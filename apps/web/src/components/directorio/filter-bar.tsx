@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useTransition } from 'react';
+import { useCallback, useState, useTransition } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,19 @@ export function FilterBar() {
   const only24h = searchParams.get('abierto24h') === '1';
   const search = searchParams.get('q') ?? '';
 
+  // Input controlado, no `defaultValue`: sin esto, navegar con atrás/adelante
+  // cambia la URL (y los resultados) pero el texto visible en la caja se queda
+  // congelado en lo último que se tecleó, porque defaultValue solo se aplica
+  // al montar. Se resincroniza durante el render (no en un efecto) cuando
+  // `search` cambia por una causa externa — patrón recomendado por React para
+  // "ajustar estado cuando cambia un prop" sin el reflow extra de un efecto.
+  const [prevSearch, setPrevSearch] = useState(search);
+  const [inputValue, setInputValue] = useState(search);
+  if (search !== prevSearch) {
+    setPrevSearch(search);
+    setInputValue(search);
+  }
+
   const updateParams = useCallback(
     (updates: Record<string, string | null>) => {
       const params = new URLSearchParams(searchParams.toString());
@@ -40,10 +53,13 @@ export function FilterBar() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
         <Input
-          defaultValue={search}
+          value={inputValue}
           placeholder="Buscar por nombre, servicio o zona…"
           className="pl-9"
-          onChange={(e) => updateParams({ q: e.target.value })}
+          onChange={(e) => {
+            setInputValue(e.target.value);
+            updateParams({ q: e.target.value });
+          }}
           aria-label="Buscar en el directorio"
         />
       </div>

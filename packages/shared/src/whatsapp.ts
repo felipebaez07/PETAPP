@@ -18,6 +18,19 @@ export function buildWhatsAppLink(params: {
   return `https://wa.me/${digits}?text=${text}`;
 }
 
+export function buildProductInquiryWhatsAppLink(params: {
+  whatsappNumber: string;
+  establishmentName: string;
+  productName: string;
+}): string {
+  const { whatsappNumber, establishmentName, productName } = params;
+  const text = encodeURIComponent(
+    `Hola, vengo de PetApp y quisiera preguntar por "${productName}" en ${establishmentName}.`
+  );
+  const digits = whatsappNumber.replace(/\D/g, '');
+  return `https://wa.me/${digits}?text=${text}`;
+}
+
 export function buildAdoptionInterestWhatsAppLink(params: {
   whatsappNumber: string;
   animalName: string;

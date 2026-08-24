@@ -1,37 +1,121 @@
 import {
   DEMO_ADOPTION_POSTS,
   DEMO_ESTABLISHMENTS,
+  DEMO_PRODUCTS,
+  DEMO_FORUM_POSTS,
   type AdoptionPostWithPhotos,
   type EstablishmentWithDetails,
+  type ProductWithEstablishment,
+  type ForumPostWithEstablishment,
 } from '@petapp/shared';
+import { isSupabaseConfigured, supabase } from './supabase';
 
 /**
- * Capa de datos de la app móvil.
- *
- * Hoy el proyecto Supabase real todavía no está provisionado (ver PDD /
- * NEXT_STEPS), así que estas funciones devuelven los datos de demostración
- * de `@petapp/shared` (los mismos que alimentan `supabase/seed.sql`). Se
- * exponen como `async` a propósito, para que las pantallas ya consuman esta
- * capa como si fuera una consulta remota (loading/error reales) y el día que
- * se conecte Supabase baste con reemplazar el cuerpo de cada función por un
- * `supabase.from(...)` usando el cliente de `lib/supabase.ts`, sin tocar los
- * componentes que las consumen.
+ * Capa de datos de la app móvil. Mientras no exista un proyecto Supabase real
+ * conectado (`isSupabaseConfigured`), sirve los fixtures de demo de
+ * `@petapp/shared`; en cuanto está configurado, consulta la base real —
+ * ninguna pantalla que consuma estas funciones necesita cambiar.
  */
 
 export async function fetchEstablishments(): Promise<EstablishmentWithDetails[]> {
-  return DEMO_ESTABLISHMENTS;
+  if (!isSupabaseConfigured) return DEMO_ESTABLISHMENTS;
+
+  const { data, error } = await supabase
+    .from('establishments')
+    .select('*, hours:establishment_hours(*), services(*), products(*)')
+    .eq('is_active', true)
+    .order('name');
+  if (error) throw error;
+  return (data ?? []) as unknown as EstablishmentWithDetails[];
 }
 
 export async function fetchEstablishmentById(
   id: string
 ): Promise<EstablishmentWithDetails | null> {
-  return DEMO_ESTABLISHMENTS.find((establishment) => establishment.id === id) ?? null;
+  if (!isSupabaseConfigured) {
+    return DEMO_ESTABLISHMENTS.find((establishment) => establishment.id === id) ?? null;
+  }
+
+  const { data, error } = await supabase
+    .from('establishments')
+    .select('*, hours:establishment_hours(*), services(*), products(*)')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as unknown as EstablishmentWithDetails) ?? null;
 }
 
 export async function fetchAdoptionPosts(): Promise<AdoptionPostWithPhotos[]> {
-  return DEMO_ADOPTION_POSTS;
+  if (!isSupabaseConfigured) return DEMO_ADOPTION_POSTS;
+
+  const { data, error } = await supabase
+    .from('adoption_posts')
+    .select('*, photos:adoption_photos(*), establishment:establishments(id,name,slug,whatsapp_number)')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as unknown as AdoptionPostWithPhotos[];
 }
 
 export async function fetchAdoptionPostById(id: string): Promise<AdoptionPostWithPhotos | null> {
-  return DEMO_ADOPTION_POSTS.find((post) => post.id === id) ?? null;
+  if (!isSupabaseConfigured) {
+    return DEMO_ADOPTION_POSTS.find((post) => post.id === id) ?? null;
+  }
+
+  const { data, error } = await supabase
+    .from('adoption_posts')
+    .select('*, photos:adoption_photos(*), establishment:establishments(id,name,slug,whatsapp_number)')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as unknown as AdoptionPostWithPhotos) ?? null;
+}
+
+export async function fetchProducts(): Promise<ProductWithEstablishment[]> {
+  if (!isSupabaseConfigured) {
+    return DEMO_PRODUCTS.map((product) => {
+      const establishment = DEMO_ESTABLISHMENTS.find((e) => e.id === product.establishment_id);
+      return {
+        ...product,
+        establishment: establishment
+          ? {
+              id: establishment.id,
+              name: establishment.name,
+              slug: establishment.slug,
+              whatsapp_number: establishment.whatsapp_number,
+              category: establishment.category,
+            }
+          : null,
+      };
+    });
+  }
+
+  const { data, error } = await supabase
+    .from('products')
+    .select('*, establishment:establishments(id,name,slug,whatsapp_number,category)')
+    .eq('is_active', true)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as unknown as ProductWithEstablishment[];
+}
+
+export async function fetchForumPosts(): Promise<ForumPostWithEstablishment[]> {
+  if (!isSupabaseConfigured) {
+    return DEMO_FORUM_POSTS.map((post) => {
+      const establishment = DEMO_ESTABLISHMENTS.find((e) => e.id === post.establishment_id);
+      return {
+        ...post,
+        establishment: establishment
+          ? { id: establishment.id, name: establishment.name, slug: establishment.slug, category: establishment.category }
+          : null,
+      };
+    });
+  }
+
+  const { data, error } = await supabase
+    .from('forum_posts')
+    .select('*, establishment:establishments(id,name,slug,category)')
+    .eq('is_active', true)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as unknown as ForumPostWithEstablishment[];
 }

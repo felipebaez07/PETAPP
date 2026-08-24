@@ -13,10 +13,15 @@ export default async function DashboardHomePage() {
     return (
       <div>
         <h1 className="font-heading text-2xl font-bold text-foreground">Panel de administración</h1>
-        <p className="mt-2 text-muted-foreground">Gestiona la verificación de aliados del piloto.</p>
-        <Button asChild className="mt-4">
-          <Link href="/panel/admin/aliados">Ir a verificación de aliados</Link>
-        </Button>
+        <p className="mt-2 text-muted-foreground">Gestiona las solicitudes de alianza y la verificación de aliados del piloto.</p>
+        <div className="mt-4 flex gap-3">
+          <Button asChild>
+            <Link href="/panel/admin/solicitudes">Ver solicitudes</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/panel/admin/aliados">Verificar aliados</Link>
+          </Button>
+        </div>
       </div>
     );
   }
@@ -63,7 +68,8 @@ export default async function DashboardHomePage() {
           <CardContent className="p-4 text-sm text-muted-foreground">
             Tu perfil está{' '}
             {user.establishment.verification_status === 'pendiente' ? 'pendiente de revisión' : 'en revisión'} por el
-            equipo del piloto. Aparecerás en el directorio público una vez verificado.
+            equipo del piloto. Ya apareces en el directorio público con la etiqueta &quot;pendiente de
+            verificación&quot; — cuando el equipo confirme tus datos, pasarás a &quot;Verificado&quot;.
           </CardContent>
         </Card>
       )}

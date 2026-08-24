@@ -56,3 +56,20 @@ export const adoptionPostSchema = z.object({
   location_text: z.string().max(120).optional().or(z.literal('')),
 });
 export type AdoptionPostFormValues = z.infer<typeof adoptionPostSchema>;
+
+export const productSchema = z.object({
+  name: z.string().min(1, 'El nombre es obligatorio').max(100),
+  description: z.string().max(500).optional().or(z.literal('')),
+  category: z.enum(['alimento', 'accesorios', 'higiene', 'salud', 'otro']),
+  price_reference: z.string().max(60).optional().or(z.literal('')),
+  image_url: z.string().url('URL de imagen inválida').optional().or(z.literal('')),
+});
+export type ProductFormValues = z.infer<typeof productSchema>;
+
+export const forumPostSchema = z.object({
+  title: z.string().min(1, 'El título es obligatorio').max(120),
+  body: z.string().min(1, 'Escribe el contenido de la publicación').max(1000),
+  category: z.enum(['promocion', 'anuncio', 'noticia', 'lugar']),
+  image_url: z.string().url('URL de imagen inválida').optional().or(z.literal('')),
+});
+export type ForumPostFormValues = z.infer<typeof forumPostSchema>;

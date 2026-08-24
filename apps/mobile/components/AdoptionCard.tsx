@@ -25,7 +25,7 @@ export function AdoptionCard({ post }: { post: AdoptionPostWithPhotos }) {
       className="mb-3 flex-row gap-3 rounded-md border border-border bg-card p-4"
     >
       <View className="h-16 w-16 items-center justify-center rounded-md bg-backgroundAlt">
-        <SpeciesIcon size={28} color="#0F766E" />
+        <SpeciesIcon size={28} color="#059669" />
       </View>
 
       <View className="flex-1 gap-1.5">

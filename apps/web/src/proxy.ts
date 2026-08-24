@@ -26,5 +26,12 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/panel/:path*'],
+  // Antes solo corría en /panel/:path*, pero el estado de sesión también se
+  // lee en páginas públicas (Navbar en el layout raíz). Si el token expira
+  // mientras el usuario navega fuera de /panel, ese refresh ocurre dentro de
+  // un Server Component (que no puede persistir cookies) en vez de aquí —
+  // el próximo refresh token ya está "usado" y Supabase invalida la sesión.
+  // Coincide con el matcher amplio que recomienda la guía oficial de
+  // @supabase/ssr para Next.js.
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 };

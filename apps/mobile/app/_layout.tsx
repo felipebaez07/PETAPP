@@ -68,6 +68,8 @@ export default function RootLayout() {
             options={{ title: 'Agregar mascota', presentation: 'modal' }}
           />
           <Stack.Screen name="adopciones/[id]" options={{ title: 'Adopción' }} />
+          <Stack.Screen name="mi-tienda" options={{ title: 'Mi tienda' }} />
+          <Stack.Screen name="mi-foro" options={{ title: 'Mi foro' }} />
           <Stack.Screen name="+not-found" options={{ title: 'No encontrado' }} />
         </Stack>
       </PetsProvider>

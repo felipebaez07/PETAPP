@@ -6,18 +6,19 @@
 // archivo lo ejecuta Node directamente, sin pasar por Babel/Metro. Si cambian
 // los tokens del design system, actualiza los tres lugares.
 const COLORS = {
-  primary: '#123A5C',
-  primaryDark: '#0B2540',
-  secondary: '#0F766E',
+  primary: '#0369A1',
+  primaryDark: '#075985',
+  secondary: '#10B981',
+  secondaryForeground: '#0C2233',
   accent: '#D97706',
   success: '#059669',
   background: '#F8FAFC',
-  backgroundAlt: '#F0FDFA',
-  foreground: '#0F172A',
+  backgroundAlt: '#ECFDF5',
+  foreground: '#0C2233',
   card: '#FFFFFF',
-  muted: '#EDF2F5',
+  muted: '#E7EEF2',
   mutedForeground: '#64748B',
-  border: '#DCE6EA',
+  border: '#D6E4EA',
   destructive: '#DC2626',
 };
 

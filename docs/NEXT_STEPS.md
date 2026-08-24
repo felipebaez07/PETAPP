@@ -1,86 +1,91 @@
 # Qué falta y qué se necesita del equipo/negocio
 
-Este documento resume, con honestidad, qué parte del piloto ya es real (código funcional) y qué parte
-sigue en modo demo esperando decisiones o credenciales que solo el equipo del proyecto puede dar.
+Este documento resume, con honestidad, qué parte del piloto ya es real (código funcional, probado
+contra un proyecto Supabase real) y qué parte sigue esperando decisiones o insumos que solo el equipo
+del proyecto puede dar.
 
-## 1. Backend real (Supabase) — bloqueante para todo lo demás
+## 1. Backend real (Supabase) — ya conectado
 
-Hoy no hay ningún proyecto Supabase conectado (la cuenta conectada a esta sesión no tiene organizaciones).
-El esquema completo ya está escrito y listo para aplicar: `supabase/migrations/0001_init.sql` (tablas,
-enums, Row Level Security) y `supabase/seed.sql` (10 aliados y 4 publicaciones de adopción de ejemplo,
-**ficticios** — deben reemplazarse por los aliados reales antes de salir a producción).
+Hay un proyecto Supabase real conectado (`nnsjospqprfygmxnlszb`, región us-west-2), con el esquema
+completo aplicado: `supabase/migrations/0001_init.sql` (tablas, enums, RLS), `0002_products.sql`
+(marketplace), `0003_forum.sql` (foro/muro de anuncios) y `0004_bugfixes.sql` (correcciones de RLS
+encontradas en la auditoría de bugs — ver punto 8). **Antes de dar por cerrado este punto, confirma que
+las cuatro migraciones estén aplicadas en orden en el SQL Editor del proyecto** (revísalas con
+`select * from supabase_migrations.schema_migrations` si tienes la CLI, o simplemente re-corre las que
+falten).
 
-Dos caminos, cualquiera de los dos funciona:
+Login con Google también está conectado (Supabase Auth → Google provider, con las credenciales de
+Google Cloud Console ya configuradas) — solo para la web por ahora; en mobile queda como siguiente paso
+(requiere `expo-auth-session` y deep linking, un flujo distinto al de la web).
 
-- **Opción A — más rápida**: crea una cuenta/organización en [supabase.com](https://supabase.com) (tiene
-  plan gratuito, suficiente para todo el piloto) y autoriza la conexión de Supabase con Claude desde la
-  configuración de conectores de claude.ai. Con eso puedo crear el proyecto, aplicar el esquema y dejar
-  todo conectado directamente.
-- **Opción B**: crea tú mismo el proyecto en supabase.com, corre las migraciones (`supabase db push` con
-  la CLI, o pega el contenido de `0001_init.sql` y `seed.sql` en el SQL Editor del panel de Supabase), y
-  pásame la **Project URL** y la **anon key** (Settings → API). Con eso completo los `.env.local` de
-  ambas apps (`apps/web/.env.example` y `apps/mobile/.env.example` ya indican qué variables van).
+## 2. Los aliados piloto reales
 
-Sin esto, ambas apps seguirán funcionando en **modo demo** (datos de ejemplo, sin autenticación real,
-sin persistencia) — es una app real y navegable, pero nadie puede realmente registrarse ni guardar datos.
+`supabase/seed.sql` ya tiene **27 negocios y organizaciones reales de Ibagué** (veterinarias, petshops,
+profesionales independientes, fundaciones), investigados y con fuente documentada en
+`docs/CANDIDATOS_ALIADOS_IBAGUE.md` — **pero ninguno ha sido contactado ni ha dado su consentimiento**
+para aparecer como aliado. Todos quedan con `verification_status = 'pendiente'` a propósito. El equipo
+del piloto debe:
 
-## 2. Los ~10 aliados piloto reales
-
-El PDD (sección 6.1) pide vincular veterinarias, comercios y al menos una fundación reales de Ibagué.
-`supabase/seed.sql` tiene datos ficticios de referencia (nombres, horarios, servicios) que solo sirven
-para probar la UI. Necesito de ustedes, por cada aliado real:
-
-- Nombre, categoría (veterinaria / comercio / profesional / fundación), dirección, ciudad.
-- Teléfono y **número de WhatsApp** en formato internacional (ej. `573001234567`) — es el canal real de
-  reserva en esta fase.
-- Horarios de atención (o si atienden 24/7).
-- Servicios que ofrecen, con precio de referencia si quieren mostrarlo.
+1. Contactar a cada uno (la lista con teléfonos está en `docs/CANDIDATOS_ALIADOS_IBAGUE.md`).
+2. Una vez acepten, vincular su cuenta real: desde `/panel/admin/solicitudes` (si llegaron por el
+   formulario "Únete al piloto") o directamente actualizando `owner_id` en la tabla `establishments`.
+3. Marcarlos como `verificado` desde `/panel/admin/aliados`.
 
 ## 3. Identidad de marca
 
-El nombre "PetApp" es provisional (así lo dice el propio PDD). Falta:
-
-- Nombre definitivo.
-- Logo real. Hoy la web tiene un favicon placeholder propio (huella sobre navy, `apps/web/src/app/icon.svg`)
-  y la app móvil todavía usa los íconos/splash por defecto de la plantilla de Expo — ambos deben
-  reemplazarse por el logo definitivo (ícono, splash, adaptive icon de Android).
-- Paleta de color: ya está definida y documentada en `design-system/petapp/MASTER.md` (navy + teal,
-  ámbar reservado para adopciones) — es una decisión de diseño ya tomada, pero avísenme si quieren
-  cambiarla antes de que se propague a más pantallas.
+- Nombre "PetApp" sigue siendo provisional.
+- Logo real pendiente (favicon/splash siguen siendo placeholders).
+- **Paleta de color — actualizada (v2):** se cambió de navy+teal a azul clínico (`#0369A1`) + verde menta
+  (`#10B981`) + blanco, a pedido explícito, documentada en `design-system/petapp/MASTER.md`. El ámbar
+  (adopciones) y el rojo (errores) no cambiaron — son decisiones semánticas separadas de la paleta de marca.
 
 ## 4. Política de tratamiento de datos y términos de uso (Ley 1581 de 2012)
 
-Ya existe un primer borrador, publicado en `/politica-privacidad` y `/terminos` (enlazado desde el
-footer), con un aviso visible de "borrador para revisión". **No debe tratarse como vinculante todavía**:
-falta completar la razón social/nombre legal y el correo de contacto (marcados entre corchetes en el
-propio texto), y lo ideal es que un abogado lo revise antes del lanzamiento real con los aliados.
+Sin cambios — borrador en `/politica-privacidad` y `/terminos`, falta razón social/correo real y revisión
+legal antes de ser vinculante.
 
 ## 5. Despliegue
 
-Ninguna de las dos apps está desplegada todavía; ambas corren solo en local.
+Ninguna de las dos apps está desplegada todavía; ambas corren solo en local (`npm run dev:web`,
+`npm run dev:mobile`). Web candidata natural a Vercel; mobile necesita `eas build` + cuenta Expo.
 
-- **Web**: el candidato natural es Vercel (soporte nativo de Next.js, despliegue en minutos). Puedo
-  configurarlo si me dan (o me piden crear) una cuenta/proyecto.
-- **Móvil**: para pruebas reales con los aliados se necesita `eas build` (Expo Application Services) y
-  distribución interna (TestFlight en iOS, Internal Testing en Play Store, o directamente Expo Go durante
-  el piloto). Requiere una cuenta Expo (gratuita para empezar) y, para iOS, una cuenta de Apple Developer
-  de pago si se quiere ir más allá de Expo Go.
+## 6. Confirmación de correo en signup
 
-## 6. Configuración de autenticación en Supabase (una vez exista el proyecto)
+Sigue como decisión pendiente del equipo (Authentication → Providers → Email → "Confirm email" en el
+dashboard de Supabase). Hoy está desactivado para poder probar sin fricción.
 
-Decisión pendiente: ¿el registro de nuevos aliados/propietarios requiere confirmación por correo antes de
-poder ingresar? El código ya maneja ambos casos (`apps/web/src/components/panel/auth-form.tsx`), pero el
-comportamiento real depende de la configuración de Auth del proyecto Supabase (Authentication → Providers
-→ Email, opción "Confirm email").
+## 7. Marketplace y Foro — nuevos, sin pasarela de pago
 
-## Lo que ya funciona hoy, sin depender de nada de lo anterior
+- **Marketplace** (`/marketplace`, panel `/panel/tienda`, mobile pestaña "Comunidad"): las tiendas
+  publican productos con precio de referencia; el comprador pregunta por WhatsApp. Sin carrito ni cobro
+  en línea todavía — cuando se quiera evaluar pagos reales, las opciones típicas para Colombia son
+  Wompi, PayU, Mercado Pago o ePayco (decisión pendiente, no implementada).
+- **Foro** (`/foro`, panel `/panel/foro`, mobile pestaña "Comunidad"): los aliados publican promociones,
+  anuncios, noticias o lugares. Se ve al instante (sin cola de aprobación); un admin puede ocultar/borrar
+  después si hace falta. Las publicaciones de adopción siguen siendo su propio flujo, sin fusionar.
 
-- Directorio público con filtros (categoría, 24/7, búsqueda), ficha de establecimiento, reserva por
-  WhatsApp — con los 10 aliados de ejemplo.
-- Listado y detalle de adopciones, con formulario de interesado/a.
-- Formulario público "Únete al piloto".
-- Panel SaaS completo (perfil, horarios, servicios, reservas, publicaciones de adopción) y panel de
-  verificación de aliados para admin — con código real contra Supabase, listo para funcionar en cuanto
-  exista el proyecto (punto 1).
-- App móvil con las mismas 4 secciones (Directorio, Mascotas, Adopciones, Perfil) sobre los mismos datos
-  de ejemplo, verificada con `npx expo export --platform web` sin errores.
+## 8. Auditoría de bugs (agosto 2026) — corregidos
+
+Se corrió una auditoría exhaustiva (búsqueda + verificación adversarial) que encontró 20 bugs reales;
+los 20 quedaron corregidos, entre ellos:
+
+- RLS: un establecimiento no podía ver el perfil/mascota de quien le reservó (`0004_bugfixes.sql`).
+- RLS: el formulario público de "interesado en adopción" fallaba para visitantes sin sesión (`0004_bugfixes.sql`).
+- El registro desde mobile no mandaba nombre ni rol — ninguna cuenta de negocio podía crearse desde el celular.
+- Faltaba el flujo real para que un propietario cree una reserva desde la app (antes solo existía el
+  esquema/RLS, sin ninguna pantalla que lo usara) — ya está en la ficha de cada establecimiento (web y mobile).
+- Una solicitud de "Únete al piloto" no tenía ningún camino, ni manual ni por UI, para convertirse en un
+  establecimiento real — ahora existe `/panel/admin/solicitudes`.
+- Varias pantallas de mobile se quedaban colgadas en el spinner de carga para siempre si fallaba la red
+  (sin manejo de error) — corregido en Perfil, Adopciones, ficha de establecimiento y ficha de adopción.
+
+## Lo que ya funciona hoy
+
+- Directorio público con filtros, ficha de establecimiento (mapa, horarios, servicios, productos,
+  solicitud de reserva, WhatsApp), con los 27 aliados reales (pendientes de verificación).
+- Marketplace y Foro (ver punto 7), en web y mobile.
+- Login con email/contraseña y con Google (web); email/contraseña con selección de rol (mobile).
+- Mascotas conectadas de verdad a Supabase desde la app móvil (antes solo vivían en memoria).
+- Panel SaaS completo (perfil, horarios, servicios, tienda, foro, reservas, publicaciones de adopción) y
+  paneles de admin (verificación de aliados, solicitudes de alianza).
+- Reservas: el propietario puede solicitar desde la app (web o mobile) y el aliado la ve en su panel.

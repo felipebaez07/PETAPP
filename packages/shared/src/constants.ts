@@ -1,4 +1,4 @@
-import type { EstablishmentCategory, VerificationStatus, ReservationStatus, AdoptionStatus, PetSpecies } from './types';
+import type { EstablishmentCategory, VerificationStatus, ReservationStatus, AdoptionStatus, PetSpecies, ProductCategory, ForumPostCategory } from './types';
 
 export const APP_NAME = 'PetApp';
 export const APP_TAGLINE = 'Todo lo que tu mascota necesita, en un solo lugar';
@@ -39,22 +39,38 @@ export const SPECIES_LABELS: Record<PetSpecies, string> = {
   otro: 'Otro',
 };
 
+export const PRODUCT_CATEGORY_LABELS: Record<ProductCategory, string> = {
+  alimento: 'Alimento',
+  accesorios: 'Accesorios',
+  higiene: 'Higiene y cuidado',
+  salud: 'Salud y bienestar',
+  otro: 'Otro',
+};
+
+export const FORUM_CATEGORY_LABELS: Record<ForumPostCategory, string> = {
+  promocion: 'Promoción',
+  anuncio: 'Anuncio',
+  noticia: 'Noticia',
+  lugar: 'Lugar',
+};
+
 export const DAY_LABELS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'] as const;
 export const DAY_LABELS_SHORT = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'] as const;
 
-// Design tokens — deben coincidir con design-system/petapp/MASTER.md
+// Design tokens — deben coincidir con design-system/petapp/MASTER.md (paleta v2: azul clínico + menta)
 export const COLORS = {
-  primary: '#123A5C',
-  primaryDark: '#0B2540',
-  secondary: '#0F766E',
+  primary: '#0369A1',
+  primaryDark: '#075985',
+  secondary: '#10B981',
+  secondaryForeground: '#0C2233',
   accent: '#D97706',
   success: '#059669',
   background: '#F8FAFC',
-  backgroundAlt: '#F0FDFA',
-  foreground: '#0F172A',
+  backgroundAlt: '#ECFDF5',
+  foreground: '#0C2233',
   card: '#FFFFFF',
-  muted: '#EDF2F5',
+  muted: '#E7EEF2',
   mutedForeground: '#64748B',
-  border: '#DCE6EA',
+  border: '#D6E4EA',
   destructive: '#DC2626',
 } as const;

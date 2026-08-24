@@ -25,7 +25,7 @@ export function SwitchField({ label, description, value, onValueChange }: Switch
       <Switch
         value={value}
         onValueChange={onValueChange}
-        trackColor={{ false: '#DCE6EA', true: '#0F766E' }}
+        trackColor={{ false: '#D6E4EA', true: '#10B981' }}
         thumbColor="#FFFFFF"
       />
     </Pressable>

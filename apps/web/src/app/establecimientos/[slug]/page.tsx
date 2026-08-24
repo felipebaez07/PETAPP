@@ -1,18 +1,28 @@
 import { notFound } from 'next/navigation';
 import { MapPin, Phone, MessageCircle } from 'lucide-react';
 import { getEstablishmentBySlug } from '@/lib/data';
+import { getCurrentUser } from '@/lib/auth';
 import { VerifiedBadge } from '@/components/directorio/verified-badge';
 import { OpenStatus } from '@/components/directorio/open-status';
 import { HoursTable } from '@/components/directorio/hours-table';
+import { ReservationRequestForm } from '@/components/establecimientos/reservation-request-form';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CATEGORY_LABELS, buildWhatsAppLink, formatPhoneForDisplay } from '@petapp/shared';
+import {
+  CATEGORY_LABELS,
+  PRODUCT_CATEGORY_LABELS,
+  buildWhatsAppLink,
+  buildProductInquiryWhatsAppLink,
+  buildGoogleMapsLink,
+  formatPhoneForDisplay,
+} from '@petapp/shared';
 
 export default async function EstablishmentDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const establishment = await getEstablishmentBySlug(slug);
   if (!establishment) notFound();
+  const viewer = await getCurrentUser();
 
   const whatsappLink = establishment.whatsapp_number
     ? buildWhatsAppLink({
@@ -20,6 +30,7 @@ export default async function EstablishmentDetailPage({ params }: { params: Prom
         establishmentName: establishment.name,
       })
     : null;
+  const mapsLink = buildGoogleMapsLink(establishment);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
@@ -39,6 +50,11 @@ export default async function EstablishmentDetailPage({ params }: { params: Prom
           </div>
         </div>
         <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <a href={mapsLink} target="_blank" rel="noopener noreferrer">
+              <MapPin /> Ver en Google Maps
+            </a>
+          </Button>
           {establishment.phone && (
             <Button asChild variant="outline">
               <a href={`tel:${establishment.phone}`}>
@@ -95,6 +111,57 @@ export default async function EstablishmentDetailPage({ params }: { params: Prom
           </CardContent>
         </Card>
       </div>
+
+      {viewer?.profile.role === 'propietario' && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Solicitar reserva</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ReservationRequestForm establishmentId={establishment.id} services={establishment.services} />
+          </CardContent>
+        </Card>
+      )}
+
+      {establishment.products.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Productos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="grid gap-4 sm:grid-cols-2">
+              {establishment.products.map((product) => {
+                const productWhatsappLink = establishment.whatsapp_number
+                  ? buildProductInquiryWhatsAppLink({
+                      whatsappNumber: establishment.whatsapp_number,
+                      establishmentName: establishment.name,
+                      productName: product.name,
+                    })
+                  : null;
+                return (
+                  <li key={product.id} className="rounded-md border border-border p-3">
+                    <Badge variant="secondary" className="mb-1.5">
+                      {PRODUCT_CATEGORY_LABELS[product.category]}
+                    </Badge>
+                    <p className="font-medium text-foreground">{product.name}</p>
+                    {product.description && <p className="text-sm text-muted-foreground">{product.description}</p>}
+                    {product.price_reference && (
+                      <p className="mt-1 text-sm font-medium text-foreground">{product.price_reference}</p>
+                    )}
+                    {productWhatsappLink && (
+                      <Button asChild variant="secondary" size="sm" className="mt-2 w-full">
+                        <a href={productWhatsappLink} target="_blank" rel="noopener noreferrer">
+                          <MessageCircle /> Preguntar por WhatsApp
+                        </a>
+                      </Button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       {establishment.phone && (
         <p className="mt-6 text-sm text-muted-foreground">Teléfono: {formatPhoneForDisplay(establishment.phone)}</p>

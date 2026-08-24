@@ -1,6 +1,6 @@
 import { COLORS } from '@petapp/shared';
 import { Tabs } from 'expo-router';
-import { Building2, Heart, PawPrint, UserRound } from 'lucide-react-native';
+import { Building2, Heart, PawPrint, Users, UserRound } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -35,6 +35,13 @@ export default function TabLayout() {
         options={{
           title: 'Mascotas',
           tabBarIcon: ({ color, size }) => <PawPrint color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="comunidad"
+        options={{
+          title: 'Comunidad',
+          tabBarIcon: ({ color, size }) => <Users color={color} size={size} />,
         }}
       />
       <Tabs.Screen

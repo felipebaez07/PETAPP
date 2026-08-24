@@ -2,14 +2,14 @@
 /* Lexend / Source Sans 3 se cargan y autohospedan vía next/font/google en app/layout.tsx
    (mejor rendimiento y sin FOUC que el @import de Google Fonts). */
 
-/* Tokens — deben coincidir con design-system/petapp/MASTER.md */
+/* Tokens — deben coincidir con design-system/petapp/MASTER.md (paleta v2: azul clínico + menta) */
 :root {
-  --color-primary: #123a5c;
-  --color-primary-dark: #0b2540;
+  --color-primary: #0369a1;
+  --color-primary-dark: #075985;
   --color-primary-foreground: #ffffff;
 
-  --color-secondary: #0f766e;
-  --color-secondary-foreground: #ffffff;
+  --color-secondary: #10b981;
+  --color-secondary-foreground: #0c2233;
 
   --color-accent: #d97706;
   --color-accent-foreground: #ffffff;
@@ -18,18 +18,18 @@
   --color-success-foreground: #ffffff;
 
   --color-background: #f8fafc;
-  --color-background-alt: #f0fdfa;
-  --color-foreground: #0f172a;
+  --color-background-alt: #ecfdf5;
+  --color-foreground: #0c2233;
 
   --color-card: #ffffff;
-  --color-card-foreground: #0f172a;
+  --color-card-foreground: #0c2233;
 
-  --color-muted: #edf2f5;
+  --color-muted: #e7eef2;
   --color-muted-foreground: #64748b;
 
-  --color-border: #dce6ea;
-  --color-input: #dce6ea;
-  --color-ring: #123a5c;
+  --color-border: #d6e4ea;
+  --color-input: #d6e4ea;
+  --color-ring: #0369a1;
 
   --color-destructive: #dc2626;
   --color-destructive-foreground: #ffffff;
@@ -40,18 +40,21 @@
 }
 
 .dark {
-  --color-background: #0b1220;
-  --color-background-alt: #0f1c2e;
-  --color-foreground: #e6edf3;
+  --color-primary: #38bdf8;
+  --color-secondary: #34d399;
 
-  --color-card: #111c2e;
-  --color-card-foreground: #e6edf3;
+  --color-background: #0a1520;
+  --color-background-alt: #0f1f2b;
+  --color-foreground: #e7f2ef;
 
-  --color-muted: #16233a;
+  --color-card: #0f1f2b;
+  --color-card-foreground: #e7f2ef;
+
+  --color-muted: #142430;
   --color-muted-foreground: #93a2b8;
 
-  --color-border: #1e2e42;
-  --color-input: #1e2e42;
+  --color-border: #1c3340;
+  --color-input: #1c3340;
 }
 
 @theme inline {

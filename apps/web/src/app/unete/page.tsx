@@ -17,7 +17,7 @@ const BENEFITS = [
   {
     icon: TrendingUp,
     title: 'Visibilidad real',
-    description: 'Aparece en el directorio verificado que están usando propietarios de mascotas en la ciudad.',
+    description: 'Apareces en el directorio desde el primer día; la etiqueta pasa a "Verificado" cuando el equipo confirme tus datos.',
   },
 ];
 

@@ -51,6 +51,12 @@ export function formatHoursSummary(hours: EstablishmentHours[], is24h: boolean):
     .join(' · ');
 }
 
+/** Link de búsqueda de Google Maps para un lugar — no requiere API key ni coordenadas geocodificadas. */
+export function buildGoogleMapsLink(place: { name: string; address?: string | null; city: string }): string {
+  const query = place.address ? `${place.name}, ${place.address}, ${place.city}` : `${place.name}, ${place.city}`;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+
 export function formatPhoneForDisplay(phone: string | null | undefined): string {
   if (!phone) return '';
   const digits = phone.replace(/\D/g, '');

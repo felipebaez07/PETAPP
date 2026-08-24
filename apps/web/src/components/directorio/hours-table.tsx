@@ -6,6 +6,10 @@ export function HoursTable({ hours, is24h }: { hours: EstablishmentHours[]; is24
     return <p className="text-sm font-medium text-success">Abierto todos los días, las 24 horas.</p>;
   }
 
+  if (hours.length === 0) {
+    return <p className="text-sm text-muted-foreground">Este aliado todavía no ha publicado su horario.</p>;
+  }
+
   const today = new Date().getDay();
   const sorted = [...hours].sort((a, b) => a.day_of_week - b.day_of_week);
 

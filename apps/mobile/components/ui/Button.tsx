@@ -12,13 +12,14 @@ const VARIANT_STYLES: Record<
     container: 'bg-primary',
     text: 'text-white',
     contentColor: '#FFFFFF',
-    pressedBackgroundColor: '#0B2540',
+    pressedBackgroundColor: '#075985',
   },
   secondary: {
+    // El menta (#10B981) es demasiado claro para texto/ícono blanco encima — pasa a texto oscuro.
     container: 'bg-secondary',
-    text: 'text-white',
-    contentColor: '#FFFFFF',
-    pressedBackgroundColor: '#0B5B54',
+    text: 'text-secondaryForeground',
+    contentColor: '#0C2233',
+    pressedBackgroundColor: '#047857',
   },
   accent: {
     container: 'bg-accent',
@@ -27,16 +28,18 @@ const VARIANT_STYLES: Record<
     pressedBackgroundColor: '#B45309',
   },
   outline: {
-    container: 'border border-secondary bg-transparent',
-    text: 'text-secondary',
-    contentColor: '#0F766E',
-    pressedBackgroundColor: '#F0FDFA',
+    // Usa `success` (más oscuro que `secondary`) en vez del menta plano: el menta como
+    // borde/texto sobre blanco no alcanza el contraste mínimo de 3:1.
+    container: 'border border-success bg-transparent',
+    text: 'text-success',
+    contentColor: '#059669',
+    pressedBackgroundColor: '#ECFDF5',
   },
   ghost: {
     container: 'bg-transparent',
     text: 'text-primary',
-    contentColor: '#123A5C',
-    pressedBackgroundColor: '#EDF2F5',
+    contentColor: '#0369A1',
+    pressedBackgroundColor: '#E7EEF2',
   },
 };
 

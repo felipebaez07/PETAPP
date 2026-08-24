@@ -1,8 +1,9 @@
 import { petSchema, type PetFormValues } from '@petapp/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { ScrollView, Text, View } from 'react-native';
+import { Alert, ScrollView, Text, View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
 import { ChipSelectField } from '@/components/ui/ChipSelectField';
@@ -25,6 +26,7 @@ const SEX_OPTIONS = [
 export default function NewPetScreen() {
   const router = useRouter();
   const { addPet } = usePets();
+  const [saving, setSaving] = useState(false);
   const {
     control,
     handleSubmit,
@@ -43,12 +45,14 @@ export default function NewPetScreen() {
     },
   });
 
-  const onSubmit = handleSubmit((values) => {
-    // Fase 1 (sin backend conectado todavía): esto solo agrega la mascota al
-    // estado local en memoria — ver contexts/PetsContext.tsx. Cuando el
-    // proyecto Supabase esté provisionado, reemplazar `addPet` por un INSERT
-    // en la tabla `pets` (supabase/migrations/0001_init.sql).
-    addPet(values);
+  const onSubmit = handleSubmit(async (values) => {
+    setSaving(true);
+    const pet = await addPet(values);
+    setSaving(false);
+    if (!pet) {
+      Alert.alert('No se pudo guardar', 'Intenta de nuevo en unos segundos.');
+      return;
+    }
     router.back();
   });
 
@@ -104,7 +108,7 @@ export default function NewPetScreen() {
       </View>
 
       <View className="gap-3">
-        <Button label="Guardar mascota" onPress={() => onSubmit()} loading={isSubmitting} />
+        <Button label="Guardar mascota" onPress={() => onSubmit()} loading={isSubmitting || saving} />
         <Button label="Cancelar" variant="ghost" onPress={() => router.back()} />
       </View>
     </ScrollView>

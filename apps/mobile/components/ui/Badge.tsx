@@ -16,7 +16,8 @@ const TONE_TEXT: Record<BadgeTone, string> = {
   success: 'text-white',
   muted: 'text-mutedForeground',
   accent: 'text-white',
-  secondary: 'text-white',
+  // El menta (#10B981) es demasiado claro para texto blanco encima.
+  secondary: 'text-secondaryForeground',
   destructive: 'text-white',
   primary: 'text-white',
 };
@@ -25,7 +26,7 @@ const TONE_ICON_COLOR: Record<BadgeTone, string> = {
   success: '#FFFFFF',
   muted: '#64748B',
   accent: '#FFFFFF',
-  secondary: '#FFFFFF',
+  secondary: '#0C2233',
   destructive: '#FFFFFF',
   primary: '#FFFFFF',
 };

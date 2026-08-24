@@ -1,19 +1,19 @@
 import type { Pet } from '@petapp/shared';
-import { Cat, CheckCircle2, Dog, PawPrint, XCircle } from 'lucide-react-native';
-import { Text, View } from 'react-native';
+import { Cat, CheckCircle2, Dog, PawPrint, Trash2, XCircle } from 'lucide-react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { formatPetAge, SEX_LABELS } from '@/lib/labels';
 
 const SPECIES_ICON = { perro: Dog, gato: Cat, otro: PawPrint } as const;
 
-export function PetCard({ pet }: { pet: Pet }) {
+export function PetCard({ pet, onDelete }: { pet: Pet; onDelete?: (pet: Pet) => void }) {
   const SpeciesIcon = SPECIES_ICON[pet.species];
 
   return (
     <View className="mb-3 gap-3 rounded-md border border-border bg-card p-4">
       <View className="flex-row items-center gap-3">
         <View className="h-12 w-12 items-center justify-center rounded-md bg-backgroundAlt">
-          <SpeciesIcon size={24} color="#0F766E" />
+          <SpeciesIcon size={24} color="#059669" />
         </View>
         <View className="flex-1">
           <Text className="font-heading text-base text-foreground">{pet.name}</Text>
@@ -22,6 +22,16 @@ export function PetCard({ pet }: { pet: Pet }) {
             {SEX_LABELS[pet.sex]}
           </Text>
         </View>
+        {onDelete ? (
+          <Pressable
+            onPress={() => onDelete(pet)}
+            accessibilityRole="button"
+            accessibilityLabel={`Eliminar ${pet.name}`}
+            className="h-9 w-9 items-center justify-center rounded-sm"
+          >
+            <Trash2 size={18} color="#DC2626" />
+          </Pressable>
+        ) : null}
       </View>
 
       <Text className="font-body text-sm text-mutedForeground">{formatPetAge(pet.birth_date)}</Text>

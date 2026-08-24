@@ -12,6 +12,8 @@
 
 **Why overridden:** the automatic match defaulted to "Claymorphism" (playful, kids/mascot-app style) because the query contained "pet". The source business documents (PDD, Scope Canvas, propuesta) already establish a **professional, trust-first** visual identity — dark navy headers, teal-green section accents, plain sans-serif body text, formal tables. This platform brokers veterinary/health decisions and B2B SaaS subscriptions, so it must read as credible and calm, not toylike. Claymorphism is rejected as an anti-pattern here.
 
+**Palette v2 (current):** the original navy+teal palette below was replaced with a clinical-blue + mint-green palette (same "Trust & Authority" category, same anti-patterns) after an explicit request for "blanco, verde menta, azules — profundidad, rigor, estilo profesional." Chosen using validated Tailwind-scale swatches (via the ui-ux-pro-max palette database) rather than freehand hex, structured by semantic role per the `impeccable` skill's colorize methodology. `accent` (amber, adoption-only) and `destructive` (red) are intentionally unchanged — they're separate, already-validated semantic decisions, not part of the brand-hue refresh.
+
 ---
 
 ## Global Rules
@@ -20,28 +22,28 @@
 
 | Role | Hex | CSS Variable | Usage |
 |------|-----|--------------|-------|
-| Primary (Navy) | `#123A5C` | `--color-primary` | Headers, nav, primary buttons, links |
-| On Primary | `#FFFFFF` | `--color-on-primary` | Text/icons on navy |
-| Primary Dark | `#0B2540` | `--color-primary-dark` | Hover/active state, dark-mode surfaces |
-| Secondary (Teal) | `#0F766E` | `--color-secondary` | Section accents, secondary buttons, active nav |
-| On Secondary | `#FFFFFF` | `--color-on-secondary` | Text on teal |
-| Accent (Amber) | `#D97706` | `--color-accent` | Adoption / social-impact CTAs only (semantic: "warm, human") |
+| Primary (Clinical Blue) | `#0369A1` | `--color-primary` | Headers, nav, primary buttons, links |
+| On Primary | `#FFFFFF` | `--color-on-primary` | Text/icons on blue |
+| Primary Dark | `#075985` | `--color-primary-dark` | Hover/active state, dark-mode surfaces |
+| Secondary (Mint) | `#10B981` | `--color-secondary` | Section accents, secondary buttons, active nav |
+| On Secondary | `#0C2233` | `--color-on-secondary` | Text on mint — mint is too light for white text at AA |
+| Accent (Amber) | `#D97706` | `--color-accent` | Adoption / social-impact CTAs only (semantic: "warm, human") — unchanged |
 | On Accent | `#FFFFFF` | `--color-on-accent` | Text on amber |
-| Success / Verified | `#059669` | `--color-success` | "Verificado" badge, active/open status |
+| Success / Verified | `#059669` | `--color-success` | "Verificado" badge, active/open status — deeper green than `secondary` so brand ≠ status |
 | Background | `#F8FAFC` | `--color-background` | App background |
-| Background Alt | `#F0FDFA` | `--color-background-alt` | Teal-tinted section background |
-| Foreground | `#0F172A` | `--color-foreground` | Primary text |
+| Background Alt | `#ECFDF5` | `--color-background-alt` | Mint-tinted section background |
+| Foreground | `#0C2233` | `--color-foreground` | Primary text — deep blue-charcoal instead of neutral slate, for brand cohesion |
 | Card | `#FFFFFF` | `--color-card` | Card surfaces |
-| Muted | `#EDF2F5` | `--color-muted` | Subtle fills, chips, skeletons |
+| Muted | `#E7EEF2` | `--color-muted` | Subtle fills, chips, skeletons |
 | Muted Foreground | `#64748B` | `--color-muted-foreground` | Secondary/help text |
-| Border | `#DCE6EA` | `--color-border` | Dividers, input borders |
-| Destructive | `#DC2626` | `--color-destructive` | Errors, cancel actions |
+| Border | `#D6E4EA` | `--color-border` | Dividers, input borders |
+| Destructive | `#DC2626` | `--color-destructive` | Errors, cancel actions — unchanged |
 | On Destructive | `#FFFFFF` | `--color-on-destructive` | Text on red |
-| Ring | `#123A5C` | `--color-ring` | Focus ring |
+| Ring | `#0369A1` | `--color-ring` | Focus ring |
 
-**Semantic rule:** navy+teal = trust/clinical surfaces (directorio, reservas, perfiles, SaaS dashboard). Amber is reserved *exclusively* for adoption/social-impact content so it reads as a distinct emotional register, never used for generic CTAs.
+**Semantic rule:** blue+mint = trust/clinical surfaces (directorio, reservas, perfiles, SaaS dashboard, marketplace, foro). Amber is reserved *exclusively* for adoption/social-impact content so it reads as a distinct emotional register, never used for generic CTAs.
 
-**Dark mode:** background → `#0B1220`, card → `#111C2E`, foreground → `#E6EDF3`, border → `#1E2E42`, keep primary/secondary/accent hexes but raise lightness ~8% for AA contrast on dark surfaces.
+**Dark mode:** background → `#0A1520`, card → `#0F1F2B`, foreground → `#E7F2EF`, border → `#1C3340`, muted → `#142430`, muted-foreground → `#93A2B8`; `primary` brightens to `#38BDF8` and `secondary` to `#34D399` so both stay legible on a dark surface (a straight lightness bump of the light-mode hex would under-contrast).
 
 ### Typography
 
@@ -98,35 +100,38 @@
 
 ```css
 :root {
-  --color-primary: #123A5C;
-  --color-primary-dark: #0B2540;
-  --color-secondary: #0F766E;
+  --color-primary: #0369A1;
+  --color-primary-dark: #075985;
+  --color-secondary: #10B981;
+  --color-secondary-foreground: #0C2233;
   --color-accent: #D97706;
   --color-success: #059669;
   --color-background: #F8FAFC;
-  --color-background-alt: #F0FDFA;
-  --color-foreground: #0F172A;
+  --color-background-alt: #ECFDF5;
+  --color-foreground: #0C2233;
   --color-card: #FFFFFF;
-  --color-muted: #EDF2F5;
+  --color-muted: #E7EEF2;
   --color-muted-foreground: #64748B;
-  --color-border: #DCE6EA;
+  --color-border: #D6E4EA;
   --color-destructive: #DC2626;
-  --color-ring: #123A5C;
+  --color-ring: #0369A1;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
 }
 .dark {
-  --color-background: #0B1220;
-  --color-card: #111C2E;
-  --color-foreground: #E6EDF3;
-  --color-border: #1E2E42;
-  --color-muted: #16233A;
+  --color-background: #0A1520;
+  --color-card: #0F1F2B;
+  --color-foreground: #E7F2EF;
+  --color-border: #1C3340;
+  --color-muted: #142430;
   --color-muted-foreground: #93A2B8;
+  --color-primary: #38BDF8;
+  --color-secondary: #34D399;
 }
 ```
 
-Buttons: primary = navy fill / white text, 8–12px radius, 150–200ms transition, hover = primary-dark, focus-visible ring in `--color-ring`. Secondary/outline = teal border+text, transparent fill. Destructive = red fill for cancel/delete confirmations only. Never use emoji as icons — Lucide icon set throughout (web and RN via `lucide-react` / `lucide-react-native`).
+Buttons: primary = clinical-blue fill / white text, 8–12px radius, 150–200ms transition, hover = primary-dark, focus-visible ring in `--color-ring`. Secondary/outline = mint border+text (dark text if filled — mint is too light for white text), transparent fill. Destructive = red fill for cancel/delete confirmations only. Never use emoji as icons — Lucide icon set throughout (web and RN via `lucide-react` / `lucide-react-native`).
 
 ---
 

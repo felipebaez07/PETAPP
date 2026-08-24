@@ -22,6 +22,10 @@ export type AdoptionInterestStatus = 'nuevo' | 'contactado' | 'descartado' | 'ap
 
 export type PartnerApplicationStatus = 'nuevo' | 'contactado' | 'descartado' | 'convertido';
 
+export type ProductCategory = 'alimento' | 'accesorios' | 'higiene' | 'salud' | 'otro';
+
+export type ForumPostCategory = 'promocion' | 'anuncio' | 'noticia' | 'lugar';
+
 export interface Profile {
   id: string;
   role: UserRole;
@@ -95,6 +99,31 @@ export interface Service {
   created_at: string;
 }
 
+export interface Product {
+  id: string;
+  establishment_id: string;
+  name: string;
+  description: string | null;
+  category: ProductCategory;
+  price_reference: string | null;
+  image_url: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ForumPost {
+  id: string;
+  establishment_id: string;
+  category: ForumPostCategory;
+  title: string;
+  body: string;
+  image_url: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Reservation {
   id: string;
   pet_owner_id: string;
@@ -166,9 +195,18 @@ export interface PartnerApplication {
 export interface EstablishmentWithDetails extends Establishment {
   hours: EstablishmentHours[];
   services: Service[];
+  products: Product[];
 }
 
 export interface AdoptionPostWithPhotos extends AdoptionPost {
   photos: AdoptionPhoto[];
   establishment: Pick<Establishment, 'id' | 'name' | 'slug' | 'whatsapp_number'> | null;
+}
+
+export interface ProductWithEstablishment extends Product {
+  establishment: Pick<Establishment, 'id' | 'name' | 'slug' | 'whatsapp_number' | 'category'> | null;
+}
+
+export interface ForumPostWithEstablishment extends ForumPost {
+  establishment: Pick<Establishment, 'id' | 'name' | 'slug' | 'category'> | null;
 }

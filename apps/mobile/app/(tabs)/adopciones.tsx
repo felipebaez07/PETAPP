@@ -11,12 +11,17 @@ import { fetchAdoptionPosts } from '@/lib/data';
 
 export default function AdoptionsScreen() {
   const [posts, setPosts] = useState<AdoptionPostWithPhotos[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     let active = true;
-    fetchAdoptionPosts().then((data) => {
-      if (active) setPosts(data);
-    });
+    fetchAdoptionPosts()
+      .then((data) => {
+        if (active) setPosts(data);
+      })
+      .catch(() => {
+        if (active) setLoadError(true);
+      });
     return () => {
       active = false;
     };
@@ -27,7 +32,15 @@ export default function AdoptionsScreen() {
       <ScreenHeader title="Adopciones" subtitle="Encuentra un nuevo miembro para tu familia" />
 
       {posts === null ? (
-        <LoadingState label="Cargando publicaciones..." />
+        loadError ? (
+          <EmptyState
+            icon={SearchX}
+            title="No se pudieron cargar las publicaciones"
+            description="Intenta de nuevo en unos segundos."
+          />
+        ) : (
+          <LoadingState label="Cargando publicaciones..." />
+        )
       ) : posts.length === 0 ? (
         <EmptyState
           icon={SearchX}

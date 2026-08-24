@@ -2,9 +2,15 @@ import 'server-only';
 import {
   DEMO_ESTABLISHMENTS,
   DEMO_ADOPTION_POSTS,
+  DEMO_PRODUCTS,
+  DEMO_FORUM_POSTS,
   type EstablishmentWithDetails,
   type AdoptionPostWithPhotos,
   type EstablishmentCategory,
+  type ProductWithEstablishment,
+  type ProductCategory,
+  type ForumPostWithEstablishment,
+  type ForumPostCategory,
 } from '@petapp/shared';
 import { isSupabaseConfigured } from './supabase/config';
 import { createSupabaseServerClient } from './supabase/server';
@@ -31,7 +37,7 @@ export async function getEstablishments(filters: DirectoryFilters = {}): Promise
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase
       .from('establishments')
-      .select('*, hours:establishment_hours(*), services(*)')
+      .select('*, hours:establishment_hours(*), services(*), products(*)')
       .eq('is_active', true)
       .order('name');
     if (error) throw error;
@@ -56,12 +62,88 @@ export async function getEstablishmentBySlug(slug: string): Promise<Establishmen
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from('establishments')
-    .select('*, hours:establishment_hours(*), services(*)')
+    .select('*, hours:establishment_hours(*), services(*), products(*)')
     .eq('slug', slug)
     .eq('is_active', true)
     .maybeSingle();
   if (error) throw error;
   return (data as unknown as EstablishmentWithDetails) ?? null;
+}
+
+export interface ProductFilters {
+  category?: ProductCategory;
+  search?: string;
+}
+
+export async function getProducts(filters: ProductFilters = {}): Promise<ProductWithEstablishment[]> {
+  let results: ProductWithEstablishment[];
+
+  if (!isSupabaseConfigured()) {
+    results = DEMO_PRODUCTS.map((product) => {
+      const establishment = DEMO_ESTABLISHMENTS.find((e) => e.id === product.establishment_id);
+      return {
+        ...product,
+        establishment: establishment
+          ? {
+              id: establishment.id,
+              name: establishment.name,
+              slug: establishment.slug,
+              whatsapp_number: establishment.whatsapp_number,
+              category: establishment.category,
+            }
+          : null,
+      };
+    });
+  } else {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from('products')
+      .select('*, establishment:establishments(id,name,slug,whatsapp_number,category)')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    results = (data ?? []) as unknown as ProductWithEstablishment[];
+  }
+
+  return results.filter((p) => {
+    if (filters.category && p.category !== filters.category) return false;
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      if (!p.name.toLowerCase().includes(q) && !(p.description ?? '').toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+export interface ForumFilters {
+  category?: ForumPostCategory;
+}
+
+export async function getForumPosts(filters: ForumFilters = {}): Promise<ForumPostWithEstablishment[]> {
+  let results: ForumPostWithEstablishment[];
+
+  if (!isSupabaseConfigured()) {
+    results = DEMO_FORUM_POSTS.map((post) => {
+      const establishment = DEMO_ESTABLISHMENTS.find((e) => e.id === post.establishment_id);
+      return {
+        ...post,
+        establishment: establishment
+          ? { id: establishment.id, name: establishment.name, slug: establishment.slug, category: establishment.category }
+          : null,
+      };
+    });
+  } else {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from('forum_posts')
+      .select('*, establishment:establishments(id,name,slug,category)')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    results = (data ?? []) as unknown as ForumPostWithEstablishment[];
+  }
+
+  return results.filter((p) => !filters.category || p.category === filters.category);
 }
 
 export async function getAdoptionPosts(): Promise<AdoptionPostWithPhotos[]> {

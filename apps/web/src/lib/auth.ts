@@ -21,12 +21,16 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   let establishment: Establishment | null = null;
   if (profile.role === 'establecimiento') {
+    // .limit(1) en vez de .maybeSingle(): si por error administrativo owner_id
+    // quedara vinculado a más de una fila, .maybeSingle() lanzaría un error que
+    // esta función ignoraba en silencio, mostrando "sin establecimiento" en vez
+    // del real. Con .limit(1) siempre se obtiene una fila determinística.
     const { data } = await supabase
       .from('establishments')
       .select('*')
       .eq('owner_id', authData.user.id)
-      .maybeSingle();
-    establishment = data ?? null;
+      .limit(1);
+    establishment = data?.[0] ?? null;
   }
 
   return { profile: profile as Profile, establishment };

@@ -1,14 +1,14 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import type { Pet, PetFormValues } from '@petapp/shared';
+import { getCurrentUser } from '@/lib/auth';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
-// Fase 1: no hay backend conectado todavía, así que las mascotas del
-// propietario viven en memoria durante la sesión (se pierden al recargar).
-// Cuando el proyecto Supabase esté provisionado, este provider debe:
-//   1) cargar `pets` con un SELECT filtrado por owner_id = usuario autenticado, y
-//   2) reemplazar `addPet` por un INSERT en la tabla `pets`
-//      (ver supabase/migrations/0001_init.sql), manteniendo la misma firma
-//      para no tocar las pantallas que lo consumen.
+// Sin sesión real (o sin Supabase conectado), las mascotas viven en memoria
+// durante la sesión, a modo de demo navegable. En cuanto hay un propietario
+// autenticado, este provider carga y persiste contra la tabla `pets` real
+// (supabase/migrations/0001_init.sql), sin que las pantallas que lo consumen
+// necesiten saber la diferencia.
 const DEMO_OWNER_ID = 'demo-owner-propietario';
 
 function seedPets(): Pet[] {
@@ -49,36 +49,106 @@ function seedPets(): Pet[] {
 
 interface PetsContextValue {
   pets: Pet[];
-  addPet: (values: PetFormValues) => Pet;
+  loading: boolean;
+  isDemo: boolean;
+  addPet: (values: PetFormValues) => Promise<Pet | null>;
+  deletePet: (id: string) => Promise<boolean>;
 }
 
 const PetsContext = createContext<PetsContextValue | null>(null);
 
 export function PetsProvider({ children }: { children: ReactNode }) {
   const [pets, setPets] = useState<Pet[]>(seedPets);
+  const [ownerId, setOwnerId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const addPet = useCallback((values: PetFormValues): Pet => {
-    const now = new Date().toISOString();
-    const pet: Pet = {
-      id: `local-${Date.now()}`,
-      owner_id: DEMO_OWNER_ID,
-      name: values.name,
-      species: values.species,
-      breed: values.breed ? values.breed : null,
-      sex: values.sex,
-      birth_date: values.birth_date ? values.birth_date : null,
-      sterilized: values.sterilized,
-      vaccinated: values.vaccinated,
-      photo_url: null,
-      notes: values.notes ? values.notes : null,
-      created_at: now,
-      updated_at: now,
+  useEffect(() => {
+    let active = true;
+    if (!isSupabaseConfigured) {
+      setLoading(false);
+      return;
+    }
+    getCurrentUser()
+      .then(async (user) => {
+        if (!active || !user) return;
+        setOwnerId(user.profile.id);
+        const { data } = await supabase
+          .from('pets')
+          .select('*')
+          .eq('owner_id', user.profile.id)
+          .order('created_at', { ascending: false });
+        if (active) setPets((data as Pet[] | null) ?? []);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
     };
-    setPets((prev) => [pet, ...prev]);
-    return pet;
   }, []);
 
-  const value = useMemo<PetsContextValue>(() => ({ pets, addPet }), [pets, addPet]);
+  const addPet = useCallback(
+    async (values: PetFormValues): Promise<Pet | null> => {
+      if (ownerId) {
+        const { data, error } = await supabase
+          .from('pets')
+          .insert({
+            owner_id: ownerId,
+            name: values.name,
+            species: values.species,
+            breed: values.breed || null,
+            sex: values.sex,
+            birth_date: values.birth_date || null,
+            sterilized: values.sterilized,
+            vaccinated: values.vaccinated,
+            notes: values.notes || null,
+          })
+          .select()
+          .single();
+        if (error || !data) return null;
+        setPets((prev) => [data as Pet, ...prev]);
+        return data as Pet;
+      }
+
+      // Sin sesión de propietario real: queda solo en memoria, como demo.
+      const now = new Date().toISOString();
+      const pet: Pet = {
+        id: `local-${Date.now()}`,
+        owner_id: DEMO_OWNER_ID,
+        name: values.name,
+        species: values.species,
+        breed: values.breed ? values.breed : null,
+        sex: values.sex,
+        birth_date: values.birth_date ? values.birth_date : null,
+        sterilized: values.sterilized,
+        vaccinated: values.vaccinated,
+        photo_url: null,
+        notes: values.notes ? values.notes : null,
+        created_at: now,
+        updated_at: now,
+      };
+      setPets((prev) => [pet, ...prev]);
+      return pet;
+    },
+    [ownerId]
+  );
+
+  const deletePet = useCallback(
+    async (id: string): Promise<boolean> => {
+      if (ownerId) {
+        const { error } = await supabase.from('pets').delete().eq('id', id).eq('owner_id', ownerId);
+        if (error) return false;
+      }
+      setPets((prev) => prev.filter((pet) => pet.id !== id));
+      return true;
+    },
+    [ownerId]
+  );
+
+  const value = useMemo<PetsContextValue>(
+    () => ({ pets, loading, isDemo: !ownerId, addPet, deletePet }),
+    [pets, loading, ownerId, addPet, deletePet]
+  );
 
   return <PetsContext.Provider value={value}>{children}</PetsContext.Provider>;
 }

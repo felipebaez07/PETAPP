@@ -2,7 +2,7 @@
 // local (`isDemoMode`) mientras el proyecto Supabase real no está conectado,
 // para poder construir y probar la UI de ambas apps desde ya. Reemplazar por
 // datos reales apenas se provisione el backend (ver docs/NEXT_STEPS.md).
-import type { EstablishmentWithDetails, AdoptionPostWithPhotos, EstablishmentHours } from './types';
+import type { EstablishmentWithDetails, AdoptionPostWithPhotos, EstablishmentHours, Product, ForumPost } from './types';
 
 function fullWeekHours(establishmentId: string, is24h: boolean, sundayClosed = true): EstablishmentHours[] {
   return Array.from({ length: 7 }, (_, day_of_week) => ({
@@ -14,6 +14,70 @@ function fullWeekHours(establishmentId: string, is24h: boolean, sundayClosed = t
     closed: !is24h && sundayClosed && day_of_week === 0,
   }));
 }
+
+export const DEMO_PRODUCTS: Product[] = [
+  {
+    id: 'p1',
+    establishment_id: '00000000-0000-4000-a000-000000000004',
+    name: 'Concentrado premium para perro adulto x 15kg',
+    description: 'Fórmula balanceada, mantiene el pelaje sano.',
+    category: 'alimento',
+    price_reference: 'desde $145.000',
+    image_url: null,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'p2',
+    establishment_id: '00000000-0000-4000-a000-000000000004',
+    name: 'Arenero para gato con pala',
+    description: null,
+    category: 'accesorios',
+    price_reference: 'desde $38.000',
+    image_url: null,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'p3',
+    establishment_id: '00000000-0000-4000-a000-000000000006',
+    name: 'Shampoo hipoalergénico para piel sensible',
+    description: 'El mismo que usan en el spa.',
+    category: 'higiene',
+    price_reference: 'desde $28.000',
+    image_url: null,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+
+export const DEMO_FORUM_POSTS: ForumPost[] = [
+  {
+    id: 'f1',
+    establishment_id: '00000000-0000-4000-a000-000000000004',
+    category: 'promocion',
+    title: '20% de descuento en concentrado esta semana',
+    body: 'Por el aniversario de la tienda, todos los concentrados premium tienen 20% de descuento hasta el domingo.',
+    image_url: null,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'f2',
+    establishment_id: '00000000-0000-4000-a000-000000000006',
+    category: 'anuncio',
+    title: 'Nuevo horario de fin de semana',
+    body: 'A partir de este mes también atendemos los domingos de 9am a 1pm para baño y peluquería.',
+    image_url: null,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
 
 export const DEMO_ESTABLISHMENTS: EstablishmentWithDetails[] = [
   {
@@ -46,6 +110,7 @@ export const DEMO_ESTABLISHMENTS: EstablishmentWithDetails[] = [
       { id: 's1', establishment_id: '1', name: 'Consulta general', description: 'Valoración clínica completa', price_reference: 'desde $50.000', duration_minutes: null, is_active: true, created_at: new Date().toISOString() },
       { id: 's2', establishment_id: '1', name: 'Vacunación', description: 'Esquema completo perros y gatos', price_reference: 'desde $35.000', duration_minutes: null, is_active: true, created_at: new Date().toISOString() },
     ],
+    products: [],
   },
   {
     id: '00000000-0000-4000-a000-000000000002',
@@ -76,6 +141,7 @@ export const DEMO_ESTABLISHMENTS: EstablishmentWithDetails[] = [
     services: [
       { id: 's3', establishment_id: '2', name: 'Cirugía menor', description: 'Esterilización y procedimientos ambulatorios', price_reference: 'desde $180.000', duration_minutes: null, is_active: true, created_at: new Date().toISOString() },
     ],
+    products: [],
   },
   {
     id: '00000000-0000-4000-a000-000000000003',
@@ -106,6 +172,7 @@ export const DEMO_ESTABLISHMENTS: EstablishmentWithDetails[] = [
     services: [
       { id: 's4', establishment_id: '3', name: 'Urgencia 24H', description: 'Atención inmediata cualquier hora del día', price_reference: 'desde $80.000', duration_minutes: null, is_active: true, created_at: new Date().toISOString() },
     ],
+    products: [],
   },
   {
     id: '00000000-0000-4000-a000-000000000004',
@@ -136,6 +203,7 @@ export const DEMO_ESTABLISHMENTS: EstablishmentWithDetails[] = [
     services: [
       { id: 's5', establishment_id: '4', name: 'Venta de alimento concentrado', description: 'Marcas premium y económicas', price_reference: null, duration_minutes: null, is_active: true, created_at: new Date().toISOString() },
     ],
+    products: DEMO_PRODUCTS.filter((p) => p.establishment_id === '00000000-0000-4000-a000-000000000004'),
   },
   {
     id: '00000000-0000-4000-a000-000000000006',
@@ -166,6 +234,7 @@ export const DEMO_ESTABLISHMENTS: EstablishmentWithDetails[] = [
     services: [
       { id: 's6', establishment_id: '6', name: 'Baño y corte', description: 'Spa completo con productos hipoalergénicos', price_reference: 'desde $40.000', duration_minutes: null, is_active: true, created_at: new Date().toISOString() },
     ],
+    products: DEMO_PRODUCTS.filter((p) => p.establishment_id === '00000000-0000-4000-a000-000000000006'),
   },
   {
     id: '00000000-0000-4000-a000-000000000007',
@@ -196,6 +265,7 @@ export const DEMO_ESTABLISHMENTS: EstablishmentWithDetails[] = [
     services: [
       { id: 's7', establishment_id: '7', name: 'Consulta a domicilio', description: 'Visita veterinaria en tu hogar', price_reference: 'desde $70.000', duration_minutes: null, is_active: true, created_at: new Date().toISOString() },
     ],
+    products: [],
   },
   {
     id: '00000000-0000-4000-a000-000000000008',
@@ -226,6 +296,7 @@ export const DEMO_ESTABLISHMENTS: EstablishmentWithDetails[] = [
     services: [
       { id: 's8', establishment_id: '8', name: 'Guardería diurna', description: 'Cuidado y socialización por día', price_reference: 'desde $30.000', duration_minutes: null, is_active: true, created_at: new Date().toISOString() },
     ],
+    products: [],
   },
   {
     id: '00000000-0000-4000-a000-000000000009',
@@ -254,6 +325,7 @@ export const DEMO_ESTABLISHMENTS: EstablishmentWithDetails[] = [
     updated_at: new Date().toISOString(),
     hours: fullWeekHours('9', false),
     services: [],
+    products: [],
   },
   {
     id: '00000000-0000-4000-a000-000000000010',
@@ -282,6 +354,7 @@ export const DEMO_ESTABLISHMENTS: EstablishmentWithDetails[] = [
     updated_at: new Date().toISOString(),
     hours: fullWeekHours('10', false),
     services: [],
+    products: [],
   },
 ];
 

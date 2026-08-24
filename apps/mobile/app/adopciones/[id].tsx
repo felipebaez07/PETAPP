@@ -36,11 +36,17 @@ export default function AdoptionDetailScreen() {
   const [post, setPost] = useState<AdoptionPostWithPhotos | null | undefined>(undefined);
   const [submitted, setSubmitted] = useState<{ full_name: string } | null>(null);
 
+  const [loadError, setLoadError] = useState(false);
+
   useEffect(() => {
     let active = true;
-    fetchAdoptionPostById(id).then((data) => {
-      if (active) setPost(data);
-    });
+    fetchAdoptionPostById(id)
+      .then((data) => {
+        if (active) setPost(data);
+      })
+      .catch(() => {
+        if (active) setLoadError(true);
+      });
     return () => {
       active = false;
     };
@@ -54,6 +60,19 @@ export default function AdoptionDetailScreen() {
     resolver: zodResolver(adoptionInterestSchema),
     defaultValues: { full_name: '', phone: '', email: '', message: '' },
   });
+
+  if (loadError) {
+    return (
+      <>
+        <Stack.Screen options={{ title: 'Error' }} />
+        <EmptyState
+          icon={SearchX}
+          title="No se pudo cargar la publicación"
+          description="Intenta de nuevo en unos segundos."
+        />
+      </>
+    );
+  }
 
   if (post === undefined) {
     return <LoadingState label="Cargando publicación..." />;
@@ -98,7 +117,7 @@ export default function AdoptionDetailScreen() {
       <ScrollView className="flex-1 bg-background" contentContainerStyle={{ padding: 20, gap: 20 }}>
         <View className="items-center gap-3 rounded-md border border-border bg-card p-6">
           <View className="h-24 w-24 items-center justify-center rounded-full bg-backgroundAlt">
-            <SpeciesIcon size={40} color="#0F766E" />
+            <SpeciesIcon size={40} color="#059669" />
           </View>
           <Text className="font-headingBold text-2xl text-foreground">{post.animal_name}</Text>
           <Badge label={ADOPTION_STATUS_LABELS[post.status]} tone={STATUS_TONE[post.status]} />
