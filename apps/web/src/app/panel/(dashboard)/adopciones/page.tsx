@@ -102,9 +102,9 @@ export default async function AdopcionesPanelPage() {
           {!posts || posts.length === 0 ? (
             <p className="text-sm text-muted-foreground">Aún no has publicado animales en adopción.</p>
           ) : (
-            <ul className="space-y-3">
+            <ul className="divide-y divide-border">
               {(posts as AdoptionPost[]).map((post) => (
-                <li key={post.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3 last:border-0">
+                <li key={post.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                   <div>
                     <p className="font-medium text-foreground">{post.animal_name}</p>
                     <p className="text-sm text-muted-foreground">{SPECIES_LABELS[post.species]}</p>

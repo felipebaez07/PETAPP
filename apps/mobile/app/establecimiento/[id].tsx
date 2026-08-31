@@ -1,10 +1,12 @@
 import {
   buildWhatsAppLink,
   buildGoogleMapsLink,
+  buildProductInquiryWhatsAppLink,
   CATEGORY_LABELS,
   DAY_LABELS,
   formatPhoneForDisplay,
   isOpenNow,
+  PRODUCT_CATEGORY_LABELS,
   type EstablishmentWithDetails,
 } from '@petapp/shared';
 import { Stack, useLocalSearchParams } from 'expo-router';
@@ -165,14 +167,14 @@ export default function EstablishmentDetailScreen() {
         <View className="gap-3">
           <Text className="font-heading text-lg text-foreground">Horario</Text>
           {establishment.is_24_7 ? (
-            <View className="flex-row items-center gap-2 rounded-md border border-border bg-card p-3">
+            <View className="flex-row items-center gap-2 rounded-xl bg-card p-3 shadow-xs">
               <Info size={16} color="#059669" />
               <Text className="font-bodyMedium text-sm text-foreground">
                 Abierto las 24 horas, todos los días.
               </Text>
             </View>
           ) : (
-            <View className="overflow-hidden rounded-md border border-border bg-card">
+            <View className="overflow-hidden rounded-xl bg-card shadow-sm">
               {DAY_LABELS.map((label, dayIndex) => {
                 const day = hoursByDay.get(dayIndex);
                 const isToday = dayIndex === today;
@@ -205,7 +207,7 @@ export default function EstablishmentDetailScreen() {
         <View className="gap-3">
           <Text className="font-heading text-lg text-foreground">Servicios</Text>
           {establishment.services.length === 0 ? (
-            <View className="flex-row items-center gap-2 rounded-md border border-border bg-card p-3">
+            <View className="flex-row items-center gap-2 rounded-xl bg-card p-3 shadow-xs">
               <Info size={16} color="#64748B" />
               <Text className="flex-1 font-body text-sm text-mutedForeground">
                 Este establecimiento no tiene servicios con tarifa publicados. Contáctalo por
@@ -213,9 +215,15 @@ export default function EstablishmentDetailScreen() {
               </Text>
             </View>
           ) : (
-            <View className="gap-2">
-              {establishment.services.map((service) => (
-                <View key={service.id} className="rounded-md border border-border bg-card p-3">
+            <View className="overflow-hidden rounded-xl bg-card shadow-sm">
+              {establishment.services.map((service, index) => (
+                <View
+                  key={service.id}
+                  className={[
+                    'px-4 py-3',
+                    index < establishment.services.length - 1 ? 'border-b border-border' : '',
+                  ].join(' ')}
+                >
                   <View className="flex-row items-start justify-between gap-2">
                     <Text className="flex-1 font-bodySemibold text-base text-foreground">
                       {service.name}
@@ -237,6 +245,58 @@ export default function EstablishmentDetailScreen() {
           )}
         </View>
 
+        {establishment.products.length > 0 ? (
+          <View className="gap-3">
+            <Text className="font-heading text-lg text-foreground">Productos</Text>
+            <View className="overflow-hidden rounded-xl bg-card shadow-sm">
+              {establishment.products.map((product, index) => {
+                const productWhatsappLink = establishment.whatsapp_number
+                  ? buildProductInquiryWhatsAppLink({
+                      whatsappNumber: establishment.whatsapp_number,
+                      establishmentName: establishment.name,
+                      productName: product.name,
+                    })
+                  : null;
+                return (
+                  <View
+                    key={product.id}
+                    className={[
+                      'gap-2 px-4 py-3',
+                      index < establishment.products.length - 1 ? 'border-b border-border' : '',
+                    ].join(' ')}
+                  >
+                    <Text className="font-bodySemibold text-xs uppercase tracking-wide text-secondary">
+                      {PRODUCT_CATEGORY_LABELS[product.category]}
+                    </Text>
+                    <Text className="font-bodySemibold text-base text-foreground">{product.name}</Text>
+                    {product.description ? (
+                      <Text className="font-body text-sm text-mutedForeground">{product.description}</Text>
+                    ) : null}
+                    {product.price_reference ? (
+                      <Text className="font-bodySemibold text-sm text-foreground">
+                        {product.price_reference}
+                      </Text>
+                    ) : null}
+                    {productWhatsappLink ? (
+                      <Button
+                        label="Preguntar por WhatsApp"
+                        variant="secondary"
+                        icon={MessageCircle}
+                        onPress={() =>
+                          openExternalUrl(
+                            productWhatsappLink,
+                            'No se pudo abrir WhatsApp. Verifica que esté instalado.'
+                          )
+                        }
+                      />
+                    ) : null}
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        ) : null}
+
         <View className="gap-3">
           <Text className="font-heading text-lg text-foreground">Ubicación</Text>
           {establishment.address ? (
@@ -256,7 +316,7 @@ export default function EstablishmentDetailScreen() {
         </View>
 
         {viewer?.profile.role === 'propietario' ? (
-          <View className="gap-3 rounded-md border border-border bg-card p-4">
+          <View className="gap-3 rounded-xl bg-card p-4 shadow-sm">
             <Text className="font-heading text-lg text-foreground">Solicitar reserva</Text>
             {reservationSent ? (
               <Text className="font-body text-sm text-success">
@@ -341,7 +401,7 @@ export default function EstablishmentDetailScreen() {
             />
           ) : null}
           {!establishment.whatsapp_number && !establishment.phone ? (
-            <View className="flex-row items-center gap-2 rounded-md border border-border bg-card p-3">
+            <View className="flex-row items-center gap-2 rounded-xl bg-card p-3 shadow-xs">
               <Info size={16} color="#64748B" />
               <Text className="flex-1 font-body text-sm text-mutedForeground">
                 Este establecimiento aún no tiene datos de contacto disponibles.

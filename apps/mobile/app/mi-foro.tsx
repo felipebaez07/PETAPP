@@ -175,7 +175,7 @@ export default function MiForoScreen() {
         ) : (
           posts.map((post) =>
             editingId === post.id ? (
-              <View key={post.id} className="rounded-md border border-border bg-card p-4">
+              <View key={post.id} className="rounded-xl bg-card p-4 shadow-sm">
                 <ForumPostFormFields
                   defaultValues={{
                     title: post.title,
@@ -191,7 +191,7 @@ export default function MiForoScreen() {
             ) : (
               <View
                 key={post.id}
-                className="flex-row items-start justify-between gap-3 rounded-md border border-border bg-card p-4"
+                className="flex-row items-start justify-between gap-3 rounded-xl bg-card p-4 shadow-sm"
               >
                 <View className="flex-1 gap-1">
                   <Text className="font-bodySemibold text-xs uppercase tracking-wide text-secondary">

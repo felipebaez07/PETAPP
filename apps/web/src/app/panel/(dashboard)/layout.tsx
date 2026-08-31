@@ -44,12 +44,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className="mx-auto flex max-w-6xl gap-8 px-4 py-8 sm:px-6">
       <aside className="hidden w-56 shrink-0 sm:block">
         <p className="mb-4 px-2 text-sm font-medium text-muted-foreground">Hola, {user.profile.full_name.split(' ')[0]}</p>
-        <nav className="space-y-1">
+        <nav className="divide-y divide-border overflow-hidden rounded-xl bg-card shadow-sm">
           {visibleItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="flex items-center gap-2.5 rounded-sm px-3 py-2 text-sm font-medium text-muted-foreground transition-colors duration-200 hover:bg-muted hover:text-foreground"
+              className="flex items-center gap-2.5 px-3 py-3 text-sm font-medium text-muted-foreground transition-colors duration-200 hover:bg-muted hover:text-foreground"
             >
               <item.icon className="size-4" />
               {item.label}

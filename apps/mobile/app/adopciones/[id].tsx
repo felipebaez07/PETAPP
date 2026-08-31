@@ -11,7 +11,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Cat, CheckCircle2, Dog, MapPin, MessageCircle, PawPrint, SearchX, XCircle } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { Badge, type BadgeTone } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -20,6 +20,7 @@ import { FormTextField } from '@/components/ui/FormTextField';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { fetchAdoptionPostById } from '@/lib/data';
 import { openExternalUrl } from '@/lib/linking';
+import { supabase } from '@/lib/supabase';
 
 const SPECIES_ICON = { perro: Dog, gato: Cat, otro: PawPrint } as const;
 
@@ -94,10 +95,18 @@ export default function AdoptionDetailScreen() {
   const SpeciesIcon = SPECIES_ICON[post.species];
   const establishment = post.establishment;
 
-  const onSubmit = handleSubmit((values) => {
-    // Fase 1: no hay backend conectado todavía. En producción esto debe
-    // crear un registro en la tabla `adoption_interests`
-    // (ver supabase/migrations/0001_init.sql) en vez de solo estado local.
+  const onSubmit = handleSubmit(async (values) => {
+    const { error } = await supabase.from('adoption_interests').insert({
+      adoption_post_id: id,
+      full_name: values.full_name,
+      phone: values.phone,
+      email: values.email || null,
+      message: values.message || null,
+    });
+    if (error) {
+      Alert.alert('No se pudo enviar tu interés', error.message);
+      return;
+    }
     setSubmitted({ full_name: values.full_name });
   });
 
@@ -115,7 +124,7 @@ export default function AdoptionDetailScreen() {
     <>
       <Stack.Screen options={{ title: post.animal_name }} />
       <ScrollView className="flex-1 bg-background" contentContainerStyle={{ padding: 20, gap: 20 }}>
-        <View className="items-center gap-3 rounded-md border border-border bg-card p-6">
+        <View className="items-center gap-3 rounded-xl bg-card p-6 shadow-sm">
           <View className="h-24 w-24 items-center justify-center rounded-full bg-backgroundAlt">
             <SpeciesIcon size={40} color="#059669" />
           </View>
@@ -164,14 +173,14 @@ export default function AdoptionDetailScreen() {
         {establishment ? (
           <Pressable
             onPress={() => router.push(`/establecimiento/${establishment.id}`)}
-            className="rounded-md border border-border bg-card p-3"
+            className="rounded-xl bg-card p-3 shadow-xs"
           >
             <Text className="font-body text-sm text-mutedForeground">Publicado por</Text>
             <Text className="font-bodySemibold text-base text-secondary">{establishment.name}</Text>
           </Pressable>
         ) : null}
 
-        <View className="gap-3 rounded-md border border-border bg-card p-4">
+        <View className="gap-3 rounded-xl bg-card p-4 shadow-sm">
           {submitted ? (
             <View className="items-center gap-3 py-2">
               <CheckCircle2 size={40} color="#059669" />

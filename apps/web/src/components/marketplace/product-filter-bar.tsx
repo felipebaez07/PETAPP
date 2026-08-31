@@ -43,7 +43,7 @@ export function ProductFilterBar() {
   );
 
   return (
-    <div className="flex flex-col gap-4 rounded-md border border-border bg-card p-4 sm:p-5">
+    <div className="flex flex-col gap-4 rounded-xl bg-card p-4 shadow-sm sm:p-5">
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
         <Input

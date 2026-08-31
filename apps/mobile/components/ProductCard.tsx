@@ -15,7 +15,7 @@ export function ProductCard({ product }: { product: ProductWithEstablishment }) 
     : null;
 
   return (
-    <View className="mb-3 gap-2 rounded-md border border-border bg-card p-4">
+    <View className="mb-3 gap-2 rounded-xl bg-card p-4 shadow-sm">
       <Text className="font-bodySemibold text-xs uppercase tracking-wide text-secondary">
         {PRODUCT_CATEGORY_LABELS[product.category]}
       </Text>

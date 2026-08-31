@@ -195,7 +195,7 @@ export default function MiTiendaScreen() {
         ) : (
           products.map((product) =>
             editingId === product.id ? (
-              <View key={product.id} className="rounded-md border border-border bg-card p-4">
+              <View key={product.id} className="rounded-xl bg-card p-4 shadow-sm">
                 <ProductFormFields
                   defaultValues={{
                     name: product.name,
@@ -212,7 +212,7 @@ export default function MiTiendaScreen() {
             ) : (
               <View
                 key={product.id}
-                className="flex-row items-start justify-between gap-3 rounded-md border border-border bg-card p-4"
+                className="flex-row items-start justify-between gap-3 rounded-xl bg-card p-4 shadow-sm"
               >
                 <View className="flex-1 gap-1">
                   <Text className="font-bodySemibold text-xs uppercase tracking-wide text-secondary">

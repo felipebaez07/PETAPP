@@ -94,9 +94,9 @@ export default async function EstablishmentDetailPage({ params }: { params: Prom
             {establishment.services.length === 0 ? (
               <p className="text-sm text-muted-foreground">Este aliado aún no ha publicado servicios.</p>
             ) : (
-              <ul className="space-y-3">
+              <ul className="divide-y divide-border">
                 {establishment.services.map((service) => (
-                  <li key={service.id} className="flex items-start justify-between gap-3 text-sm">
+                  <li key={service.id} className="flex items-start justify-between gap-3 py-3 text-sm">
                     <div>
                       <p className="font-medium text-foreground">{service.name}</p>
                       {service.description && <p className="text-muted-foreground">{service.description}</p>}
@@ -139,7 +139,7 @@ export default async function EstablishmentDetailPage({ params }: { params: Prom
                     })
                   : null;
                 return (
-                  <li key={product.id} className="rounded-md border border-border p-3">
+                  <li key={product.id} className="rounded-xl bg-card p-3 shadow-sm">
                     <Badge variant="secondary" className="mb-1.5">
                       {PRODUCT_CATEGORY_LABELS[product.category]}
                     </Badge>

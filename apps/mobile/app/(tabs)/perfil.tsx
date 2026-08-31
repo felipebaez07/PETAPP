@@ -1,6 +1,21 @@
-import { AlertCircle, CheckCircle2, LogOut, Lock, Mail, Megaphone, Store, UserRound } from 'lucide-react-native';
+import {
+  AlertCircle,
+  Building2,
+  CalendarCheck,
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  ListChecks,
+  LogOut,
+  Lock,
+  Mail,
+  Megaphone,
+  PawPrint,
+  Store,
+  UserRound,
+} from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { Button } from '@/components/ui/Button';
@@ -121,7 +136,7 @@ export default function ProfileScreen() {
       <View className="flex-1 bg-background">
         <ScreenHeader title="Perfil" subtitle="Tu cuenta en PetApp" />
         <View className="gap-4 p-5">
-          <View className="flex-row items-center gap-3 rounded-md border border-border bg-card p-4">
+          <View className="flex-row items-center gap-3 rounded-xl bg-card p-4 shadow-sm">
             <View className="h-12 w-12 items-center justify-center rounded-full bg-backgroundAlt">
               <UserRound size={24} color="#0369A1" />
             </View>
@@ -134,10 +149,34 @@ export default function ProfileScreen() {
           </View>
 
           {user.profile.role === 'establecimiento' ? (
-            <>
-              <Button label="Mi tienda" icon={Store} onPress={() => router.push('/mi-tienda')} />
-              <Button label="Mi foro" variant="secondary" icon={Megaphone} onPress={() => router.push('/mi-foro')} />
-            </>
+            <View className="gap-3">
+              <Text className="font-heading text-lg text-foreground">Gestionar mi negocio</Text>
+              <View className="overflow-hidden rounded-xl bg-card shadow-sm">
+                {[
+                  { label: 'Perfil del negocio', icon: Building2, href: '/negocio-perfil' as const },
+                  { label: 'Horarios', icon: Clock, href: '/negocio-horarios' as const },
+                  { label: 'Servicios', icon: ListChecks, href: '/negocio-servicios' as const },
+                  { label: 'Reservas', icon: CalendarCheck, href: '/negocio-reservas' as const },
+                  { label: 'Publicaciones de adopción', icon: PawPrint, href: '/negocio-adopciones' as const },
+                  { label: 'Mi tienda', icon: Store, href: '/mi-tienda' as const },
+                  { label: 'Mi foro', icon: Megaphone, href: '/mi-foro' as const },
+                ].map((item, index, arr) => (
+                  <Pressable
+                    key={item.href}
+                    onPress={() => router.push(item.href)}
+                    accessibilityRole="button"
+                    className={[
+                      'min-h-11 flex-row items-center gap-3 px-4 py-3',
+                      index < arr.length - 1 ? 'border-b border-border' : '',
+                    ].join(' ')}
+                  >
+                    <item.icon size={20} color="#0369A1" />
+                    <Text className="flex-1 font-bodyMedium text-base text-foreground">{item.label}</Text>
+                    <ChevronRight size={18} color="#64748B" />
+                  </Pressable>
+                ))}
+              </View>
+            </View>
           ) : null}
 
           <Button label="Cerrar sesión" variant="outline" icon={LogOut} onPress={handleSignOut} />
@@ -151,7 +190,7 @@ export default function ProfileScreen() {
       <ScreenHeader title="Perfil" subtitle="Tu cuenta en PetApp" />
 
       <View className="gap-6 p-5">
-        <View className="flex-row items-center gap-3 rounded-md border border-border bg-card p-4">
+        <View className="flex-row items-center gap-3 rounded-xl bg-card p-4 shadow-sm">
           <View className="h-12 w-12 items-center justify-center rounded-full bg-backgroundAlt">
             <UserRound size={24} color="#0369A1" />
           </View>
@@ -234,14 +273,14 @@ export default function ProfileScreen() {
           </View>
 
           {error ? (
-            <View className="flex-row items-start gap-2 rounded-md border border-border bg-card p-3">
+            <View className="flex-row items-start gap-2 rounded-xl bg-card p-3 shadow-xs">
               <AlertCircle size={16} color="#DC2626" />
               <Text className="flex-1 font-body text-sm text-destructive">{error}</Text>
             </View>
           ) : null}
 
           {success ? (
-            <View className="flex-row items-start gap-2 rounded-md border border-border bg-card p-3">
+            <View className="flex-row items-start gap-2 rounded-xl bg-card p-3 shadow-xs">
               <CheckCircle2 size={16} color="#059669" />
               <Text className="flex-1 font-body text-sm text-success">{success}</Text>
             </View>

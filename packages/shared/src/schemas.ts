@@ -66,6 +66,23 @@ export const productSchema = z.object({
 });
 export type ProductFormValues = z.infer<typeof productSchema>;
 
+export const establishmentProfileSchema = z.object({
+  name: z.string().min(1, 'El nombre es obligatorio').max(120),
+  description: z.string().max(500).optional().or(z.literal('')),
+  address: z.string().max(200).optional().or(z.literal('')),
+  phone: z.string().max(20).optional().or(z.literal('')),
+  whatsapp_number: z.string().max(20).optional().or(z.literal('')),
+  is_24_7: z.boolean().default(false),
+});
+export type EstablishmentProfileFormValues = z.infer<typeof establishmentProfileSchema>;
+
+export const serviceSchema = z.object({
+  name: z.string().min(1, 'El nombre es obligatorio').max(100),
+  description: z.string().max(300).optional().or(z.literal('')),
+  price_reference: z.string().max(60).optional().or(z.literal('')),
+});
+export type ServiceFormValues = z.infer<typeof serviceSchema>;
+
 export const forumPostSchema = z.object({
   title: z.string().min(1, 'El título es obligatorio').max(120),
   body: z.string().min(1, 'Escribe el contenido de la publicación').max(1000),

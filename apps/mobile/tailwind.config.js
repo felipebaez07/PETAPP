@@ -43,6 +43,23 @@ module.exports = {
         sm: '8px',
         md: '12px',
         lg: '16px',
+        xl: '20px',
+      },
+      // Sombras suaves reales (tinte navy, no negro puro) — mismo tinte que
+      // design-system/petapp/MASTER.md. NativeWind traduce `shadow-*` a
+      // shadowColor/shadowOffset/shadowRadius (iOS); `elevation` (abajo) cubre Android
+      // usando la misma clave de escala.
+      boxShadow: {
+        xs: '0 1px 2px rgba(12, 34, 51, 0.06)',
+        sm: '0 1px 3px rgba(12, 34, 51, 0.08)',
+        md: '0 4px 10px rgba(12, 34, 51, 0.12)',
+        lg: '0 10px 20px rgba(12, 34, 51, 0.16)',
+      },
+      elevation: {
+        xs: 1,
+        sm: 2,
+        md: 4,
+        lg: 8,
       },
     },
   },

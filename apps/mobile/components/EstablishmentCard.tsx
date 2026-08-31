@@ -14,7 +14,8 @@ export function EstablishmentCard({ establishment }: { establishment: Establishm
     <Pressable
       onPress={() => router.push(`/establecimiento/${establishment.id}`)}
       accessibilityRole="button"
-      className="mb-3 rounded-md border border-border bg-card p-4"
+      className="mb-3 rounded-xl bg-card p-4 shadow-sm"
+      style={({ pressed }) => (pressed ? { transform: [{ scale: 0.98 }] } : undefined)}
     >
       <View className="flex-row items-start gap-3">
         <View className="flex-1 gap-1.5">

@@ -79,7 +79,9 @@ export function Button({
       accessibilityRole="button"
       accessibilityState={{ disabled: isDisabled }}
       style={({ pressed }) =>
-        pressed && !isDisabled ? { backgroundColor: styles.pressedBackgroundColor } : undefined
+        pressed && !isDisabled
+          ? { backgroundColor: styles.pressedBackgroundColor, transform: [{ scale: 0.98 }] }
+          : undefined
       }
       className={[
         'min-h-11 flex-row items-center justify-center gap-2 rounded-md',

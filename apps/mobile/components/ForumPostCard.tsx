@@ -9,7 +9,7 @@ export function ForumPostCard({ post }: { post: ForumPostWithEstablishment }) {
   });
 
   return (
-    <View className="mb-3 gap-2 rounded-md border border-border bg-card p-4">
+    <View className="mb-3 gap-2 rounded-xl bg-card p-4 shadow-sm">
       <View className="flex-row items-center justify-between">
         <Text className="font-bodySemibold text-xs uppercase tracking-wide text-secondary">
           {FORUM_CATEGORY_LABELS[post.category]}

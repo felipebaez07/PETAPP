@@ -50,3 +50,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# claude code local runtime state (session locks, skill symlinks —
+# regenerated locally by `npx skills add`; the portable source of truth is
+# skills-lock.json + .agents/skills/, which ARE committed)
+.claude/

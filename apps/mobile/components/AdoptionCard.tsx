@@ -22,7 +22,8 @@ export function AdoptionCard({ post }: { post: AdoptionPostWithPhotos }) {
     <Pressable
       onPress={() => router.push(`/adopciones/${post.id}`)}
       accessibilityRole="button"
-      className="mb-3 flex-row gap-3 rounded-md border border-border bg-card p-4"
+      className="mb-3 flex-row gap-3 rounded-xl bg-card p-4 shadow-sm"
+      style={({ pressed }) => (pressed ? { transform: [{ scale: 0.98 }] } : undefined)}
     >
       <View className="h-16 w-16 items-center justify-center rounded-md bg-backgroundAlt">
         <SpeciesIcon size={28} color="#059669" />

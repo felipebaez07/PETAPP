@@ -70,6 +70,11 @@ export default function RootLayout() {
           <Stack.Screen name="adopciones/[id]" options={{ title: 'Adopción' }} />
           <Stack.Screen name="mi-tienda" options={{ title: 'Mi tienda' }} />
           <Stack.Screen name="mi-foro" options={{ title: 'Mi foro' }} />
+          <Stack.Screen name="negocio-perfil" options={{ title: 'Perfil del negocio' }} />
+          <Stack.Screen name="negocio-horarios" options={{ title: 'Horarios' }} />
+          <Stack.Screen name="negocio-servicios" options={{ title: 'Servicios' }} />
+          <Stack.Screen name="negocio-reservas" options={{ title: 'Reservas' }} />
+          <Stack.Screen name="negocio-adopciones" options={{ title: 'Publicaciones de adopción' }} />
           <Stack.Screen name="+not-found" options={{ title: 'No encontrado' }} />
         </Stack>
       </PetsProvider>
