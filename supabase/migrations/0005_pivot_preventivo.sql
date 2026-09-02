@@ -29,11 +29,23 @@ alter table if exists public.adoption_posts rename to zz_deprecated_adoption_pos
 -- comercio/fundacion en vez de borrarlas: son datos reales investigados (seed de Ibagué)
 -- y la decisión de producto puede revisarse; is_active=false ya está soportado por el
 -- RLS existente (establishments_public_read_active).
+--
+-- El trigger `establishments_prevent_self_verification` (0001_init.sql) bloquea CUALQUIER
+-- cambio a is_active salvo que quien ejecuta la sentencia sea admin autenticado (is_admin()
+-- lee auth.uid()). El SQL Editor de Supabase no corre con una sesión de usuario — auth.uid()
+-- es NULL ahí — así que este UPDATE dispara la excepción aunque lo corras como dueño del
+-- proyecto. Se desactiva el trigger puntualmente solo para este UPDATE y se reactiva de
+-- inmediato: es una corrección de datos legítima hecha por quien administra la base, no un
+-- bypass permanente ni algo alcanzable desde la app (RLS/trigger siguen intactos después).
 -- ============================================================================
+
+alter table public.establishments disable trigger establishments_prevent_self_verification;
 
 update public.establishments
 set is_active = false
 where category in ('comercio', 'fundacion') and is_active = true;
+
+alter table public.establishments enable trigger establishments_prevent_self_verification;
 
 -- ============================================================================
 -- 3. RENOMBRAR RESERVATIONS -> SERVICE_REQUESTS
@@ -41,14 +53,21 @@ where category in ('comercio', 'fundacion') and is_active = true;
 -- de updated_at siguen apuntando a la misma tabla (Postgres no las rompe al renombrar),
 -- solo quedan con nombres heredados de "reservations" — se documenta aquí para quien
 -- lea pg_policies y se pregunte por qué no coinciden con el nombre de la tabla.
+-- Envuelto en un chequeo de to_regclass para que sea seguro volver a correr este archivo
+-- completo si una ejecución anterior falló a mitad de camino (como pasó con la sección 2).
 -- ============================================================================
 
-alter table public.reservations rename to service_requests;
-alter index reservations_pkey rename to service_requests_pkey;
-alter index reservations_pet_owner_id_idx rename to service_requests_pet_owner_id_idx;
-alter index reservations_establishment_id_idx rename to service_requests_establishment_id_idx;
-alter index reservations_status_idx rename to service_requests_status_idx;
-alter trigger reservations_set_updated_at on public.service_requests rename to service_requests_set_updated_at;
+do $$
+begin
+  if to_regclass('public.reservations') is not null then
+    alter table public.reservations rename to service_requests;
+    alter index reservations_pkey rename to service_requests_pkey;
+    alter index reservations_pet_owner_id_idx rename to service_requests_pet_owner_id_idx;
+    alter index reservations_establishment_id_idx rename to service_requests_establishment_id_idx;
+    alter index reservations_status_idx rename to service_requests_status_idx;
+    alter trigger reservations_set_updated_at on public.service_requests rename to service_requests_set_updated_at;
+  end if;
+end $$;
 
 -- ============================================================================
 -- 4. CALENDARIO PREVENTIVO
