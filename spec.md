@@ -415,6 +415,19 @@ Se corrió la skill `code-review` (nivel alto) sobre todo el diff del pivot (`83
 
 (Agregar aquí cualquier tarea nueva que salga en el camino, con fecha.)
 
+- [x] (2026-09-02) **Bug crítico en producción**: `/cuidador/mascotas` y `/cuidador/mascotas/[id]`
+  devolvían 500 en Vercel ("Functions cannot be passed directly to Client Components") desde el
+  commit `4e5c1c7`. Causa: `pet-card.tsx` y `mascotas/[id]/page.tsx` (Server Components) le pasaban
+  `icon={PawPrint}` — la referencia al componente de `lucide-react` — a `RemoteImage` (`'use client'`).
+  Una referencia a componente no es serializable a través del límite servidor/cliente de RSC; un
+  elemento JSX ya renderizado sí. **`tsc --noEmit` no detecta este error** — es una regla de runtime
+  de React Server Components, no de tipos — por eso pasó el typecheck sin problema el día anterior y
+  solo se vio al desplegar de verdad. Lección: para páginas que cruzan el límite Server/Client
+  Component, correr `npm run build` (Next build real) antes de dar por bueno un cambio, no solo
+  `tsc --noEmit`. Corregido: `RemoteImage.icon` pasó de tipo `LucideIcon` a `ReactNode` (hecho:
+  2026-09-02, commit `4b4a6b6`, encontrado con logs reales de Vercel que el usuario copió del
+  dashboard).
+
 - [ ] (2026-09-01) Migración nueva para exponer "próximos vencimientos" al prestador en su resumen del
   panel: una policy de RLS en `preventive_events` que dé `select` a un `establecimiento` únicamente para
   mascotas con al menos una `service_request` en estado `confirmada`/`completada` con ese establecimiento.
