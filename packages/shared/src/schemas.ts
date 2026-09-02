@@ -12,30 +12,20 @@ export const petSchema = z.object({
 });
 export type PetFormValues = z.infer<typeof petSchema>;
 
-export const adoptionInterestSchema = z.object({
-  full_name: z.string().min(2, 'Ingresa tu nombre completo').max(100),
-  phone: z
-    .string()
-    .min(7, 'Ingresa un número de contacto válido')
-    .max(20),
-  email: z.string().email('Correo inválido').optional().or(z.literal('')),
-  message: z.string().max(500).optional().or(z.literal('')),
-});
-export type AdoptionInterestFormValues = z.infer<typeof adoptionInterestSchema>;
-
-export const reservationRequestSchema = z.object({
+/** Solicitud de cita del cuidador a un prestador (ex `reservationRequestSchema`). */
+export const serviceRequestSchema = z.object({
   establishment_id: z.string().uuid(),
   service_id: z.string().uuid().optional(),
   pet_id: z.string().uuid().optional(),
   preferred_datetime: z.string().optional(),
   notes: z.string().max(500).optional().or(z.literal('')),
 });
-export type ReservationRequestValues = z.infer<typeof reservationRequestSchema>;
+export type ServiceRequestValues = z.infer<typeof serviceRequestSchema>;
 
-// Formulario público "Únete al piloto" (solicitud de alianza, sección 6.1/12 del PDD)
+// Formulario público "¿Eres un prestador veterinario? Únete al piloto"
 export const partnerApplicationSchema = z.object({
   business_name: z.string().min(2).max(120),
-  category: z.enum(['veterinaria', 'comercio', 'profesional', 'fundacion']),
+  category: z.enum(['veterinaria', 'profesional']),
   contact_name: z.string().min(2).max(100),
   phone: z.string().min(7).max(20),
   email: z.string().email().optional().or(z.literal('')),
@@ -43,28 +33,6 @@ export const partnerApplicationSchema = z.object({
   message: z.string().max(500).optional().or(z.literal('')),
 });
 export type PartnerApplicationValues = z.infer<typeof partnerApplicationSchema>;
-
-export const adoptionPostSchema = z.object({
-  animal_name: z.string().min(1).max(60),
-  species: z.enum(['perro', 'gato', 'otro']),
-  estimated_age: z.string().max(60).optional().or(z.literal('')),
-  sex: z.enum(['macho', 'hembra', 'desconocido']),
-  sterilized: z.boolean().default(false),
-  vaccinated: z.boolean().default(false),
-  health_notes: z.string().max(500).optional().or(z.literal('')),
-  personality_notes: z.string().max(500).optional().or(z.literal('')),
-  location_text: z.string().max(120).optional().or(z.literal('')),
-});
-export type AdoptionPostFormValues = z.infer<typeof adoptionPostSchema>;
-
-export const productSchema = z.object({
-  name: z.string().min(1, 'El nombre es obligatorio').max(100),
-  description: z.string().max(500).optional().or(z.literal('')),
-  category: z.enum(['alimento', 'accesorios', 'higiene', 'salud', 'otro']),
-  price_reference: z.string().max(60).optional().or(z.literal('')),
-  image_url: z.string().url('URL de imagen inválida').optional().or(z.literal('')),
-});
-export type ProductFormValues = z.infer<typeof productSchema>;
 
 export const establishmentProfileSchema = z.object({
   name: z.string().min(1, 'El nombre es obligatorio').max(120),
@@ -83,10 +51,31 @@ export const serviceSchema = z.object({
 });
 export type ServiceFormValues = z.infer<typeof serviceSchema>;
 
-export const forumPostSchema = z.object({
-  title: z.string().min(1, 'El título es obligatorio').max(120),
-  body: z.string().min(1, 'Escribe el contenido de la publicación').max(1000),
-  category: z.enum(['promocion', 'anuncio', 'noticia', 'lugar']),
-  image_url: z.string().url('URL de imagen inválida').optional().or(z.literal('')),
+export const preventiveEventSchema = z.object({
+  pet_id: z.string().uuid(),
+  type: z.enum(['vacuna', 'control', 'desparasitacion', 'otro']),
+  title: z.string().min(1, 'Ponle un título a este recordatorio').max(120),
+  due_date: z.string().min(1, 'La fecha es obligatoria'),
+  notes: z.string().max(500).optional().or(z.literal('')),
 });
-export type ForumPostFormValues = z.infer<typeof forumPostSchema>;
+export type PreventiveEventFormValues = z.infer<typeof preventiveEventSchema>;
+
+export const petDocumentSchema = z.object({
+  pet_id: z.string().uuid(),
+  title: z.string().min(1, 'Ponle un nombre a este documento').max(120),
+  // Se restringe a http(s) explícitamente: la web renderiza esto en un <a href> directo
+  // (components/cuidador/document-row.tsx), y `z.string().url()` por sí solo acepta
+  // esquemas como `javascript:`, que ejecutarían al hacer clic.
+  document_url: z
+    .string()
+    .url('Debe ser una URL válida')
+    .refine((url) => /^https?:\/\//i.test(url), 'El enlace debe empezar con http:// o https://'),
+  document_type: z.enum(['carnet_vacunacion', 'historia_clinica', 'otro']),
+});
+export type PetDocumentFormValues = z.infer<typeof petDocumentSchema>;
+
+export const providerPlanSchema = z.object({
+  plan_code: z.enum(['basico', 'pro']),
+  notes: z.string().max(500).optional().or(z.literal('')),
+});
+export type ProviderPlanFormValues = z.infer<typeof providerPlanSchema>;

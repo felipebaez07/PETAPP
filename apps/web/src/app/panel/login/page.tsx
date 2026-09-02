@@ -13,7 +13,7 @@ export default async function LoginPage({
       <Card>
         <CardHeader>
           <CardTitle>Ingresar</CardTitle>
-          <CardDescription>Panel para establecimientos aliados y propietarios.</CardDescription>
+          <CardDescription>Panel para prestadores aliados y cuidadores.</CardDescription>
         </CardHeader>
         <CardContent>
           {error === 'oauth' && (

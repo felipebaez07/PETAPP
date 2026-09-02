@@ -1,5 +1,7 @@
 import Link from 'next/link';
+import { CalendarClock } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { VerifiedBadge } from '@/components/directorio/verified-badge';
@@ -30,10 +32,13 @@ export default async function DashboardHomePage() {
     return (
       <div>
         <h1 className="font-heading text-2xl font-bold text-foreground">Tu cuenta</h1>
-        <p className="mt-2 text-muted-foreground">
-          La gestión de mascotas, reservas y adopciones está disponible en la app móvil de PetApp. Este panel web es
-          para establecimientos aliados.
+        <p className="mt-2 max-w-md text-muted-foreground">
+          Este panel web es para prestadores aliados. Gestiona el perfil de tus mascotas, su calendario preventivo y
+          sus documentos desde tu espacio de cuidador.
         </p>
+        <Button asChild className="mt-4">
+          <Link href="/cuidador/mascotas">Ir a mis mascotas</Link>
+        </Button>
       </div>
     );
   }
@@ -52,6 +57,13 @@ export default async function DashboardHomePage() {
       </div>
     );
   }
+
+  const supabase = await createSupabaseServerClient();
+  const { count: pendingCount } = await supabase
+    .from('service_requests')
+    .select('id', { count: 'exact', head: true })
+    .eq('establishment_id', user.establishment.id)
+    .eq('status', 'pendiente');
 
   return (
     <div>
@@ -74,7 +86,35 @@ export default async function DashboardHomePage() {
         </Card>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Solicitudes de cita pendientes</CardTitle>
+            <CardDescription>Cuidadores esperando tu respuesta.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between">
+            <p className="font-heading text-3xl font-bold text-foreground">{pendingCount ?? 0}</p>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/panel/solicitudes">Ver solicitudes</Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex-row items-start gap-2 space-y-0">
+            <CalendarClock className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+            <div>
+              <CardTitle className="text-base">Próximos vencimientos de tus pacientes</CardTitle>
+              <CardDescription>
+                Todavía no disponible: el calendario preventivo es privado del cuidador. Está en el backlog una
+                vista compartida cuando exista una cita confirmada contigo (ver spec.md sección 9).
+              </CardDescription>
+            </div>
+          </CardHeader>
+        </Card>
+      </div>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle>Perfil del negocio</CardTitle>
@@ -99,12 +139,12 @@ export default async function DashboardHomePage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Reservas</CardTitle>
-            <CardDescription>Solicitudes recibidas por WhatsApp.</CardDescription>
+            <CardTitle>Tu plan</CardTitle>
+            <CardDescription>Básico o Pro, estado de la suscripción.</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild variant="outline" size="sm">
-              <Link href="/panel/reservas">Ver reservas</Link>
+              <Link href="/panel/plan">Ver plan</Link>
             </Button>
           </CardContent>
         </Card>

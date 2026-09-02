@@ -8,7 +8,7 @@ import { CATEGORY_LABELS, type EstablishmentWithDetails } from '@petapp/shared';
 
 export function EstablishmentCard({ establishment }: { establishment: EstablishmentWithDetails }) {
   return (
-    <Link href={`/establecimientos/${establishment.slug}`} className="block group">
+    <Link href={`/directorio/${establishment.slug}`} className="block group">
       <Card className="h-full group-hover:shadow-md group-hover:-translate-y-0.5">
         <CardContent className="p-5 flex flex-col gap-3">
           <div className="flex items-start justify-between gap-2">

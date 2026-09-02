@@ -8,7 +8,7 @@ export default function RegistroPage() {
       <Card>
         <CardHeader>
           <CardTitle>Crear cuenta</CardTitle>
-          <CardDescription>Únete como establecimiento aliado o como propietario de mascota.</CardDescription>
+          <CardDescription>Únete como cuidador/a de mascota o como prestador veterinario aliado.</CardDescription>
         </CardHeader>
         <CardContent>
           <AuthForm mode="registro" />

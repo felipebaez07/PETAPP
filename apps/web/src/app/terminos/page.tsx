@@ -20,10 +20,10 @@ export default function TermsPage() {
         <section>
           <h2 className="font-heading text-lg font-semibold text-foreground">1. Qué es {APP_NAME}</h2>
           <p className="mt-2">
-            {APP_NAME} (nombre provisional) es un piloto local en {PILOT_CITY} que conecta a propietarios de
-            mascotas con veterinarias, comercios, profesionales y fundaciones aliadas mediante un
-            directorio verificado, perfiles de mascotas, solicitudes de reserva y publicaciones de
-            adopción.
+            {APP_NAME} es un piloto local en {PILOT_CITY} enfocado en seguimiento preventivo veterinario: perfil
+            de mascota, calendario de vacunas y controles, documentos básicos, y un directorio de veterinarias
+            y profesionales verificados con solicitud de cita directa. Es gratis para el cuidador; los
+            prestadores acceden mediante un plan de suscripción (modelo B2B2C).
           </p>
         </section>
 
@@ -31,46 +31,49 @@ export default function TermsPage() {
           <h2 className="font-heading text-lg font-semibold text-foreground">2. Alcance de esta fase</h2>
           <p className="mt-2">Durante el piloto (Fase 1), la plataforma incluye:</p>
           <ul className="mt-2 list-disc space-y-1 pl-5">
-            <li>Directorio verificado con filtros de horario, distancia, servicio y atención 24/7.</li>
-            <li>Perfiles de mascotas del usuario propietario.</li>
-            <li>Solicitudes de reserva, coordinadas manualmente por WhatsApp con cada aliado.</li>
-            <li>Publicaciones de adopción y formulario de interesado/a.</li>
+            <li>Perfil de mascota y calendario preventivo (vacunas, controles, desparasitación) con recordatorios.</li>
+            <li>Documentos básicos de la mascota (carné de vacunación, historia clínica) guardados como enlace.</li>
+            <li>Directorio verificado de veterinarias y profesionales, con filtros de horario, servicio y atención 24/7.</li>
+            <li>Solicitudes de cita, coordinadas manualmente por WhatsApp con cada prestador.</li>
+            <li>Plan de suscripción del prestador (básico/pro), con activación manual por el equipo del piloto.</li>
           </ul>
           <p className="mt-3">Explícitamente <strong>no</strong> incluye en esta fase:</p>
           <ul className="mt-2 list-disc space-y-1 pl-5">
-            <li>Marketplace de productos ni venta de medicamentos.</li>
+            <li>Marketplace de productos, venta de medicamentos, foro o publicaciones de adopción.</li>
             <li>Consultas u orientación con inteligencia artificial.</li>
-            <li>Pagos en línea, comisiones automatizadas o domicilios.</li>
-            <li>Compraventa de animales — solo adopción responsable.</li>
+            <li>Pagos en línea ni cobro automatizado del plan del prestador.</li>
+            <li>Subida real de archivos para documentos — por ahora se guardan como enlaces.</li>
           </ul>
         </section>
 
         <section>
           <h2 className="font-heading text-lg font-semibold text-foreground">3. Rol de {APP_NAME}</h2>
           <p className="mt-2">
-            {APP_NAME} actúa como intermediario tecnológico entre usuarios y aliados. No presta directamente
-            servicios veterinarios, no vende productos y no participa en la coordinación final de citas o
-            adopciones, la cual ocurre entre el usuario y el aliado por fuera de la plataforma (WhatsApp u
-            otro canal directo). La verificación de un aliado indica que su información y existencia fueron
+            {APP_NAME} actúa como intermediario tecnológico entre cuidadores y prestadores. No presta
+            directamente servicios veterinarios y no participa en la coordinación final de la cita, la cual
+            ocurre entre el cuidador y el prestador por fuera de la plataforma (WhatsApp u otro canal
+            directo). La verificación de un prestador indica que su información y existencia fueron
             confirmadas por el equipo del piloto, no una garantía sobre la calidad del servicio prestado.
+            {APP_NAME} tampoco sustituye el criterio profesional de un médico veterinario: el calendario
+            preventivo es una herramienta de recordatorio, no una indicación médica.
           </p>
         </section>
 
         <section>
-          <h2 className="font-heading text-lg font-semibold text-foreground">4. Obligaciones del usuario</h2>
+          <h2 className="font-heading text-lg font-semibold text-foreground">4. Obligaciones del cuidador</h2>
           <ul className="mt-2 list-disc space-y-1 pl-5">
             <li>Proporcionar información veraz en tu perfil, el de tus mascotas y en cualquier formulario.</li>
             <li>Usar la plataforma únicamente para los fines descritos en estos términos.</li>
-            <li>En caso de adopción, actuar de buena fe frente a la fundación o rescatista aliado.</li>
+            <li>Confirmar con el prestador, y no solo con el calendario preventivo, cualquier decisión médica relevante.</li>
           </ul>
         </section>
 
         <section>
-          <h2 className="font-heading text-lg font-semibold text-foreground">5. Obligaciones del aliado</h2>
+          <h2 className="font-heading text-lg font-semibold text-foreground">5. Obligaciones del prestador</h2>
           <ul className="mt-2 list-disc space-y-1 pl-5">
             <li>Mantener actualizada su información pública (horarios, servicios, contacto).</li>
-            <li>Atender con razonable diligencia las solicitudes recibidas a través de la plataforma.</li>
-            <li>En el caso de fundaciones, publicar información veraz sobre el estado de salud y personalidad de los animales en adopción.</li>
+            <li>Atender con razonable diligencia las solicitudes de cita recibidas a través de la plataforma.</li>
+            <li>No solicitar ni intentar acceder a los datos de salud de una mascota fuera de lo que el cuidador comparta directamente al coordinar la cita.</li>
           </ul>
         </section>
 

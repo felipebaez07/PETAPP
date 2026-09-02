@@ -20,7 +20,7 @@ const sourceSans = Source_Sans_3({
 export const metadata: Metadata = {
   title: `${APP_NAME} — ${APP_TAGLINE}`,
   description:
-    'Directorio verificado de veterinarias, comercios y fundaciones en Ibagué. Reservas por WhatsApp, perfiles de mascotas y adopciones responsables.',
+    'Perfil de mascota, calendario preventivo, documentos y directorio de veterinarias y profesionales verificados en Ibagué. Solicita cita directo, sin perder el hilo de las vacunas y controles.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

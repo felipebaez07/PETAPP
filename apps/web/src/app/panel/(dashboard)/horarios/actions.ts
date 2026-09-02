@@ -31,7 +31,7 @@ export async function updateHours(days: DayInput[]): Promise<{ ok: boolean; erro
   if (error) return { ok: false, error: error.message };
 
   revalidatePath('/panel/horarios');
-  revalidatePath('/');
-  revalidatePath(`/establecimientos/${user.establishment.slug}`);
+  revalidatePath('/directorio');
+  revalidatePath(`/directorio/${user.establishment.slug}`);
   return { ok: true };
 }

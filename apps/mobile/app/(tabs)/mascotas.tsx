@@ -2,6 +2,7 @@ import type { Pet } from '@petapp/shared';
 import { useRouter } from 'expo-router';
 import { PawPrint, Plus } from 'lucide-react-native';
 import { Alert, FlatList, Pressable, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { PetCard } from '@/components/PetCard';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -66,7 +67,17 @@ export default function PetsScreen() {
         <FlatList
           data={pets}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <PetCard pet={item} onDelete={confirmDelete} />}
+          renderItem={({ item, index }) => (
+            <Animated.View
+              entering={
+                index < 8
+                  ? FadeInDown.duration(280).delay(index * 40).springify().damping(26).stiffness(220)
+                  : undefined
+              }
+            >
+              <PetCard pet={item} onDelete={confirmDelete} />
+            </Animated.View>
+          )}
           contentContainerStyle={{ padding: 20 }}
         />
       )}

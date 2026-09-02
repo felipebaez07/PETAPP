@@ -1,10 +1,15 @@
-// Tipos que reflejan 1:1 el esquema de supabase/migrations/0001_init.sql.
-// Si el esquema cambia, este archivo debe actualizarse (o regenerarse con
-// `generate_typescript_types` una vez el proyecto Supabase esté provisionado).
+// Tipos que reflejan 1:1 el esquema de supabase/migrations/0001_init.sql +
+// 0005_pivot_preventivo.sql. Si el esquema cambia, este archivo debe actualizarse
+// (o regenerarse con `generate_typescript_types` una vez la migración esté aplicada
+// sobre el proyecto Supabase real).
 
 export type UserRole = 'propietario' | 'establecimiento' | 'admin';
 
+// 'comercio' y 'fundacion' se conservan en el tipo porque filas históricas del seed
+// de Ibagué todavía las usan (ver 0005_pivot_preventivo.sql, quedaron con is_active=false),
+// pero el directorio y los formularios nuevos solo ofrecen 'veterinaria' | 'profesional'.
 export type EstablishmentCategory = 'veterinaria' | 'comercio' | 'profesional' | 'fundacion';
+export type ProviderCategory = Extract<EstablishmentCategory, 'veterinaria' | 'profesional'>;
 
 export type VerificationStatus = 'pendiente' | 'en_revision' | 'verificado' | 'rechazado';
 
@@ -12,19 +17,19 @@ export type PetSpecies = 'perro' | 'gato' | 'otro';
 
 export type PetSex = 'macho' | 'hembra' | 'desconocido';
 
-export type ReservationStatus = 'pendiente' | 'confirmada' | 'cancelada' | 'completada' | 'no_asistio';
+export type ServiceRequestStatus = 'pendiente' | 'confirmada' | 'cancelada' | 'completada' | 'no_asistio';
 
-export type ReservationChannel = 'whatsapp' | 'telefono' | 'presencial' | 'otro';
-
-export type AdoptionStatus = 'disponible' | 'en_proceso' | 'adoptado' | 'retirado';
-
-export type AdoptionInterestStatus = 'nuevo' | 'contactado' | 'descartado' | 'aprobado';
+export type ServiceRequestChannel = 'whatsapp' | 'telefono' | 'presencial' | 'otro';
 
 export type PartnerApplicationStatus = 'nuevo' | 'contactado' | 'descartado' | 'convertido';
 
-export type ProductCategory = 'alimento' | 'accesorios' | 'higiene' | 'salud' | 'otro';
+export type PreventiveEventType = 'vacuna' | 'control' | 'desparasitacion' | 'otro';
 
-export type ForumPostCategory = 'promocion' | 'anuncio' | 'noticia' | 'lugar';
+export type PetDocumentType = 'carnet_vacunacion' | 'historia_clinica' | 'otro';
+
+export type ProviderPlanCode = 'basico' | 'pro';
+
+export type ProviderPlanStatus = 'prueba' | 'activa' | 'pausada' | 'cancelada';
 
 export interface Profile {
   id: string;
@@ -99,32 +104,8 @@ export interface Service {
   created_at: string;
 }
 
-export interface Product {
-  id: string;
-  establishment_id: string;
-  name: string;
-  description: string | null;
-  category: ProductCategory;
-  price_reference: string | null;
-  image_url: string | null;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ForumPost {
-  id: string;
-  establishment_id: string;
-  category: ForumPostCategory;
-  title: string;
-  body: string;
-  image_url: string | null;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Reservation {
+/** Solicitud de cita del cuidador a un prestador (ex `Reservation`, tabla `service_requests`). */
+export interface ServiceRequest {
   id: string;
   pet_owner_id: string;
   establishment_id: string;
@@ -132,49 +113,50 @@ export interface Reservation {
   pet_id: string | null;
   requested_at: string;
   preferred_datetime: string | null;
-  status: ReservationStatus;
-  channel: ReservationChannel;
+  status: ServiceRequestStatus;
+  channel: ServiceRequestChannel;
   notes: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export interface AdoptionPost {
+/** Evento del calendario preventivo de una mascota (vacuna, control, desparasitación). */
+export interface PreventiveEvent {
   id: string;
-  posted_by: string | null;
-  establishment_id: string | null;
-  animal_name: string;
-  species: PetSpecies;
-  estimated_age: string | null;
-  sex: PetSex;
-  sterilized: boolean;
-  vaccinated: boolean;
-  health_notes: string | null;
-  personality_notes: string | null;
-  location_text: string | null;
-  status: AdoptionStatus;
-  cover_photo_url: string | null;
+  pet_id: string;
+  type: PreventiveEventType;
+  title: string;
+  due_date: string;
+  completed_at: string | null;
+  reminder_sent_at: string | null;
+  notes: string | null;
+  created_by: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export interface AdoptionPhoto {
+/** Documento/soporte básico de una mascota (carnet de vacunación, historia clínica, etc.). */
+export interface PetDocument {
   id: string;
-  adoption_post_id: string;
-  photo_url: string;
-  sort_order: number;
+  pet_id: string;
+  title: string;
+  document_url: string;
+  document_type: PetDocumentType;
+  uploaded_by: string | null;
+  created_at: string;
 }
 
-export interface AdoptionInterest {
+/** Plan B2B del prestador (suscripción del piloto — sin pasarela de pago todavía). */
+export interface ProviderPlan {
   id: string;
-  adoption_post_id: string;
-  interested_user_id: string | null;
-  full_name: string;
-  phone: string;
-  email: string | null;
-  message: string | null;
-  status: AdoptionInterestStatus;
+  establishment_id: string;
+  plan_code: ProviderPlanCode;
+  status: ProviderPlanStatus;
+  notes: string | null;
+  activated_by: string | null;
+  activated_at: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface PartnerApplication {
@@ -195,18 +177,9 @@ export interface PartnerApplication {
 export interface EstablishmentWithDetails extends Establishment {
   hours: EstablishmentHours[];
   services: Service[];
-  products: Product[];
 }
 
-export interface AdoptionPostWithPhotos extends AdoptionPost {
-  photos: AdoptionPhoto[];
-  establishment: Pick<Establishment, 'id' | 'name' | 'slug' | 'whatsapp_number'> | null;
-}
-
-export interface ProductWithEstablishment extends Product {
-  establishment: Pick<Establishment, 'id' | 'name' | 'slug' | 'whatsapp_number' | 'category'> | null;
-}
-
-export interface ForumPostWithEstablishment extends ForumPost {
-  establishment: Pick<Establishment, 'id' | 'name' | 'slug' | 'category'> | null;
+export interface PetWithDetails extends Pet {
+  preventive_events: PreventiveEvent[];
+  documents: PetDocument[];
 }

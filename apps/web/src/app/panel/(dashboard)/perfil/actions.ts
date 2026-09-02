@@ -38,7 +38,7 @@ export async function updateEstablishmentProfile(formData: FormData): Promise<Up
   if (error) return { ok: false, error: error.message };
 
   revalidatePath('/panel');
-  revalidatePath('/');
-  revalidatePath(`/establecimientos/${user.establishment.slug}`);
+  revalidatePath('/directorio');
+  revalidatePath(`/directorio/${user.establishment.slug}`);
   return { ok: true };
 }

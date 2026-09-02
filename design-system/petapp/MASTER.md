@@ -147,6 +147,27 @@ Buttons: primary = clinical-blue fill / white text, 8–12px radius, 150–200ms
 
 ---
 
+## Motion & Materials (addendum 2026-09-01 — guía `apple-design`)
+
+Aplica al rediseño del pivot preventivo (web Next.js/Motion y mobile Expo/Reanimated). Objetivo:
+pulido, seguro, cálido — nunca clínico-frío ni juguetón/rebotoso.
+
+**Springs por defecto (no `ease`/`keyframes` fijos en nada que el usuario pueda tocar/arrastrar):**
+
+| Interacción | Damping | Response/duración | Web (Motion) | Mobile (Reanimated) |
+|---|---|---|---|---|
+| Aparecer/mover por defecto (cards, modales, navegación) | Crítico (sin rebote) | 0.3–0.4s | `{ type:'spring', bounce:0, duration:0.35 }` | `withSpring(v,{damping:26,stiffness:220,mass:1})` |
+| Sheet/bottom-sheet/drawer (filtros, "Solicitar cita") | Ligero rebote | 0.3s | `{ type:'spring', bounce:0.15, duration:0.3 }` | `withSpring(v,{damping:18,stiffness:180})` |
+| Gesto con momentum (swipe para completar recordatorio, arrastrar para reordenar) | Rebote leve, solo si hubo velocidad de gesto | 0.3–0.4s | `{ type:'spring', bounce:0.2, duration:0.35 }`, con `velocity` del gesto | `withSpring(v,{damping:14,stiffness:160})` tomando `event.velocityY/X` |
+
+- **Feedback en el press, no en el release**: `active:` / `Pressable onPressIn` escala a `0.97` en ≤100ms — nunca esperar al `onPress`.
+- **Nunca animar algo arrastrable con `transition` CSS o `Animated.timing`** — deben poder soltarse e invertirse a mitad de gesto (interruptibilidad).
+- **Listas que aparecen** (calendario preventivo, directorio, mascotas): fade + `translateY` de 8–12px, 200–300ms, stagger de 30–50ms por fila, tope de las primeras 8 filas (después sin stagger, para no sentirse lento).
+- **Transiciones de pantalla**: entrar y salir por el mismo eje (push/pop simétrico); un sheet que sube se cierra bajando por el mismo camino, nunca por otro lado.
+- **Materiales translúcidos**: solo en chrome flotante con contenido debajo (tab bar mobile, header sticky web) — `backdrop-filter: blur(20px) saturate(180%)` sobre `rgba(255,255,255,0.7)` en light / `rgba(10,21,32,0.75)` en dark. Nunca apilar dos superficies translúcidas. El texto sobre un fondo translúcido va en `--color-foreground` sólido, nunca gris apagado.
+- **`prefers-reduced-motion`**: reemplazar todo spring/slide por cross-fade de opacidad, 150–200ms, sin overshoot. En mobile, leer `AccessibilityInfo.isReduceMotionEnabled()` y aplicar el mismo criterio.
+- **Micro-delight con propósito, no decorativo**: una vacuna marcada como completada dispara un check con spring de rebote leve (sensación de logro/alivio, coherente con el "espacio seguro" del producto) — no confeti ni sonidos, solo motion + color `--color-success`.
+
 ## Pre-Delivery Checklist
 
 - [ ] No emojis used as icons (Lucide only)

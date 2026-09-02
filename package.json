@@ -12,7 +12,9 @@
     "build:web": "npm run build --workspace=apps/web",
     "dev:mobile": "npm run start --workspace=apps/mobile",
     "typecheck": "npm run typecheck --workspace=apps/web && npm run typecheck --workspace=apps/mobile && npm run typecheck --workspace=packages/shared",
-    "lint": "npm run lint --workspace=apps/web"
+    "lint": "npm run lint --workspace=apps/web",
+    "graph:update": "uv tool run --from graphifyy graphify update . && uv tool run --from graphifyy graphify export html",
+    "graph:obsidian": "uv tool run --from graphifyy graphify update . && uv tool run --from graphifyy graphify export obsidian --dir \"C:/Users/felip/Documents/boveda-obsidian/Proyectos/Grafos/petapp\""
   },
   "engines": {
     "node": ">=20"

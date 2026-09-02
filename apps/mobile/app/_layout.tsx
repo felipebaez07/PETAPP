@@ -67,14 +67,12 @@ export default function RootLayout() {
             name="mascotas/nueva"
             options={{ title: 'Agregar mascota', presentation: 'modal' }}
           />
-          <Stack.Screen name="adopciones/[id]" options={{ title: 'Adopción' }} />
-          <Stack.Screen name="mi-tienda" options={{ title: 'Mi tienda' }} />
-          <Stack.Screen name="mi-foro" options={{ title: 'Mi foro' }} />
+          <Stack.Screen name="mascotas/[id]" options={{ title: 'Mascota' }} />
           <Stack.Screen name="negocio-perfil" options={{ title: 'Perfil del negocio' }} />
           <Stack.Screen name="negocio-horarios" options={{ title: 'Horarios' }} />
           <Stack.Screen name="negocio-servicios" options={{ title: 'Servicios' }} />
-          <Stack.Screen name="negocio-reservas" options={{ title: 'Reservas' }} />
-          <Stack.Screen name="negocio-adopciones" options={{ title: 'Publicaciones de adopción' }} />
+          <Stack.Screen name="negocio-solicitudes" options={{ title: 'Solicitudes de cita' }} />
+          <Stack.Screen name="negocio-plan" options={{ title: 'Mi plan' }} />
           <Stack.Screen name="+not-found" options={{ title: 'No encontrado' }} />
         </Stack>
       </PetsProvider>

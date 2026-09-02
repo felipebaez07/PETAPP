@@ -5,13 +5,11 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock,
+  CreditCard,
   ListChecks,
   LogOut,
   Lock,
   Mail,
-  Megaphone,
-  PawPrint,
-  Store,
   UserRound,
 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
@@ -24,7 +22,7 @@ import { LoadingState } from '@/components/ui/LoadingState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { getCurrentUser, type CurrentUser } from '@/lib/auth';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
-import type { UserRole } from '@petapp/shared';
+import { APP_NAME, type UserRole } from '@petapp/shared';
 
 type AuthMode = 'login' | 'signup';
 
@@ -134,7 +132,7 @@ export default function ProfileScreen() {
   if (user) {
     return (
       <View className="flex-1 bg-background">
-        <ScreenHeader title="Perfil" subtitle="Tu cuenta en PetApp" />
+        <ScreenHeader title="Perfil" subtitle={`Tu cuenta en ${APP_NAME}`} />
         <View className="gap-4 p-5">
           <View className="flex-row items-center gap-3 rounded-xl bg-card p-4 shadow-sm">
             <View className="h-12 w-12 items-center justify-center rounded-full bg-backgroundAlt">
@@ -156,10 +154,8 @@ export default function ProfileScreen() {
                   { label: 'Perfil del negocio', icon: Building2, href: '/negocio-perfil' as const },
                   { label: 'Horarios', icon: Clock, href: '/negocio-horarios' as const },
                   { label: 'Servicios', icon: ListChecks, href: '/negocio-servicios' as const },
-                  { label: 'Reservas', icon: CalendarCheck, href: '/negocio-reservas' as const },
-                  { label: 'Publicaciones de adopción', icon: PawPrint, href: '/negocio-adopciones' as const },
-                  { label: 'Mi tienda', icon: Store, href: '/mi-tienda' as const },
-                  { label: 'Mi foro', icon: Megaphone, href: '/mi-foro' as const },
+                  { label: 'Solicitudes de cita', icon: CalendarCheck, href: '/negocio-solicitudes' as const },
+                  { label: 'Mi plan', icon: CreditCard, href: '/negocio-plan' as const },
                 ].map((item, index, arr) => (
                   <Pressable
                     key={item.href}
@@ -187,7 +183,7 @@ export default function ProfileScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ScreenHeader title="Perfil" subtitle="Tu cuenta en PetApp" />
+      <ScreenHeader title="Perfil" subtitle={`Tu cuenta en ${APP_NAME}`} />
 
       <View className="gap-6 p-5">
         <View className="flex-row items-center gap-3 rounded-xl bg-card p-4 shadow-sm">
@@ -197,7 +193,7 @@ export default function ProfileScreen() {
           <View className="flex-1">
             <Text className="font-heading text-base text-foreground">Propietario</Text>
             <Text className="font-body text-sm text-mutedForeground">
-              Puedes gestionar tus mascotas y reservar citas con establecimientos verificados.
+              Lleva el calendario preventivo de tus mascotas y solicita citas con prestadores verificados.
             </Text>
           </View>
         </View>
@@ -226,7 +222,7 @@ export default function ProfileScreen() {
               </View>
 
               <View className="gap-1.5">
-                <Text className="font-bodySemibold text-sm text-foreground">¿Cómo usarás PetApp?</Text>
+                <Text className="font-bodySemibold text-sm text-foreground">¿Cómo usarás {APP_NAME}?</Text>
                 <View className="gap-2">
                   {SIGNUP_ROLE_OPTIONS.map((option) => (
                     <Chip

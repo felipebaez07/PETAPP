@@ -32,30 +32,43 @@ export default function PrivacyPolicyPage() {
           <h2 className="font-heading text-lg font-semibold text-foreground">2. Datos que recolectamos</h2>
           <ul className="mt-2 list-disc space-y-1 pl-5">
             <li>Datos de contacto: nombre completo, teléfono, correo electrónico.</li>
-            <li>Datos de establecimientos aliados: nombre del negocio, dirección, horarios, servicios, WhatsApp.</li>
-            <li>Datos de mascotas: nombre, especie, raza, sexo, fecha de nacimiento, estado de esterilización/vacunación.</li>
+            <li>Datos de prestadores aliados: nombre del negocio, dirección, horarios, servicios, WhatsApp.</li>
             <li>
-              Contenido de formularios: solicitudes de reserva, mensajes de interés de adopción y
-              solicitudes de alianza (&quot;Únete al piloto&quot;).
+              Datos de salud de la mascota: nombre, especie, raza, sexo, fecha de nacimiento, estado de
+              esterilización/vacunación, y su calendario preventivo (vacunas, controles, desparasitación
+              programados y completados).
+            </li>
+            <li>
+              Documentos y soportes que el cuidador decida guardar sobre su mascota: enlaces a carné de
+              vacunación, historia clínica u otros registros médicos.
+            </li>
+            <li>
+              Contenido de formularios: solicitudes de cita, notas de intención de pago del plan de un
+              prestador, y solicitudes de alianza (&quot;Únete al piloto&quot;).
             </li>
             <li>Datos de autenticación (correo y contraseña cifrada) para quienes crean una cuenta.</li>
           </ul>
+          <p className="mt-2">
+            Los datos de salud de la mascota y sus documentos son visibles únicamente para el cuidador
+            propietario (o un administrador del piloto para soporte) — ningún prestador puede consultarlos
+            salvo lo que el propio cuidador comparta directamente al coordinar una cita.
+          </p>
         </section>
 
         <section>
           <h2 className="font-heading text-lg font-semibold text-foreground">3. Finalidad del tratamiento</h2>
           <ul className="mt-2 list-disc space-y-1 pl-5">
-            <li>Operar el directorio verificado y facilitar el contacto entre usuarios y establecimientos.</li>
-            <li>Verificar la identidad y legitimidad de los establecimientos aliados.</li>
-            <li>Gestionar perfiles de mascotas y publicaciones de adopción.</li>
-            <li>Registrar solicitudes de reserva para medir volumen y calidad del servicio (Fase 1: la coordinación real ocurre por WhatsApp, no dentro de la plataforma).</li>
-            <li>Contactar a quienes solicitan vincularse como aliados o adoptar un animal.</li>
+            <li>Operar el directorio verificado y facilitar el contacto entre cuidadores y prestadores.</li>
+            <li>Verificar la identidad y legitimidad de los prestadores aliados.</li>
+            <li>Mantener el perfil de mascota, su calendario preventivo y sus documentos básicos.</li>
+            <li>Registrar solicitudes de cita para medir volumen y calidad del servicio (Fase 1: la coordinación real ocurre por WhatsApp, no dentro de la plataforma).</li>
+            <li>Contactar a quienes solicitan vincularse como prestadores aliados.</li>
             <li>Medir indicadores del piloto (sección 9 del Plan de Desarrollo del Proyecto) de forma agregada.</li>
           </ul>
           <p className="mt-2">
-            En esta fase <strong>no</strong> se realizan pagos en línea ni se comparten datos con
-            marketplaces de terceros — esas funciones están fuera de alcance del piloto (ver Términos de
-            uso).
+            En esta fase <strong>no</strong> se realizan pagos en línea, no hay marketplace de productos ni se
+            comparten datos con terceros comerciales — esas funciones están fuera de alcance del piloto (ver
+            Términos de uso).
           </p>
         </section>
 
@@ -85,7 +98,10 @@ export default function PrivacyPolicyPage() {
           <p className="mt-2">
             Los datos se almacenan en infraestructura de base de datos con controles de acceso por rol y
             cifrado en tránsito. Se conservan durante la vigencia del piloto y el tiempo adicional que
-            exija la ley o que sea razonable para fines de soporte y auditoría.
+            exija la ley o que sea razonable para fines de soporte y auditoría. Los datos de salud de la
+            mascota reciben el mismo nivel de aislamiento por dueño que el resto de la información sensible:
+            el acceso está restringido a nivel de base de datos (no solo de interfaz), de forma que ni
+            prestadores ni otros cuidadores pueden leerlos.
           </p>
         </section>
 

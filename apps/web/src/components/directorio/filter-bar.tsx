@@ -7,9 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { CATEGORY_LABELS, type EstablishmentCategory } from '@petapp/shared';
+import { CATEGORY_LABELS, type ProviderCategory } from '@petapp/shared';
 
-const CATEGORIES = Object.keys(CATEGORY_LABELS) as EstablishmentCategory[];
+// El directorio público solo ofrece las categorías del alcance nuevo (spec.md sección 5):
+// veterinaria y profesional independiente. Comercio/fundación quedaron fuera del piloto.
+const CATEGORIES: ProviderCategory[] = ['veterinaria', 'profesional'];
 
 export function FilterBar() {
   const router = useRouter();

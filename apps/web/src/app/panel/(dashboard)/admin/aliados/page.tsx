@@ -13,7 +13,13 @@ export default async function AdminAliadosPage() {
   if (!user || user.profile.role !== 'admin') redirect('/panel');
 
   const supabase = await createSupabaseServerClient();
-  const { data: establishments } = await supabase.from('establishments').select('*').order('created_at', { ascending: false });
+  // Solo prestadores veterinaria/profesional — comercio/fundación quedaron fuera del
+  // alcance del piloto (spec.md sección 5) y ya están ocultos con is_active=false.
+  const { data: establishments } = await supabase
+    .from('establishments')
+    .select('*')
+    .in('category', ['veterinaria', 'profesional'])
+    .order('created_at', { ascending: false });
 
   const rows = (establishments ?? []) as Establishment[];
   const pendingCount = rows.filter((e) => e.verification_status !== 'verificado').length;

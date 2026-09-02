@@ -1,12 +1,10 @@
 import {
   buildWhatsAppLink,
   buildGoogleMapsLink,
-  buildProductInquiryWhatsAppLink,
   CATEGORY_LABELS,
   DAY_LABELS,
   formatPhoneForDisplay,
   isOpenNow,
-  PRODUCT_CATEGORY_LABELS,
   type EstablishmentWithDetails,
 } from '@petapp/shared';
 import { Stack, useLocalSearchParams } from 'expo-router';
@@ -36,9 +34,9 @@ export default function EstablishmentDetailScreen() {
   const { pets } = usePets();
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [selectedPetId, setSelectedPetId] = useState<string | null>(null);
-  const [reservationNotes, setReservationNotes] = useState('');
-  const [reservationSubmitting, setReservationSubmitting] = useState(false);
-  const [reservationSent, setReservationSent] = useState(false);
+  const [requestNotes, setRequestNotes] = useState('');
+  const [requestSubmitting, setRequestSubmitting] = useState(false);
+  const [requestSent, setRequestSent] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -122,22 +120,22 @@ export default function EstablishmentDetailScreen() {
     openExternalUrl(buildGoogleMapsLink(establishment), 'No se pudo abrir Google Maps.');
   }
 
-  async function handleCreateReservation() {
+  async function handleCreateServiceRequest() {
     if (!establishment || !viewer) return;
-    setReservationSubmitting(true);
-    const { error } = await supabase.from('reservations').insert({
+    setRequestSubmitting(true);
+    const { error } = await supabase.from('service_requests').insert({
       pet_owner_id: viewer.profile.id,
       establishment_id: establishment.id,
       service_id: selectedServiceId || null,
       pet_id: selectedPetId || null,
-      notes: reservationNotes.trim() || null,
+      notes: requestNotes.trim() || null,
     });
-    setReservationSubmitting(false);
+    setRequestSubmitting(false);
     if (error) {
       Alert.alert('No se pudo enviar la solicitud', error.message);
       return;
     }
-    setReservationSent(true);
+    setRequestSent(true);
   }
 
   return (
@@ -245,58 +243,6 @@ export default function EstablishmentDetailScreen() {
           )}
         </View>
 
-        {establishment.products.length > 0 ? (
-          <View className="gap-3">
-            <Text className="font-heading text-lg text-foreground">Productos</Text>
-            <View className="overflow-hidden rounded-xl bg-card shadow-sm">
-              {establishment.products.map((product, index) => {
-                const productWhatsappLink = establishment.whatsapp_number
-                  ? buildProductInquiryWhatsAppLink({
-                      whatsappNumber: establishment.whatsapp_number,
-                      establishmentName: establishment.name,
-                      productName: product.name,
-                    })
-                  : null;
-                return (
-                  <View
-                    key={product.id}
-                    className={[
-                      'gap-2 px-4 py-3',
-                      index < establishment.products.length - 1 ? 'border-b border-border' : '',
-                    ].join(' ')}
-                  >
-                    <Text className="font-bodySemibold text-xs uppercase tracking-wide text-secondary">
-                      {PRODUCT_CATEGORY_LABELS[product.category]}
-                    </Text>
-                    <Text className="font-bodySemibold text-base text-foreground">{product.name}</Text>
-                    {product.description ? (
-                      <Text className="font-body text-sm text-mutedForeground">{product.description}</Text>
-                    ) : null}
-                    {product.price_reference ? (
-                      <Text className="font-bodySemibold text-sm text-foreground">
-                        {product.price_reference}
-                      </Text>
-                    ) : null}
-                    {productWhatsappLink ? (
-                      <Button
-                        label="Preguntar por WhatsApp"
-                        variant="secondary"
-                        icon={MessageCircle}
-                        onPress={() =>
-                          openExternalUrl(
-                            productWhatsappLink,
-                            'No se pudo abrir WhatsApp. Verifica que esté instalado.'
-                          )
-                        }
-                      />
-                    ) : null}
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-        ) : null}
-
         <View className="gap-3">
           <Text className="font-heading text-lg text-foreground">Ubicación</Text>
           {establishment.address ? (
@@ -317,10 +263,10 @@ export default function EstablishmentDetailScreen() {
 
         {viewer?.profile.role === 'propietario' ? (
           <View className="gap-3 rounded-xl bg-card p-4 shadow-sm">
-            <Text className="font-heading text-lg text-foreground">Solicitar reserva</Text>
-            {reservationSent ? (
+            <Text className="font-heading text-lg text-foreground">Solicitar cita</Text>
+            {requestSent ? (
               <Text className="font-body text-sm text-success">
-                Solicitud enviada. El aliado la verá en su panel de reservas.
+                Solicitud enviada. El prestador la verá en su panel de solicitudes.
               </Text>
             ) : (
               <>
@@ -360,8 +306,8 @@ export default function EstablishmentDetailScreen() {
                   <Text className="font-bodySemibold text-sm text-foreground">Notas (opcional)</Text>
                   <View className="min-h-11 rounded-sm border border-border bg-card px-3 py-2">
                     <TextInput
-                      value={reservationNotes}
-                      onChangeText={setReservationNotes}
+                      value={requestNotes}
+                      onChangeText={setRequestNotes}
                       placeholder="Ej. horario preferido, motivo de la visita"
                       placeholderTextColor="#64748B"
                       multiline
@@ -370,11 +316,11 @@ export default function EstablishmentDetailScreen() {
                   </View>
                 </View>
                 <Button
-                  label="Solicitar reserva"
+                  label="Solicitar cita"
                   variant="outline"
                   icon={CalendarPlus}
-                  onPress={handleCreateReservation}
-                  loading={reservationSubmitting}
+                  onPress={handleCreateServiceRequest}
+                  loading={requestSubmitting}
                 />
               </>
             )}
@@ -384,7 +330,7 @@ export default function EstablishmentDetailScreen() {
         <View className="gap-3">
           {establishment.whatsapp_number ? (
             <Button
-              label="Reservar por WhatsApp"
+              label="Contactar por WhatsApp"
               variant="secondary"
               size="lg"
               icon={MessageCircle}

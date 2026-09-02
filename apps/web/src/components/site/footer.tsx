@@ -8,15 +8,15 @@ export function Footer() {
         <div>
           <p className="font-heading font-semibold text-foreground">{APP_NAME}</p>
           <p className="text-sm text-muted-foreground">
-            Piloto local en {PILOT_CITY} · Fase 1. Directorio verificado, reservas y adopciones.
+            Piloto local en {PILOT_CITY} · Fase 1. Seguimiento preventivo y directorio veterinario verificado.
           </p>
         </div>
         <div className="flex flex-wrap gap-6 text-sm text-muted-foreground">
-          <Link href="/unete" className="hover:text-foreground">
-            Vincular mi negocio
+          <Link href="/directorio" className="hover:text-foreground">
+            Directorio
           </Link>
-          <Link href="/adopciones" className="hover:text-foreground">
-            Adopciones
+          <Link href="/unete" className="hover:text-foreground">
+            Soy prestador, únete al piloto
           </Link>
           <Link href="/politica-privacidad" className="hover:text-foreground">
             Política de datos

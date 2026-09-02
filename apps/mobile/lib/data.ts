@@ -1,12 +1,10 @@
 import {
-  DEMO_ADOPTION_POSTS,
   DEMO_ESTABLISHMENTS,
-  DEMO_PRODUCTS,
-  DEMO_FORUM_POSTS,
-  type AdoptionPostWithPhotos,
+  DEMO_PET_DOCUMENTS,
+  DEMO_PREVENTIVE_EVENTS,
   type EstablishmentWithDetails,
-  type ProductWithEstablishment,
-  type ForumPostWithEstablishment,
+  type PetDocument,
+  type PreventiveEvent,
 } from '@petapp/shared';
 import { isSupabaseConfigured, supabase } from './supabase';
 
@@ -22,8 +20,9 @@ export async function fetchEstablishments(): Promise<EstablishmentWithDetails[]>
 
   const { data, error } = await supabase
     .from('establishments')
-    .select('*, hours:establishment_hours(*), services(*), products(*)')
+    .select('*, hours:establishment_hours(*), services(*)')
     .eq('is_active', true)
+    .in('category', ['veterinaria', 'profesional'])
     .order('name');
   if (error) throw error;
   return (data ?? []) as unknown as EstablishmentWithDetails[];
@@ -38,84 +37,60 @@ export async function fetchEstablishmentById(
 
   const { data, error } = await supabase
     .from('establishments')
-    .select('*, hours:establishment_hours(*), services(*), products(*)')
+    .select('*, hours:establishment_hours(*), services(*)')
     .eq('id', id)
     .maybeSingle();
   if (error) throw error;
   return (data as unknown as EstablishmentWithDetails) ?? null;
 }
 
-export async function fetchAdoptionPosts(): Promise<AdoptionPostWithPhotos[]> {
-  if (!isSupabaseConfigured) return DEMO_ADOPTION_POSTS;
-
-  const { data, error } = await supabase
-    .from('adoption_posts')
-    .select('*, photos:adoption_photos(*), establishment:establishments(id,name,slug,whatsapp_number)')
-    .order('created_at', { ascending: false });
-  if (error) throw error;
-  return (data ?? []) as unknown as AdoptionPostWithPhotos[];
-}
-
-export async function fetchAdoptionPostById(id: string): Promise<AdoptionPostWithPhotos | null> {
+/** Eventos del calendario preventivo de una mascota puntual (ficha de mascota). */
+export async function fetchPreventiveEventsByPet(petId: string): Promise<PreventiveEvent[]> {
   if (!isSupabaseConfigured) {
-    return DEMO_ADOPTION_POSTS.find((post) => post.id === id) ?? null;
+    return DEMO_PREVENTIVE_EVENTS.filter((event) => event.pet_id === petId);
   }
 
   const { data, error } = await supabase
-    .from('adoption_posts')
-    .select('*, photos:adoption_photos(*), establishment:establishments(id,name,slug,whatsapp_number)')
-    .eq('id', id)
-    .maybeSingle();
+    .from('preventive_events')
+    .select('*')
+    .eq('pet_id', petId)
+    .order('due_date', { ascending: true });
   if (error) throw error;
-  return (data as unknown as AdoptionPostWithPhotos) ?? null;
+  return (data ?? []) as PreventiveEvent[];
 }
 
-export async function fetchProducts(): Promise<ProductWithEstablishment[]> {
+/**
+ * Eventos del calendario preventivo de todas las mascotas de un propietario, para el
+ * resumen de "Inicio" (el momento decisivo del customer journey: volver cuando el
+ * recordatorio es pertinente). Recibe los ids de mascota ya cargados por `PetsContext`
+ * en vez de resolverlos aquí, para no duplicar esa consulta.
+ */
+export async function fetchPreventiveEventsForPets(petIds: string[]): Promise<PreventiveEvent[]> {
+  if (petIds.length === 0) return [];
+
   if (!isSupabaseConfigured) {
-    return DEMO_PRODUCTS.map((product) => {
-      const establishment = DEMO_ESTABLISHMENTS.find((e) => e.id === product.establishment_id);
-      return {
-        ...product,
-        establishment: establishment
-          ? {
-              id: establishment.id,
-              name: establishment.name,
-              slug: establishment.slug,
-              whatsapp_number: establishment.whatsapp_number,
-              category: establishment.category,
-            }
-          : null,
-      };
-    });
+    return DEMO_PREVENTIVE_EVENTS.filter((event) => petIds.includes(event.pet_id));
   }
 
   const { data, error } = await supabase
-    .from('products')
-    .select('*, establishment:establishments(id,name,slug,whatsapp_number,category)')
-    .eq('is_active', true)
-    .order('created_at', { ascending: false });
+    .from('preventive_events')
+    .select('*')
+    .in('pet_id', petIds)
+    .order('due_date', { ascending: true });
   if (error) throw error;
-  return (data ?? []) as unknown as ProductWithEstablishment[];
+  return (data ?? []) as PreventiveEvent[];
 }
 
-export async function fetchForumPosts(): Promise<ForumPostWithEstablishment[]> {
+export async function fetchPetDocumentsByPet(petId: string): Promise<PetDocument[]> {
   if (!isSupabaseConfigured) {
-    return DEMO_FORUM_POSTS.map((post) => {
-      const establishment = DEMO_ESTABLISHMENTS.find((e) => e.id === post.establishment_id);
-      return {
-        ...post,
-        establishment: establishment
-          ? { id: establishment.id, name: establishment.name, slug: establishment.slug, category: establishment.category }
-          : null,
-      };
-    });
+    return DEMO_PET_DOCUMENTS.filter((document) => document.pet_id === petId);
   }
 
   const { data, error } = await supabase
-    .from('forum_posts')
-    .select('*, establishment:establishments(id,name,slug,category)')
-    .eq('is_active', true)
+    .from('pet_documents')
+    .select('*')
+    .eq('pet_id', petId)
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return (data ?? []) as unknown as ForumPostWithEstablishment[];
+  return (data ?? []) as PetDocument[];
 }

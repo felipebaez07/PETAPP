@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { LayoutDashboard, Building2, Clock, ListChecks, CalendarCheck, PawPrint, ShieldCheck, Store, Megaphone, Inbox, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Building2, Clock, ListChecks, CalendarCheck, ShieldCheck, Inbox, CreditCard, type LucideIcon } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { isSupabaseConfigured } from '@/lib/supabase/config';
 import type { UserRole } from '@petapp/shared';
@@ -18,10 +18,8 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/panel/perfil', label: 'Perfil del negocio', icon: Building2, roles: ['establecimiento'], requiresEstablishment: true },
   { href: '/panel/horarios', label: 'Horarios', icon: Clock, roles: ['establecimiento'], requiresEstablishment: true },
   { href: '/panel/servicios', label: 'Servicios', icon: ListChecks, roles: ['establecimiento'], requiresEstablishment: true },
-  { href: '/panel/tienda', label: 'Tienda', icon: Store, roles: ['establecimiento'], requiresEstablishment: true },
-  { href: '/panel/foro', label: 'Foro', icon: Megaphone, roles: ['establecimiento'], requiresEstablishment: true },
-  { href: '/panel/reservas', label: 'Reservas', icon: CalendarCheck, roles: ['establecimiento'], requiresEstablishment: true },
-  { href: '/panel/adopciones', label: 'Publicaciones de adopción', icon: PawPrint, roles: ['establecimiento'], requiresEstablishment: true },
+  { href: '/panel/solicitudes', label: 'Solicitudes de cita', icon: CalendarCheck, roles: ['establecimiento'], requiresEstablishment: true },
+  { href: '/panel/plan', label: 'Tu plan', icon: CreditCard, roles: ['establecimiento'], requiresEstablishment: true },
   { href: '/panel/admin/solicitudes', label: 'Solicitudes de alianza', icon: Inbox, roles: ['admin'] },
   { href: '/panel/admin/aliados', label: 'Verificar aliados', icon: ShieldCheck, roles: ['admin'] },
 ];

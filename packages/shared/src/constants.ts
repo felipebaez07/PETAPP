@@ -1,7 +1,16 @@
-import type { EstablishmentCategory, VerificationStatus, ReservationStatus, AdoptionStatus, PetSpecies, ProductCategory, ForumPostCategory } from './types';
+import type {
+  EstablishmentCategory,
+  VerificationStatus,
+  ServiceRequestStatus,
+  PetSpecies,
+  PreventiveEventType,
+  PetDocumentType,
+  ProviderPlanCode,
+  ProviderPlanStatus,
+} from './types';
 
-export const APP_NAME = 'PetApp';
-export const APP_TAGLINE = 'Todo lo que tu mascota necesita, en un solo lugar';
+export const APP_NAME = 'PETAPP';
+export const APP_TAGLINE = 'Seguimiento preventivo, documentos y prestadores verificados en un solo lugar';
 export const PILOT_CITY = 'Ibagué';
 
 export const CATEGORY_LABELS: Record<EstablishmentCategory, string> = {
@@ -18,19 +27,12 @@ export const VERIFICATION_LABELS: Record<VerificationStatus, string> = {
   rechazado: 'Rechazado',
 };
 
-export const RESERVATION_STATUS_LABELS: Record<ReservationStatus, string> = {
+export const SERVICE_REQUEST_STATUS_LABELS: Record<ServiceRequestStatus, string> = {
   pendiente: 'Pendiente',
   confirmada: 'Confirmada',
   cancelada: 'Cancelada',
   completada: 'Completada',
   no_asistio: 'No asistió',
-};
-
-export const ADOPTION_STATUS_LABELS: Record<AdoptionStatus, string> = {
-  disponible: 'Disponible',
-  en_proceso: 'En proceso',
-  adoptado: 'Adoptado',
-  retirado: 'Retirado',
 };
 
 export const SPECIES_LABELS: Record<PetSpecies, string> = {
@@ -39,19 +41,29 @@ export const SPECIES_LABELS: Record<PetSpecies, string> = {
   otro: 'Otro',
 };
 
-export const PRODUCT_CATEGORY_LABELS: Record<ProductCategory, string> = {
-  alimento: 'Alimento',
-  accesorios: 'Accesorios',
-  higiene: 'Higiene y cuidado',
-  salud: 'Salud y bienestar',
+export const PREVENTIVE_EVENT_TYPE_LABELS: Record<PreventiveEventType, string> = {
+  vacuna: 'Vacuna',
+  control: 'Control',
+  desparasitacion: 'Desparasitación',
   otro: 'Otro',
 };
 
-export const FORUM_CATEGORY_LABELS: Record<ForumPostCategory, string> = {
-  promocion: 'Promoción',
-  anuncio: 'Anuncio',
-  noticia: 'Noticia',
-  lugar: 'Lugar',
+export const PET_DOCUMENT_TYPE_LABELS: Record<PetDocumentType, string> = {
+  carnet_vacunacion: 'Carné de vacunación',
+  historia_clinica: 'Historia clínica',
+  otro: 'Otro',
+};
+
+export const PROVIDER_PLAN_CODE_LABELS: Record<ProviderPlanCode, string> = {
+  basico: 'Básico',
+  pro: 'Pro',
+};
+
+export const PROVIDER_PLAN_STATUS_LABELS: Record<ProviderPlanStatus, string> = {
+  prueba: 'En prueba',
+  activa: 'Activa',
+  pausada: 'Pausada',
+  cancelada: 'Cancelada',
 };
 
 export const DAY_LABELS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'] as const;

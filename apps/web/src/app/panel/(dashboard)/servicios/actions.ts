@@ -22,7 +22,7 @@ export async function addService(formData: FormData): Promise<void> {
   });
 
   revalidatePath('/panel/servicios');
-  revalidatePath(`/establecimientos/${user.establishment.slug}`);
+  revalidatePath(`/directorio/${user.establishment.slug}`);
 }
 
 export async function deleteService(formData: FormData): Promise<void> {
@@ -36,5 +36,5 @@ export async function deleteService(formData: FormData): Promise<void> {
   await supabase.from('services').delete().eq('id', id).eq('establishment_id', user.establishment.id);
 
   revalidatePath('/panel/servicios');
-  revalidatePath(`/establecimientos/${user.establishment.slug}`);
+  revalidatePath(`/directorio/${user.establishment.slug}`);
 }

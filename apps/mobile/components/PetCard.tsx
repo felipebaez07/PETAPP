@@ -1,5 +1,6 @@
 import type { Pet } from '@petapp/shared';
-import { Cat, CheckCircle2, Dog, PawPrint, Trash2, XCircle } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { Cat, CheckCircle2, ChevronRight, Dog, PawPrint, Trash2, XCircle } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 
 import { formatPetAge, SEX_LABELS } from '@/lib/labels';
@@ -7,10 +8,20 @@ import { formatPetAge, SEX_LABELS } from '@/lib/labels';
 const SPECIES_ICON = { perro: Dog, gato: Cat, otro: PawPrint } as const;
 
 export function PetCard({ pet, onDelete }: { pet: Pet; onDelete?: (pet: Pet) => void }) {
+  const router = useRouter();
   const SpeciesIcon = SPECIES_ICON[pet.species];
 
   return (
-    <View className="mb-3 gap-3 rounded-xl bg-card p-4 shadow-sm">
+    <Pressable
+      // `.expo/types/router.d.ts` no reconoce `mascotas/[id]` como ruta dinámica en este
+      // monorepo (típegen de expo-router cruza rutas de apps/web) — cast puntual mientras
+      // se investiga, ver spec.md backlog.
+      onPress={() => router.push(`/mascotas/${pet.id}` as any)}
+      accessibilityRole="button"
+      accessibilityLabel={`Ver ficha de ${pet.name}`}
+      style={({ pressed }) => (pressed ? { transform: [{ scale: 0.98 }] } : undefined)}
+      className="mb-3 gap-3 rounded-xl bg-card p-4 shadow-sm"
+    >
       <View className="flex-row items-center gap-3">
         <View className="h-12 w-12 items-center justify-center rounded-md bg-backgroundAlt">
           <SpeciesIcon size={24} color="#059669" />
@@ -27,11 +38,13 @@ export function PetCard({ pet, onDelete }: { pet: Pet; onDelete?: (pet: Pet) => 
             onPress={() => onDelete(pet)}
             accessibilityRole="button"
             accessibilityLabel={`Eliminar ${pet.name}`}
+            hitSlop={8}
             className="h-9 w-9 items-center justify-center rounded-sm"
           >
             <Trash2 size={18} color="#DC2626" />
           </Pressable>
         ) : null}
+        <ChevronRight size={18} color="#64748B" />
       </View>
 
       <Text className="font-body text-sm text-mutedForeground">{formatPetAge(pet.birth_date)}</Text>
@@ -58,6 +71,6 @@ export function PetCard({ pet, onDelete }: { pet: Pet; onDelete?: (pet: Pet) => 
           </Text>
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 }

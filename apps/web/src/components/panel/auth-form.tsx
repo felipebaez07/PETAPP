@@ -10,8 +10,8 @@ import { isSupabaseConfigured } from '@/lib/supabase/config';
 import { APP_NAME, type UserRole } from '@petapp/shared';
 
 const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
-  { value: 'establecimiento', label: 'Tengo un negocio o fundación aliada' },
-  { value: 'propietario', label: 'Soy propietario/a de mascota' },
+  { value: 'propietario', label: 'Soy cuidador/a de mascota' },
+  { value: 'establecimiento', label: 'Soy prestador veterinario o profesional independiente' },
 ];
 
 export function AuthForm({ mode }: { mode: 'login' | 'registro' }) {
@@ -19,7 +19,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'registro' }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState<UserRole>('establecimiento');
+  const [role, setRole] = useState<UserRole>('propietario');
   const [status, setStatus] = useState<'idle' | 'submitting' | 'error' | 'check-email'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
