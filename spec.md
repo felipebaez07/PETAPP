@@ -505,12 +505,9 @@ ver más abajo): conectar esa base con UI real de carga de archivos.
 
 **Pendiente honesto de esta ronda (no se alcanzó a hacer o no se pudo probar, no se maquilla):**
 
-- [ ] **Nada de esto se probó contra el proyecto Supabase real** — la migración
-  `0007_pet_media_storage.sql` sigue sin aplicarse en el proyecto remoto (`nnsjospqprfygmxnlszb`);
-  eso lo aplica el usuario manualmente por el SQL Editor, como las anteriores. Hasta que no se
-  aplique, cualquier intento real de subir una foto o un documento en el deploy de Vercel va a
-  fallar con "bucket not found". Se verificó únicamente que el código compila y que la lógica es
-  coherente leyéndolo, no que funcione en runtime.
+- [x] `0007_pet_media_storage.sql` aplicada por el usuario en el proyecto Supabase real vía SQL
+  Editor (hecho: 2026-09-02) — los buckets `pet-photos`/`pet-documents` y sus policies ya existen
+  en producción. Sigue pendiente probar el flujo end-to-end en el navegador real (siguiente ítem).
 - [ ] No se probó en un navegador real ningún paso del flujo (seleccionar archivo, ver la vista
   previa, que la subida realmente llegue al bucket, que la URL firmada realmente abra el PDF/
   imagen) — este entorno no tiene forma de correr `next dev` y hacer click a través de la UI.
