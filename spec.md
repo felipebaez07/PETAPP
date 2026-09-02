@@ -221,14 +221,16 @@ soporte en `0001_init.sql`/`0005_pivot_preventivo.sql` ya aplicadas.
 
 Pendiente honesto de esta ronda (no se alcanzó a hacer, no se maquilla):
 
-- [ ] (2026-09-01) La agenda del prestador (`app/(tabs)/agenda.tsx`) depende de que
-  `service_requests.preferred_datetime` tenga un valor — hoy ningún formulario mobile permite al
-  cuidador proponer fecha/hora al solicitar cita (`app/establecimiento/[id].tsx` solo manda
-  `service_id`/`pet_id`/`notes`), así que en la práctica la sección "Próximas citas confirmadas"
-  quedará vacía hasta que (a) se agregue un selector de fecha/hora deseada al formulario de
-  solicitud, o (b) el prestador la fije manualmente en algún flujo nuevo. No se hizo por estar fuera
-  del alcance literal de los 5 pedidos (que era mostrar la agenda a partir de datos ya existentes,
-  no agregar un campo nuevo al formulario de solicitud) — queda como tarea natural de seguimiento.
+- [x] (2026-09-01) La agenda del prestador dependía de que `service_requests.preferred_datetime`
+  tuviera un valor, y ningún formulario lo pedía. Resuelto: `app/establecimiento/[id].tsx` ahora
+  incluye "Fecha y hora preferida (opcional)" con `DatePickerField` en `mode="datetime"` (ISO
+  completo, no solo fecha) y lo manda en el `insert` de `service_requests`. `DatePickerField` ganó
+  soporte para `mode="datetime"` en las tres plataformas (iOS: control inline nativo; Android: dos
+  pasos encadenados fecha→hora, porque el picker nativo no combina ambos en un solo diálogo; web:
+  `<input type="datetime-local">` con conversión explícita a hora local). De paso se corrigió un bug
+  de zona horaria en el agrupado por día de la agenda (usaba `.slice(0,10)` sobre el ISO en UTC, que
+  en Colombia -UTC-5- corría al día siguiente cualquier cita entre las 7pm y medianoche local; nuevo
+  helper `localDateKey()` en `lib/labels.ts`) (hecho: 2026-09-01, commit `b110c61`).
 - [ ] (2026-09-01) El picker nativo de fecha en iOS usa `display="inline"` con un botón "Listo" para
   cerrarlo (el modo `"default"` de iOS no es un modal flotante fuera de un `Modal` propio) — no se
   probó en un dispositivo/simulador iOS real dentro de esta tarea (solo se verificó que compila y
