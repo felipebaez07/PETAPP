@@ -192,6 +192,7 @@ export const DEMO_PET_DOCUMENTS: PetDocument[] = [
     pet_id: 'demo-pet-1',
     title: 'Carné de vacunación',
     document_url: 'https://example.com/demo/carnet-vacunacion.pdf',
+    storage_path: null,
     document_type: 'carnet_vacunacion',
     uploaded_by: null,
     created_at: new Date().toISOString(),

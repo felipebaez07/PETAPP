@@ -32,11 +32,15 @@ export function DocumentRow({ document, petId }: { document: PetDocument; petId:
         <p className="truncate font-medium text-foreground">{document.title}</p>
         <Badge variant="outline">{PET_DOCUMENT_TYPE_LABELS[document.document_type]}</Badge>
       </div>
-      <Button asChild variant="ghost" size="icon" aria-label={`Abrir ${document.title}`}>
-        <a href={document.document_url} target="_blank" rel="noopener noreferrer">
-          <ExternalLink className="size-4" />
-        </a>
-      </Button>
+      {document.document_url ? (
+        <Button asChild variant="ghost" size="icon" aria-label={`Abrir ${document.title}`}>
+          <a href={document.document_url} target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="size-4" />
+          </a>
+        </Button>
+      ) : null}
+      {/* document.storage_path (archivo subido a Storage, bucket privado): abrirlo requiere
+          generar una URL firmada — queda pendiente de implementar la subida real de archivos. */}
       <Button variant="ghost" size="icon" aria-label={`Eliminar ${document.title}`} onClick={onDelete}>
         <Trash2 className="size-4 text-destructive" />
       </Button>

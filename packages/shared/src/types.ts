@@ -135,12 +135,18 @@ export interface PreventiveEvent {
   updated_at: string;
 }
 
-/** Documento/soporte básico de una mascota (carnet de vacunación, historia clínica, etc.). */
+/**
+ * Documento/soporte básico de una mascota (carnet de vacunación, historia clínica, etc.).
+ * Exactamente una de las dos fuentes está presente: `document_url` (enlace externo pegado a
+ * mano) o `storage_path` (archivo subido al bucket privado `pet-documents` de Supabase Storage
+ * — sin URL pública fija; la app genera una URL firmada al mostrarlo). Ver 0007_pet_media_storage.sql.
+ */
 export interface PetDocument {
   id: string;
   pet_id: string;
   title: string;
-  document_url: string;
+  document_url: string | null;
+  storage_path: string | null;
   document_type: PetDocumentType;
   uploaded_by: string | null;
   created_at: string;

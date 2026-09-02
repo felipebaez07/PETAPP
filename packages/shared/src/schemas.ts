@@ -74,16 +74,25 @@ export const preventiveEventSchema = z.object({
 });
 export type PreventiveEventFormValues = z.infer<typeof preventiveEventSchema>;
 
+// Exactamente una fuente: un enlace externo pegado a mano (`document_url`, restringido a
+// http(s) — igual que antes, se renderiza en un <a href> directo y `z.string().url()` por sí
+// solo aceptaría `javascript:`) o un archivo subido a Storage (`storage_path`, lo arma la app
+// después de subir el archivo, nunca lo escribe el usuario a mano). Se queda como `z.object`
+// plano (sin `.refine`) a propósito: mobile hace `petDocumentSchema.omit({ pet_id: true })`, y
+// `.refine()` envuelve el schema en un `ZodEffects` que ya no tiene `.omit()`. La regla de "al
+// menos una fuente" la valida cada formulario según el modo (subir archivo / pegar enlace) que
+// esté activo, y queda reforzada de todas formas por el CHECK de la base de datos
+// (0007_pet_media_storage.sql) como última defensa.
 export const petDocumentSchema = z.object({
   pet_id: z.string().uuid(),
   title: z.string().min(1, 'Ponle un nombre a este documento').max(120),
-  // Se restringe a http(s) explícitamente: la web renderiza esto en un <a href> directo
-  // (components/cuidador/document-row.tsx), y `z.string().url()` por sí solo acepta
-  // esquemas como `javascript:`, que ejecutarían al hacer clic.
   document_url: z
     .string()
     .url('Debe ser una URL válida')
-    .refine((url) => /^https?:\/\//i.test(url), 'El enlace debe empezar con http:// o https://'),
+    .refine((url) => /^https?:\/\//i.test(url), 'El enlace debe empezar con http:// o https://')
+    .optional()
+    .or(z.literal('')),
+  storage_path: z.string().min(1).optional(),
   document_type: z.enum(['carnet_vacunacion', 'historia_clinica', 'otro']),
 });
 export type PetDocumentFormValues = z.infer<typeof petDocumentSchema>;

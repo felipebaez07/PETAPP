@@ -21,7 +21,13 @@ export function PetDocumentRow({ document, onDelete }: PetDocumentRowProps) {
 
   return (
     <Pressable
-      onPress={() => openExternalUrl(document.document_url, 'No se pudo abrir este documento.')}
+      onPress={() =>
+        // document.storage_path (archivo subido a Storage, bucket privado) requiere generar
+        // una URL firmada — queda pendiente de implementar la subida real de archivos.
+        document.document_url
+          ? openExternalUrl(document.document_url, 'No se pudo abrir este documento.')
+          : undefined
+      }
       accessibilityRole="button"
       accessibilityLabel={`Abrir documento ${document.title}`}
       style={({ pressed }) => (pressed ? { opacity: 0.85 } : undefined)}
