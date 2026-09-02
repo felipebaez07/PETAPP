@@ -11,10 +11,12 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { Building2, CalendarPlus, Info, MapPin, MessageCircle, Phone, SearchX, ShieldCheck } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Alert, Image, ScrollView, Text, TextInput, View } from 'react-native';
+import { useForm } from 'react-hook-form';
 
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
+import { DatePickerField } from '@/components/ui/DatePickerField';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { RemoteImage } from '@/components/ui/RemoteImage';
@@ -38,6 +40,13 @@ export default function EstablishmentDetailScreen() {
   const [requestNotes, setRequestNotes] = useState('');
   const [requestSubmitting, setRequestSubmitting] = useState(false);
   const [requestSent, setRequestSent] = useState(false);
+  // Formulario mínimo solo para el picker de fecha/hora — el resto de este bloque de
+  // "Solicitar cita" ya usaba useState plano en vez de react-hook-form, así que se agrega
+  // esta única instancia en vez de migrar todo el formulario a RHF de una vez.
+  const { control: dateControl, watch: watchDate, reset: resetDate } = useForm<{ preferred_datetime: string }>({
+    defaultValues: { preferred_datetime: '' },
+  });
+  const preferredDatetime = watchDate('preferred_datetime');
 
   useEffect(() => {
     let active = true;
@@ -130,12 +139,14 @@ export default function EstablishmentDetailScreen() {
       service_id: selectedServiceId || null,
       pet_id: selectedPetId || null,
       notes: requestNotes.trim() || null,
+      preferred_datetime: preferredDatetime || null,
     });
     setRequestSubmitting(false);
     if (error) {
       Alert.alert('No se pudo enviar la solicitud', error.message);
       return;
     }
+    resetDate({ preferred_datetime: '' });
     setRequestSent(true);
   }
 
@@ -314,6 +325,13 @@ export default function EstablishmentDetailScreen() {
                     </View>
                   </View>
                 ) : null}
+                <DatePickerField
+                  control={dateControl}
+                  name="preferred_datetime"
+                  label="Fecha y hora preferida (opcional)"
+                  mode="datetime"
+                  helperText="Si no eliges una, coordinamos por WhatsApp."
+                />
                 <View className="gap-1.5">
                   <Text className="font-bodySemibold text-sm text-foreground">Notas (opcional)</Text>
                   <View className="min-h-11 rounded-sm border border-border bg-card px-3 py-2">

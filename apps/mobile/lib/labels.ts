@@ -28,10 +28,28 @@ export function formatPetAge(birthDate: string | null): string {
   return `${years} ${years === 1 ? 'año' : 'años'} y ${remainingMonths} ${remainingMonths === 1 ? 'mes' : 'meses'}`;
 }
 
-/** Encabezado de sección de la agenda del prestador, ej. "Lunes 8 de septiembre". */
-export function formatAgendaDateHeader(iso: string): string {
+/**
+ * Clave de fecha LOCAL ("AAAA-MM-DD") a partir de un ISO completo — para agrupar por día en
+ * la agenda. Debe ser la fecha local, no `iso.slice(0, 10)`: ese slice toma el día en UTC, que
+ * en Colombia (UTC-5) queda mal para cualquier cita entre las 7pm y la medianoche local (cae
+ * en el día siguiente en UTC).
+ */
+export function localDateKey(iso: string): string {
   const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
+  if (Number.isNaN(date.getTime())) return iso.slice(0, 10);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/** Encabezado de sección de la agenda del prestador, ej. "Lunes 8 de septiembre". Recibe una clave de `localDateKey`. */
+export function formatAgendaDateHeader(dateKey: string): string {
+  // Se parsea con hora local explícita (sin "Z"): un "AAAA-MM-DD" a secas se interpreta como
+  // medianoche UTC, que en Colombia (UTC-5) muestra el día anterior — el mismo bug que evita
+  // `localDateKey` al generar la clave.
+  const date = new Date(`${dateKey}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return dateKey;
   const label = date.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' });
   return label.charAt(0).toUpperCase() + label.slice(1);
 }

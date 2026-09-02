@@ -12,7 +12,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { getCurrentUser } from '@/lib/auth';
-import { formatAgendaDateHeader, formatAgendaTime } from '@/lib/labels';
+import { formatAgendaDateHeader, formatAgendaTime, localDateKey } from '@/lib/labels';
 import { supabase } from '@/lib/supabase';
 
 interface ServiceRequestRow {
@@ -88,7 +88,7 @@ export default function AgendaScreen() {
 
     const groups: { dateKey: string; items: ServiceRequestRow[] }[] = [];
     for (const request of confirmed) {
-      const dateKey = request.preferred_datetime!.slice(0, 10);
+      const dateKey = localDateKey(request.preferred_datetime!);
       const existing = groups.find((g) => g.dateKey === dateKey);
       if (existing) existing.items.push(request);
       else groups.push({ dateKey, items: [request] });

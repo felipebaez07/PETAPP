@@ -5,18 +5,22 @@ import type { Control, FieldValues, Path } from 'react-hook-form';
 import { Controller } from 'react-hook-form';
 import { Platform, Pressable, Text, View } from 'react-native';
 
+type PickerMode = 'date' | 'datetime';
+
 interface DatePickerFieldProps<TFieldValues extends FieldValues> {
   control: Control<TFieldValues>;
   name: Path<TFieldValues>;
   label: string;
   placeholder?: string;
   helperText?: string;
+  /** 'date' (por defecto) guarda "AAAA-MM-DD"; 'datetime' guarda un ISO completo (para `timestamptz`). */
+  mode?: PickerMode;
 }
 
-/** Convierte "AAAA-MM-DD" (o vacío) al `Date` que espera el picker nativo. */
-function toDate(value: string | undefined): Date {
+/** Convierte "AAAA-MM-DD" (modo date) o un ISO completo (modo datetime) al `Date` del picker. */
+function toDate(value: string | undefined, mode: PickerMode): Date {
   if (value) {
-    const parsed = new Date(`${value}T00:00:00`);
+    const parsed = new Date(mode === 'date' ? `${value}T00:00:00` : value);
     if (!Number.isNaN(parsed.getTime())) return parsed;
   }
   return new Date();
@@ -30,19 +34,33 @@ function toIsoDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-function formatDisplay(value: string): string {
-  const date = new Date(`${value}T00:00:00`);
+/** Combina la fecha de un `Date` con la hora de otro (para el paso date→time en Android). */
+function combineDateAndTime(datePart: Date, timePart: Date): Date {
+  const combined = new Date(datePart);
+  combined.setHours(timePart.getHours(), timePart.getMinutes(), 0, 0);
+  return combined;
+}
+
+function formatDisplay(value: string, mode: PickerMode): string {
+  const date = new Date(mode === 'date' ? `${value}T00:00:00` : value);
   if (Number.isNaN(date.getTime())) return '';
+  if (mode === 'date') {
+    const label = date.toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  }
   const label = date.toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });
-  return label.charAt(0).toUpperCase() + label.slice(1);
+  const time = date.toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' });
+  return `${label.charAt(0).toUpperCase() + label.slice(1)} · ${time}`;
 }
 
 /**
- * Selector de fecha real (nativo) controlado por react-hook-form — mismo shape de props
- * que `FormTextField`/`ChipSelectField`. En Android se cierra solo al elegir un día; en
- * iOS el picker queda inline con un botón "Listo" (el modo `display="default"` de iOS no
- * es un modal flotante, hay que darle una forma explícita de cerrarlo).
- * Ver `DatePickerField.web.tsx` para la variante de navegador (`<input type="date">`).
+ * Selector de fecha (u hora) real (nativo) controlado por react-hook-form — mismo shape de
+ * props que `FormTextField`/`ChipSelectField`. En Android se cierra solo al elegir; en iOS el
+ * picker queda inline con un botón "Listo" (el modo `display="default"`/`inline` de iOS no es
+ * un modal flotante, hay que darle una forma explícita de cerrarlo). En modo `datetime`, Android
+ * no soporta un solo control combinado — se encadenan dos pasos (fecha, luego hora); iOS sí
+ * soporta `mode="datetime"` en un único control inline.
+ * Ver `DatePickerField.web.tsx` para la variante de navegador (`<input type="date"|"datetime-local">`).
  */
 export function DatePickerField<TFieldValues extends FieldValues>({
   control,
@@ -50,8 +68,11 @@ export function DatePickerField<TFieldValues extends FieldValues>({
   label,
   placeholder = 'Selecciona una fecha',
   helperText,
+  mode = 'date',
 }: DatePickerFieldProps<TFieldValues>) {
-  const [showPicker, setShowPicker] = useState(false);
+  const [androidStage, setAndroidStage] = useState<'idle' | 'date' | 'time'>('idle');
+  const [iosPickerOpen, setIosPickerOpen] = useState(false);
+  const [pendingDatePart, setPendingDatePart] = useState<Date | null>(null);
 
   return (
     <Controller
@@ -60,19 +81,45 @@ export function DatePickerField<TFieldValues extends FieldValues>({
       render={({ field: { value, onChange }, fieldState: { error } }) => {
         const stringValue = typeof value === 'string' ? value : '';
 
-        function handleChange(event: DateTimePickerEvent, selectedDate?: Date) {
-          if (Platform.OS === 'android') {
-            setShowPicker(false);
+        function openPicker() {
+          // En Android, tanto 'date' como 'datetime' arrancan por el paso de fecha
+          // (en modo datetime, elegir la hora es un segundo paso encadenado, ver abajo).
+          if (Platform.OS === 'ios') {
+            setIosPickerOpen(true);
+          } else {
+            setAndroidStage('date');
           }
-          if (event.type === 'dismissed') return;
-          if (selectedDate) onChange(toIsoDate(selectedDate));
+        }
+
+        function handleIosChange(event: DateTimePickerEvent, selectedDate?: Date) {
+          if (event.type === 'dismissed' || !selectedDate) return;
+          onChange(mode === 'date' ? toIsoDate(selectedDate) : selectedDate.toISOString());
+        }
+
+        function handleAndroidDatePicked(event: DateTimePickerEvent, selectedDate?: Date) {
+          setAndroidStage('idle');
+          if (event.type === 'dismissed' || !selectedDate) return;
+          if (mode === 'date') {
+            onChange(toIsoDate(selectedDate));
+            return;
+          }
+          // Modo datetime en Android: la fecha ya se eligió, ahora se pide la hora.
+          setPendingDatePart(selectedDate);
+          setAndroidStage('time');
+        }
+
+        function handleAndroidTimePicked(event: DateTimePickerEvent, selectedTime?: Date) {
+          setAndroidStage('idle');
+          if (event.type === 'dismissed' || !selectedTime || !pendingDatePart) return;
+          onChange(combineDateAndTime(pendingDatePart, selectedTime).toISOString());
+          setPendingDatePart(null);
         }
 
         return (
           <View className="gap-1.5">
             <Text className="font-bodySemibold text-sm text-foreground">{label}</Text>
             <Pressable
-              onPress={() => setShowPicker(true)}
+              onPress={openPicker}
               accessibilityRole="button"
               accessibilityLabel={label}
               className={`min-h-11 flex-row items-center gap-2 rounded-sm border bg-card px-3 ${
@@ -83,7 +130,7 @@ export function DatePickerField<TFieldValues extends FieldValues>({
               <Text
                 className={`flex-1 py-3 font-body text-base ${stringValue ? 'text-foreground' : 'text-mutedForeground'}`}
               >
-                {stringValue ? formatDisplay(stringValue) : placeholder}
+                {stringValue ? formatDisplay(stringValue, mode) : placeholder}
               </Text>
             </Pressable>
             {error ? (
@@ -92,24 +139,39 @@ export function DatePickerField<TFieldValues extends FieldValues>({
               <Text className="font-body text-xs text-mutedForeground">{helperText}</Text>
             ) : null}
 
-            {showPicker ? (
-              <View className={Platform.OS === 'ios' ? 'rounded-xl bg-card shadow-sm' : undefined}>
+            {Platform.OS === 'ios' && iosPickerOpen ? (
+              <View className="rounded-xl bg-card shadow-sm">
                 <DateTimePicker
-                  value={toDate(stringValue)}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                  onChange={handleChange}
+                  value={toDate(stringValue, mode)}
+                  mode={mode}
+                  display="inline"
+                  onChange={handleIosChange}
                 />
-                {Platform.OS === 'ios' ? (
-                  <Pressable
-                    onPress={() => setShowPicker(false)}
-                    accessibilityRole="button"
-                    className="items-center border-t border-border py-3"
-                  >
-                    <Text className="font-bodySemibold text-sm text-primary">Listo</Text>
-                  </Pressable>
-                ) : null}
+                <Pressable
+                  onPress={() => setIosPickerOpen(false)}
+                  accessibilityRole="button"
+                  className="items-center border-t border-border py-3"
+                >
+                  <Text className="font-bodySemibold text-sm text-primary">Listo</Text>
+                </Pressable>
               </View>
+            ) : null}
+
+            {Platform.OS === 'android' && androidStage === 'date' ? (
+              <DateTimePicker
+                value={toDate(stringValue, mode)}
+                mode="date"
+                display="default"
+                onChange={handleAndroidDatePicked}
+              />
+            ) : null}
+            {Platform.OS === 'android' && androidStage === 'time' ? (
+              <DateTimePicker
+                value={pendingDatePart ?? new Date()}
+                mode="time"
+                display="default"
+                onChange={handleAndroidTimePicked}
+              />
             ) : null}
           </View>
         );
