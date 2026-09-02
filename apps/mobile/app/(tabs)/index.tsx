@@ -44,15 +44,26 @@ export default function HomeScreen() {
 
   useEffect(() => {
     let active = true;
-    getCurrentUser()
-      .then((current) => {
-        if (active) setUser(current);
-      })
-      .catch(() => {
-        if (active) setUser(null);
-      });
+    function refreshUser() {
+      getCurrentUser()
+        .then((current) => {
+          if (active) setUser(current);
+        })
+        .catch(() => {
+          if (active) setUser(null);
+        });
+    }
+
+    refreshUser();
+    // "Inicio" es una tab que se monta una sola vez al abrir la app (antes de iniciar
+    // sesión, si es la primera pantalla que se ve) — sin este listener, `user` quedaba
+    // pegado en el estado con el que arrancó y nunca mostraba el dashboard correcto
+    // después de loguearse. Mismo bug ya corregido en (tabs)/_layout.tsx y PetsContext.tsx.
+    const { data: subscription } = supabase.auth.onAuthStateChange(() => refreshUser());
+
     return () => {
       active = false;
+      subscription.subscription.unsubscribe();
     };
   }, []);
 

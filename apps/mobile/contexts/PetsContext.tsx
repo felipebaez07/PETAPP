@@ -69,32 +69,54 @@ export function PetsProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       return;
     }
-    getCurrentUser()
-      .then(async (user) => {
-        if (!active || !user) return;
-        setOwnerId(user.profile.id);
-        const { data, error } = await supabase
-          .from('pets')
-          .select('*')
-          .eq('owner_id', user.profile.id)
-          .order('created_at', { ascending: false });
-        if (!active) return;
-        if (error) {
-          // Sin este catch, un error de red dejaba `pets` en el seed de demo sin avisar,
-          // como si de verdad no hubiera mascotas guardadas para este propietario.
-          Alert.alert('No se pudieron cargar tus mascotas', 'Intenta de nuevo en unos segundos.');
-          return;
-        }
-        setPets((data as Pet[] | null) ?? []);
-      })
-      .catch(() => {
-        if (active) Alert.alert('No se pudo cargar tu cuenta', 'Intenta de nuevo en unos segundos.');
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+
+    function loadForCurrentSession() {
+      setLoading(true);
+      getCurrentUser()
+        .then(async (user) => {
+          if (!active) return;
+          if (!user) {
+            // Sesión cerrada (o nunca hubo): vuelve al set de demo, no se queda con las
+            // mascotas de la cuenta anterior.
+            setOwnerId(null);
+            setPets(seedPets());
+            return;
+          }
+          setOwnerId(user.profile.id);
+          const { data, error } = await supabase
+            .from('pets')
+            .select('*')
+            .eq('owner_id', user.profile.id)
+            .order('created_at', { ascending: false });
+          if (!active) return;
+          if (error) {
+            // Sin este catch, un error de red dejaba `pets` en el seed de demo sin avisar,
+            // como si de verdad no hubiera mascotas guardadas para este propietario.
+            Alert.alert('No se pudieron cargar tus mascotas', 'Intenta de nuevo en unos segundos.');
+            return;
+          }
+          setPets((data as Pet[] | null) ?? []);
+        })
+        .catch(() => {
+          if (active) Alert.alert('No se pudo cargar tu cuenta', 'Intenta de nuevo en unos segundos.');
+        })
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+    }
+
+    loadForCurrentSession();
+    // `PetsProvider` envuelve toda la app desde `app/_layout.tsx` y monta una sola vez, antes
+    // de que el usuario inicie sesión. Sin este listener, `ownerId` quedaba pegado en `null`
+    // (el estado de "no hay sesión" con el que arrancó la app) para siempre, aunque el usuario
+    // se logueara después en la tab Perfil — la tab "Mascotas" seguía mostrando el demo
+    // Max/Mishi con el aviso de "inicia sesión" incluso ya autenticado. Mismo bug que ya se
+    // había corregido en (tabs)/_layout.tsx, reintroducido acá porque es un archivo distinto.
+    const { data: subscription } = supabase.auth.onAuthStateChange(() => loadForCurrentSession());
+
     return () => {
       active = false;
+      subscription.subscription.unsubscribe();
     };
   }, []);
 
