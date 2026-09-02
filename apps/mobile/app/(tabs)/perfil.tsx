@@ -199,6 +199,26 @@ export default function ProfileScreen() {
           </View>
 
           {user.profile.role === 'establecimiento' ? (
+            <Pressable
+              onPress={() => router.push('/(tabs)/mascotas')}
+              accessibilityRole="button"
+              className="flex-row items-center gap-3 rounded-xl bg-card p-4 shadow-sm"
+            >
+              <View className="h-11 w-11 items-center justify-center rounded-md bg-backgroundAlt">
+                <PawPrint size={20} color="#0369A1" />
+              </View>
+              <View className="flex-1">
+                <Text className="font-bodySemibold text-base text-foreground">Mis mascotas</Text>
+                <Text className="font-body text-sm text-mutedForeground">
+                  Si además tienes mascotas propias, llévalas aquí — la tab queda oculta para cuentas
+                  de negocio, pero la pantalla sigue disponible.
+                </Text>
+              </View>
+              <ChevronRight size={18} color="#64748B" />
+            </Pressable>
+          ) : null}
+
+          {user.profile.role === 'establecimiento' ? (
             <View className="gap-3">
               <Text className="font-heading text-lg text-foreground">Gestionar mi negocio</Text>
               <View className="overflow-hidden rounded-xl bg-card shadow-sm">

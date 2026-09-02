@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { LayoutDashboard, Building2, Clock, ListChecks, CalendarCheck, ShieldCheck, Inbox, CreditCard, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Building2, Clock, ListChecks, CalendarCheck, ShieldCheck, Inbox, CreditCard, PawPrint, type LucideIcon } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { isSupabaseConfigured } from '@/lib/supabase/config';
 import type { UserRole } from '@petapp/shared';
@@ -20,6 +20,9 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/panel/servicios', label: 'Servicios', icon: ListChecks, roles: ['establecimiento'], requiresEstablishment: true },
   { href: '/panel/solicitudes', label: 'Solicitudes de cita', icon: CalendarCheck, roles: ['establecimiento'], requiresEstablishment: true },
   { href: '/panel/plan', label: 'Tu plan', icon: CreditCard, roles: ['establecimiento'], requiresEstablishment: true },
+  // Perfil "mixto": un negocio puede además llevar sus propias mascotas (pedido 2026-09-02) —
+  // /cuidador/mascotas ya lo permite para role='establecimiento', esto solo lo hace visible.
+  { href: '/cuidador/mascotas', label: 'Mis mascotas', icon: PawPrint, roles: ['establecimiento'] },
   { href: '/panel/admin/solicitudes', label: 'Solicitudes de alianza', icon: Inbox, roles: ['admin'] },
   { href: '/panel/admin/aliados', label: 'Verificar aliados', icon: ShieldCheck, roles: ['admin'] },
 ];

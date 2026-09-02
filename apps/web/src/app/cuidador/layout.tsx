@@ -6,8 +6,10 @@ import { isSupabaseConfigured } from '@/lib/supabase/config';
 
 /**
  * Espacio del cuidador (nuevo en el pivot — antes solo podía "reservar" desde el
- * directorio, sin gestión de mascota en la web). Requiere sesión con rol `propietario`;
- * un `establecimiento`/`admin` no tiene mascotas propias que gestionar aquí.
+ * directorio, sin gestión de mascota en la web). Requiere sesión; disponible para
+ * `propietario` y también para `establecimiento` — un negocio puede además tener sus
+ * propias mascotas (perfil "mixto", pedido explícito 2026-09-02), ya que `pets.owner_id`
+ * no depende del rol. `admin` queda fuera: administra el piloto, no lleva mascotas propias.
  */
 export default async function CuidadorLayout({ children }: { children: React.ReactNode }) {
   if (!isSupabaseConfigured()) {
@@ -16,7 +18,7 @@ export default async function CuidadorLayout({ children }: { children: React.Rea
 
   const user = await getCurrentUser();
   if (!user) redirect('/panel/login');
-  if (user.profile.role !== 'propietario') redirect('/panel');
+  if (user.profile.role === 'admin') redirect('/panel');
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
