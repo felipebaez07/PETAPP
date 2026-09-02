@@ -26,7 +26,10 @@ export function PetCard({ pet, pendingCount }: { pet: Pet; pendingCount: number 
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             {pet.birth_date && (
               <span className="inline-flex items-center gap-1">
-                <Cake className="size-3.5" /> {new Date(pet.birth_date).toLocaleDateString('es-CO')}
+                {/* "T00:00:00" sin "Z": si se parsea "2026-09-01" a secas, JS lo toma como
+                    medianoche UTC, que en Colombia (UTC-5) muestra el día anterior siempre,
+                    no solo en un caso límite de hora — encontrado en revisión de código. */}
+                <Cake className="size-3.5" /> {new Date(`${pet.birth_date}T00:00:00`).toLocaleDateString('es-CO')}
               </span>
             )}
             {pet.vaccinated && (

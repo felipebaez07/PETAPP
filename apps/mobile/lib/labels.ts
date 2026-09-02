@@ -12,7 +12,11 @@ export const SEX_LABELS: Record<PetSex, string> = {
 export function formatPetAge(birthDate: string | null): string {
   if (!birthDate) return 'Fecha de nacimiento no registrada';
 
-  const birth = new Date(birthDate);
+  // "T00:00:00" sin "Z": si se parsea "2026-01-01" a secas, JS lo toma como medianoche UTC,
+  // que en Colombia (UTC-5) cae en 2025-12-31 hora local — .getFullYear()/.getMonth()/.getDate()
+  // devuelven los componentes locales de esa instancia, así que sin esto la edad calculada
+  // queda corrida cerca de cualquier límite de mes/año.
+  const birth = new Date(`${birthDate}T00:00:00`);
   if (Number.isNaN(birth.getTime())) return 'Fecha de nacimiento no registrada';
 
   const now = new Date();

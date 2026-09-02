@@ -1,4 +1,4 @@
-import { PREVENTIVE_EVENT_TYPE_LABELS, type PreventiveEvent } from '@petapp/shared';
+import { PREVENTIVE_EVENT_TYPE_LABELS, todayLocalDateString, type PreventiveEvent } from '@petapp/shared';
 import { AlertTriangle, CalendarClock, CheckCircle2, Circle, Trash2 } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 import Animated, { ZoomIn } from 'react-native-reanimated';
@@ -7,8 +7,7 @@ export type PreventiveEventVisualStatus = 'proximo' | 'vencido' | 'completado';
 
 function getStatus(event: PreventiveEvent): PreventiveEventVisualStatus {
   if (event.completed_at) return 'completado';
-  const today = new Date().toISOString().slice(0, 10);
-  return event.due_date < today ? 'vencido' : 'proximo';
+  return event.due_date < todayLocalDateString() ? 'vencido' : 'proximo';
 }
 
 const STATUS_STYLES: Record<

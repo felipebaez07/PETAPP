@@ -11,7 +11,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { submitPartnerApplication } from '@/app/unete/actions';
 
-const CATEGORIES = Object.entries(CATEGORY_LABELS) as [PartnerApplicationValues['category'], string][];
+// No se deriva de todo `CATEGORY_LABELS` (4 categorías) a propósito: el schema de este
+// formulario (`partnerApplicationSchema`) se acotó a solo veterinaria/profesional tras el
+// pivot de producto (spec.md sección 2) — comercio/fundación ya no son categorías que este
+// formulario pueda enviar, y mostrarlas como opción seleccionable rompía el submit sin avisar.
+const PARTNER_CATEGORIES: [PartnerApplicationValues['category'], string][] = [
+  ['veterinaria', CATEGORY_LABELS.veterinaria],
+  ['profesional', CATEGORY_LABELS.profesional],
+];
 
 export function PartnerApplicationForm() {
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
@@ -72,12 +79,13 @@ export function PartnerApplicationForm() {
             {...register('category')}
             className="flex h-11 w-full rounded-sm border border-input bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            {CATEGORIES.map(([value, label]) => (
+            {PARTNER_CATEGORIES.map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>
             ))}
           </select>
+          {errors.category && <p className="text-sm text-destructive">{errors.category.message}</p>}
         </div>
       </div>
 

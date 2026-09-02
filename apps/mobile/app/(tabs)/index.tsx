@@ -251,6 +251,11 @@ function CuidadorHomeScreen() {
       .then((data) => {
         if (active) setEvents(sortByDueDate(data));
       })
+      .catch(() => {
+        // Sin este catch, un error de red dejaba `events` en [] y mostraba "Estás al día"
+        // como si de verdad no hubiera pendientes — un falso positivo tranquilizador.
+        if (active) Alert.alert('No se pudieron cargar tus recordatorios', 'Intenta de nuevo en unos segundos.');
+      })
       .finally(() => {
         if (active) setLoadingEvents(false);
       });

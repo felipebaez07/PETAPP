@@ -13,10 +13,13 @@
 -- su operación actual, así que esas deben venir de la fundación una vez contactada.
 --
 -- Limpia cualquier dato de seed anterior (incluye, por CASCADE, horarios/servicios/
--- reservas/publicaciones de adopción que dependan de estas filas).
+-- solicitudes de cita que dependan de estas filas).
+--
+-- `adoption_photos`/`adoption_posts` salieron de este truncate el 2026-09-02: la migración
+-- 0005_pivot_preventivo.sql las renombró a `zz_deprecated_*` (pivot de producto, ver
+-- spec.md sección 2), así que `supabase db reset` (migraciones + este seed) fallaba con
+-- "relation \"public.adoption_photos\" does not exist" antes de sembrar nada.
 truncate table
-  public.adoption_photos,
-  public.adoption_posts,
   public.services,
   public.establishment_hours,
   public.establishments

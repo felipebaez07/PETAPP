@@ -112,6 +112,11 @@ export default function PetDetailScreen() {
         setEvents(sortByDueDate(ev));
         setDocuments(docs);
       })
+      .catch(() => {
+        // Sin este catch, un error de red dejaba las listas vacías y mostraba los empty
+        // states ("Sin documentos todavía") como si de verdad no hubiera nada guardado.
+        if (active) Alert.alert('No se pudo cargar la ficha', 'Intenta de nuevo en unos segundos.');
+      })
       .finally(() => {
         if (active) setLoading(false);
       });

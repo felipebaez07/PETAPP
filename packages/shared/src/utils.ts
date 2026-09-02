@@ -57,6 +57,21 @@ export function buildGoogleMapsLink(place: { name: string; address?: string | nu
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
+/**
+ * "AAAA-MM-DD" de la fecha local de HOY. Nunca usar `new Date().toISOString().slice(0, 10)`
+ * para esto: da la fecha en UTC, que en zonas horarias negativas (ej. Colombia, UTC-5) queda
+ * un día atrás durante buena parte de la noche local — un evento con `due_date` de hoy se
+ * marcaría "vencido" horas antes de estarlo de verdad. Encontrado en revisión de código
+ * (2026-09-02), reimplementado independientemente (y mal) en mobile y web.
+ */
+export function todayLocalDateString(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function formatPhoneForDisplay(phone: string | null | undefined): string {
   if (!phone) return '';
   const digits = phone.replace(/\D/g, '');

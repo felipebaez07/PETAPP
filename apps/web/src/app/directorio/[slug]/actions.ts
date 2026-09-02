@@ -28,6 +28,22 @@ export async function createServiceRequest(formData: FormData): Promise<ServiceR
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos.' };
 
   const supabase = await createSupabaseServerClient();
+
+  // La policy de inserción de `service_requests` (heredada de `reservations_pet_owner_insert`,
+  // 0001_init.sql) solo exige `pet_owner_id = auth.uid()` — no valida que `pet_id` pertenezca a
+  // ese usuario. Sin este chequeo, cualquier cuidador podría mandar el `pet_id` de la mascota de
+  // otra persona (adivinado o filtrado) y el prestador vería el nombre de esa mascota ajena en su
+  // panel de solicitudes. Defensa en profundidad — la RLS por sí sola no lo cubre.
+  if (parsed.data.pet_id) {
+    const { data: pet } = await supabase
+      .from('pets')
+      .select('id')
+      .eq('id', parsed.data.pet_id)
+      .eq('owner_id', user.profile.id)
+      .maybeSingle();
+    if (!pet) return { ok: false, error: 'Esta mascota no te pertenece.' };
+  }
+
   const { error } = await supabase.from('service_requests').insert({
     pet_owner_id: user.profile.id,
     establishment_id: parsed.data.establishment_id,

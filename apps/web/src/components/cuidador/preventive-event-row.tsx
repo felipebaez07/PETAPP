@@ -6,7 +6,7 @@ import { CheckCircle2, Circle, Clock, Trash2, TriangleAlert } from 'lucide-react
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { PREVENTIVE_EVENT_TYPE_LABELS, type PreventiveEvent } from '@petapp/shared';
+import { PREVENTIVE_EVENT_TYPE_LABELS, todayLocalDateString, type PreventiveEvent } from '@petapp/shared';
 import { SPRING_GESTURE } from '@/lib/motion';
 import { togglePreventiveEventCompleted, deletePreventiveEvent } from '@/app/cuidador/mascotas/[id]/actions';
 
@@ -14,8 +14,7 @@ type EventState = 'proximo' | 'vencido' | 'completado';
 
 function eventState(event: PreventiveEvent): EventState {
   if (event.completed_at) return 'completado';
-  const today = new Date().toISOString().slice(0, 10);
-  return event.due_date < today ? 'vencido' : 'proximo';
+  return event.due_date < todayLocalDateString() ? 'vencido' : 'proximo';
 }
 
 export function PreventiveEventRow({ event, petId }: { event: PreventiveEvent; petId: string }) {

@@ -29,12 +29,16 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   let establishment: Establishment | null = null;
   if ((profile as Profile).role === 'establecimiento') {
+    // .limit(1) en vez de .maybeSingle(): si por error administrativo owner_id quedara
+    // vinculado a más de una fila, .maybeSingle() lanzaría un error que esta función
+    // ignoraba en silencio, mostrando "sin establecimiento" en vez del real. Mismo fix
+    // que ya tiene apps/web/src/lib/auth.ts — se había reintroducido el bug al portarlo.
     const { data } = await supabase
       .from('establishments')
       .select('*')
       .eq('owner_id', (profile as Profile).id)
-      .maybeSingle();
-    establishment = (data as Establishment | null) ?? null;
+      .limit(1);
+    establishment = (data?.[0] as Establishment | undefined) ?? null;
   }
 
   return { profile: profile as Profile, establishment };

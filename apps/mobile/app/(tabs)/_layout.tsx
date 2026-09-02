@@ -4,6 +4,7 @@ import { Building2, CalendarClock, Home, PawPrint, UserRound } from 'lucide-reac
 import { useEffect, useState } from 'react';
 
 import { getCurrentUser } from '@/lib/auth';
+import { supabase } from '@/lib/supabase';
 
 /**
  * Dos interfaces distintas en la misma app (spec.md sección 6, punto 4): un cuidador
@@ -23,15 +24,26 @@ export default function TabLayout() {
 
   useEffect(() => {
     let active = true;
-    getCurrentUser()
-      .then((user) => {
-        if (active) setIsBusiness(user?.profile.role === 'establecimiento');
-      })
-      .catch(() => {
-        if (active) setIsBusiness(false);
-      });
+    function refreshRole() {
+      getCurrentUser()
+        .then((user) => {
+          if (active) setIsBusiness(user?.profile.role === 'establecimiento');
+        })
+        .catch(() => {
+          if (active) setIsBusiness(false);
+        });
+    }
+
+    refreshRole();
+    // Sin este listener, cerrar sesión con una cuenta de negocio y entrar con una de
+    // cuidador (o viceversa) en la misma sesión de la app dejaba la barra de tabs con el
+    // set de tabs del rol anterior hasta reiniciar la app por completo — index.tsx/perfil.tsx
+    // sí volvían a consultar su propio rol, pero esta barra nunca se enteraba del cambio.
+    const { data: subscription } = supabase.auth.onAuthStateChange(() => refreshRole());
+
     return () => {
       active = false;
+      subscription.subscription.unsubscribe();
     };
   }, []);
 
