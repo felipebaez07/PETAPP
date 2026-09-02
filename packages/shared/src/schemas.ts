@@ -34,6 +34,18 @@ export const partnerApplicationSchema = z.object({
 });
 export type PartnerApplicationValues = z.infer<typeof partnerApplicationSchema>;
 
+// Mismo patrón de seguridad que `petDocumentSchema.document_url`: se restringe a http(s)
+// explícitamente porque estos valores se renderizan como <Image>/enlace (tarjeta del
+// directorio, ficha pública del prestador) — `z.string().url()` por sí solo acepta
+// esquemas como `javascript:`, que ejecutarían al tocar/cargar la imagen. A diferencia de
+// `document_url`, acá son opcionales: no todo establecimiento tiene logo o portada.
+const optionalHttpUrlSchema = z
+  .string()
+  .url('Debe ser una URL válida')
+  .refine((url) => /^https?:\/\//i.test(url), 'El enlace debe empezar con http:// o https://')
+  .optional()
+  .or(z.literal(''));
+
 export const establishmentProfileSchema = z.object({
   name: z.string().min(1, 'El nombre es obligatorio').max(120),
   description: z.string().max(500).optional().or(z.literal('')),
@@ -41,6 +53,8 @@ export const establishmentProfileSchema = z.object({
   phone: z.string().max(20).optional().or(z.literal('')),
   whatsapp_number: z.string().max(20).optional().or(z.literal('')),
   is_24_7: z.boolean().default(false),
+  logo_url: optionalHttpUrlSchema,
+  cover_image_url: optionalHttpUrlSchema,
 });
 export type EstablishmentProfileFormValues = z.infer<typeof establishmentProfileSchema>;
 

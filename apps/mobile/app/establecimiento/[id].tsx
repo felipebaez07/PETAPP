@@ -8,15 +8,16 @@ import {
   type EstablishmentWithDetails,
 } from '@petapp/shared';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { CalendarPlus, Info, MapPin, MessageCircle, Phone, SearchX, ShieldCheck } from 'lucide-react-native';
+import { Building2, CalendarPlus, Info, MapPin, MessageCircle, Phone, SearchX, ShieldCheck } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Alert, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, Image, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingState } from '@/components/ui/LoadingState';
+import { RemoteImage } from '@/components/ui/RemoteImage';
 import { StatusDot } from '@/components/ui/StatusDot';
 import { usePets } from '@/contexts/PetsContext';
 import { getCurrentUser, type CurrentUser } from '@/lib/auth';
@@ -142,17 +143,28 @@ export default function EstablishmentDetailScreen() {
     <>
       <Stack.Screen options={{ title: establishment.name }} />
       <ScrollView className="flex-1 bg-background" contentContainerStyle={{ padding: 20, gap: 20 }}>
-        <View className="gap-2">
-          <Text className="font-bodySemibold text-xs uppercase tracking-wide text-secondary">
-            {CATEGORY_LABELS[establishment.category]}
-          </Text>
-          <Text className="font-headingBold text-2xl text-foreground">{establishment.name}</Text>
-          <View className="flex-row items-center gap-3">
-            <StatusDot
-              open={open}
-              openLabel={establishment.is_24_7 ? 'Abierto 24/7' : 'Abierto ahora'}
-            />
-            {verified ? <Badge label="Verificado" tone="success" icon={ShieldCheck} /> : null}
+        {establishment.cover_image_url ? (
+          <Image
+            source={{ uri: establishment.cover_image_url }}
+            style={{ width: '100%', height: 140, borderRadius: 16 }}
+            resizeMode="cover"
+          />
+        ) : null}
+
+        <View className="flex-row items-center gap-3">
+          <RemoteImage uri={establishment.logo_url} size={56} icon={Building2} />
+          <View className="flex-1 gap-2">
+            <Text className="font-bodySemibold text-xs uppercase tracking-wide text-secondary">
+              {CATEGORY_LABELS[establishment.category]}
+            </Text>
+            <Text className="font-headingBold text-2xl text-foreground">{establishment.name}</Text>
+            <View className="flex-row items-center gap-3">
+              <StatusDot
+                open={open}
+                openLabel={establishment.is_24_7 ? 'Abierto 24/7' : 'Abierto ahora'}
+              />
+              {verified ? <Badge label="Verificado" tone="success" icon={ShieldCheck} /> : null}
+            </View>
           </View>
         </View>
 

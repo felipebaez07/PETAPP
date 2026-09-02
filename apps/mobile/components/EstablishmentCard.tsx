@@ -1,8 +1,9 @@
 import { CATEGORY_LABELS, isOpenNow, type EstablishmentWithDetails } from '@petapp/shared';
 import { useRouter } from 'expo-router';
-import { ChevronRight, MapPin, ShieldCheck } from 'lucide-react-native';
+import { Building2, ChevronRight, MapPin, ShieldCheck } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 
+import { RemoteImage } from './ui/RemoteImage';
 import { StatusDot } from './ui/StatusDot';
 
 export function EstablishmentCard({ establishment }: { establishment: EstablishmentWithDetails }) {
@@ -18,6 +19,7 @@ export function EstablishmentCard({ establishment }: { establishment: Establishm
       style={({ pressed }) => (pressed ? { transform: [{ scale: 0.98 }] } : undefined)}
     >
       <View className="flex-row items-start gap-3">
+        <RemoteImage uri={establishment.logo_url} size={48} icon={Building2} />
         <View className="flex-1 gap-1.5">
           <Text className="font-bodySemibold text-xs uppercase tracking-wide text-secondary">
             {CATEGORY_LABELS[establishment.category]}

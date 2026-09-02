@@ -18,6 +18,7 @@ import { z } from 'zod';
 
 import { Button } from '@/components/ui/Button';
 import { ChipSelectField } from '@/components/ui/ChipSelectField';
+import { DatePickerField } from '@/components/ui/DatePickerField';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FormTextField } from '@/components/ui/FormTextField';
 import { PetDocumentRow } from '@/components/PetDocumentRow';
@@ -69,6 +70,11 @@ function sortByDueDate(events: PreventiveEvent[]): PreventiveEvent[] {
   return [...events].sort((a, b) => a.due_date.localeCompare(b.due_date));
 }
 
+/** Historial: eventos ya completados, más recientes primero (por fecha de completado). */
+function sortByCompletedDesc(events: PreventiveEvent[]): PreventiveEvent[] {
+  return [...events].sort((a, b) => (b.completed_at ?? '').localeCompare(a.completed_at ?? ''));
+}
+
 export default function PetDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -78,6 +84,11 @@ export default function PetDetailScreen() {
   const [events, setEvents] = useState<PreventiveEvent[]>([]);
   const [documents, setDocuments] = useState<PetDocument[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // El cuidador pidió distinguir claramente lo pendiente (próximo/vencido, ver
+  // PreventiveEventRow) del historial de lo ya hecho, en vez de una sola lista mezclada.
+  const pendingEvents = useMemo(() => sortByDueDate(events.filter((e) => !e.completed_at)), [events]);
+  const historyEvents = useMemo(() => sortByCompletedDesc(events.filter((e) => e.completed_at)), [events]);
 
   useEffect(() => {
     let active = true;
@@ -313,12 +324,7 @@ export default function PetDetailScreen() {
               placeholder="Ej. Refuerzo antirrábico"
             />
             <ChipSelectField control={eventForm.control} name="type" label="Tipo" options={EVENT_TYPE_OPTIONS} />
-            <FormTextField
-              control={eventForm.control}
-              name="due_date"
-              label="Fecha (AAAA-MM-DD)"
-              placeholder="2026-10-15"
-            />
+            <DatePickerField control={eventForm.control} name="due_date" label="Fecha" />
             <FormTextField
               control={eventForm.control}
               name="notes"
@@ -342,20 +348,81 @@ export default function PetDetailScreen() {
               description="Agrega la próxima vacuna, control o desparasitación de tu mascota."
             />
           ) : (
-            <View className="gap-2.5">
-              {events.map((event, index) => (
-                <Animated.View
-                  key={event.id}
-                  entering={
-                    index < 8
-                      ? FadeInDown.duration(240).delay(index * 35).springify().damping(26).stiffness(220)
-                      : undefined
-                  }
-                >
-                  <PreventiveEventRow event={event} onToggleComplete={handleToggleEvent} onDelete={handleDeleteEvent} />
-                </Animated.View>
-              ))}
-            </View>
+            <>
+              {/* Pendientes: próximo/vencido, ordenado por fecha más cercana primero. */}
+              <View className="gap-2.5">
+                <View className="flex-row items-center justify-between">
+                  <Text className="font-bodySemibold text-sm uppercase tracking-wide text-mutedForeground">
+                    Pendientes
+                  </Text>
+                  <Text className="font-body text-xs text-mutedForeground">
+                    {pendingEvents.length}
+                  </Text>
+                </View>
+                {pendingEvents.length === 0 ? (
+                  <EmptyState
+                    icon={CheckCircle2}
+                    title="Sin pendientes"
+                    description="No hay vacunas, controles ni desparasitaciones por hacer."
+                  />
+                ) : (
+                  <View className="gap-2.5">
+                    {pendingEvents.map((event, index) => (
+                      <Animated.View
+                        key={event.id}
+                        entering={
+                          index < 8
+                            ? FadeInDown.duration(240).delay(index * 35).springify().damping(26).stiffness(220)
+                            : undefined
+                        }
+                      >
+                        <PreventiveEventRow
+                          event={event}
+                          onToggleComplete={handleToggleEvent}
+                          onDelete={handleDeleteEvent}
+                        />
+                      </Animated.View>
+                    ))}
+                  </View>
+                )}
+              </View>
+
+              {/* Historial: qué haceres ya se hicieron por esta mascota, más recientes primero. */}
+              <View className="gap-2.5">
+                <View className="flex-row items-center justify-between">
+                  <Text className="font-bodySemibold text-sm uppercase tracking-wide text-mutedForeground">
+                    Historial
+                  </Text>
+                  <Text className="font-body text-xs text-mutedForeground">
+                    {historyEvents.length}
+                  </Text>
+                </View>
+                {historyEvents.length === 0 ? (
+                  <Text className="font-body text-sm text-mutedForeground">
+                    Todavía no has marcado nada como completado.
+                  </Text>
+                ) : (
+                  <View className="gap-2.5">
+                    {historyEvents.map((event, index) => (
+                      <Animated.View
+                        key={event.id}
+                        entering={
+                          index < 8
+                            ? FadeInDown.duration(240).delay(index * 35).springify().damping(26).stiffness(220)
+                            : undefined
+                        }
+                      >
+                        <PreventiveEventRow
+                          event={event}
+                          onToggleComplete={handleToggleEvent}
+                          onDelete={handleDeleteEvent}
+                        />
+                      </Animated.View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </>
           )}
         </View>
 

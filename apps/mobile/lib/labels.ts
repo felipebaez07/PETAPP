@@ -27,3 +27,36 @@ export function formatPetAge(birthDate: string | null): string {
   if (remainingMonths === 0) return `${years} ${years === 1 ? 'año' : 'años'}`;
   return `${years} ${years === 1 ? 'año' : 'años'} y ${remainingMonths} ${remainingMonths === 1 ? 'mes' : 'meses'}`;
 }
+
+/** Encabezado de sección de la agenda del prestador, ej. "Lunes 8 de septiembre". */
+export function formatAgendaDateHeader(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  const label = date.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' });
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+/**
+ * Hora de una cita en formato "3:00 p.m." — se calcula a mano en vez de con
+ * `toLocaleTimeString` porque Hermes no siempre trae datos ICU completos para
+ * formatear hora con am/pm en es-CO de forma consistente entre plataformas.
+ */
+export function formatAgendaTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  let hours = date.getHours();
+  const minutes = date.getMinutes();
+  const period = hours >= 12 ? 'p.m.' : 'a.m.';
+  hours = hours % 12;
+  if (hours === 0) hours = 12;
+  return `${hours}:${String(minutes).padStart(2, '0')} ${period}`;
+}
+
+/** Fecha + hora de una cita en una sola línea, ej. "Lun 8 sept · 3:00 p.m.". */
+export function formatAgendaDateTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  const dayLabel = date.toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric', month: 'short' });
+  const capitalized = (dayLabel.charAt(0).toUpperCase() + dayLabel.slice(1)).replace(',', '');
+  return `${capitalized} · ${formatAgendaTime(iso)}`;
+}

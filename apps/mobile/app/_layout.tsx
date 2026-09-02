@@ -71,7 +71,8 @@ export default function RootLayout() {
           <Stack.Screen name="negocio-perfil" options={{ title: 'Perfil del negocio' }} />
           <Stack.Screen name="negocio-horarios" options={{ title: 'Horarios' }} />
           <Stack.Screen name="negocio-servicios" options={{ title: 'Servicios' }} />
-          <Stack.Screen name="negocio-solicitudes" options={{ title: 'Solicitudes de cita' }} />
+          {/* Antes "negocio-solicitudes" (Stack): ahora vive como tab "Agenda" en (tabs)/agenda.tsx,
+              visible solo para cuentas de establecimiento (ver (tabs)/_layout.tsx). */}
           <Stack.Screen name="negocio-plan" options={{ title: 'Mi plan' }} />
           <Stack.Screen name="+not-found" options={{ title: 'No encontrado' }} />
         </Stack>

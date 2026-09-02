@@ -173,6 +173,75 @@ Tareas:
 - [x] Adicional no listado originalmente pero necesario para que compile: reescrito `lib/data.ts` (quitó `fetchProducts`/`fetchForumPosts`/`fetchAdoptionPosts*`, agregó `fetchPreventiveEventsByPet`, `fetchPreventiveEventsForPets`, `fetchPetDocumentsByPet`, filtró `fetchEstablishments` a veterinaria/profesional); actualizado `app/establecimiento/[id].tsx` (quitó sección de productos y `buildProductInquiryWhatsAppLink`, renombró el flujo de "reserva" a "solicitud de cita" contra `service_requests`); actualizado `app/_layout.tsx` (Stack screens) y `app/(tabs)/perfil.tsx` (enlaces del panel de negocio) (hecho: 2026-09-01)
 - [x] `npm run typecheck` en verde en las 3 workspaces (`apps/web`, `apps/mobile`, `packages/shared`) después de los cambios (hecho: 2026-09-01)
 
+### 6.1 Ronda de pulido/funcionalidad nueva (solo mobile, pedido 2026-09-01)
+
+Cinco pedidos concretos del dueño del proyecto, solo para `apps/mobile` (y `packages/shared`
+donde hizo falta un campo opcional aditivo). No requirió ninguna migración nueva — todo tenía
+soporte en `0001_init.sql`/`0005_pivot_preventivo.sql` ya aplicadas.
+
+- [x] **Selector de fecha real** para `due_date` del calendario preventivo, en vez de texto libre
+  "AAAA-MM-DD". Nuevo componente `components/ui/DatePickerField.tsx` (nativo, con
+  `@react-native-community/datetimepicker` instalado vía `npx expo install`, mismo shape de props
+  que `FormTextField`/`ChipSelectField`) + `components/ui/DatePickerField.web.tsx` (variante web con
+  `<input type="date">`, resuelta automáticamente por Metro en `expo export --platform web` gracias
+  a la extensión `.web.tsx` — no hizo falta ningún `Platform.select` en el sitio de uso). Usado en
+  `app/mascotas/[id].tsx` (hecho: 2026-09-01, `components/ui/DatePickerField.{tsx,web.tsx}`,
+  `app/mascotas/[id].tsx`). Verificado con `npx expo export --platform web` (19 rutas, sin errores).
+- [x] **Historial del cuidador por mascota**: `app/mascotas/[id].tsx` ahora separa el calendario
+  preventivo en dos secciones — "Pendientes" (próximo/vencido, orden por fecha más cercana) e
+  "Historial" (`completed_at` no nulo, más recientes primero) — en vez de una sola lista mezclada.
+  Mismo patrón de animación existente (`FadeInDown.springify().damping(26).stiffness(220)`, stagger
+  de 35ms, tope de 8 filas por sección) (hecho: 2026-09-01, `app/mascotas/[id].tsx`).
+- [x] **Agenda del prestador**: nueva tab "Agenda" (`app/(tabs)/agenda.tsx`, renombrada desde
+  `app/negocio-solicitudes.tsx`) con una sección "Próximas citas confirmadas" que agrupa por día
+  las `service_requests` con `status='confirmada'` y `preferred_datetime` no nulo (más próximas
+  primero), mostrando hora, cuidador, mascota y servicio por fila; debajo se conserva la lista
+  completa de solicitudes tal como estaba (con los chips de cambio de estado) (hecho: 2026-09-01,
+  `app/(tabs)/agenda.tsx`, helpers `formatAgendaDateHeader`/`formatAgendaTime`/`formatAgendaDateTime`
+  en `lib/labels.ts`).
+- [x] **Dos interfaces separadas (cuidador vs. empresa)**: `app/(tabs)/_layout.tsx` lee el rol con
+  `getCurrentUser()` y oculta/muestra tabs con `href: null` (patrón documentado de Expo Router para
+  tabs condicionales, sin desmontar rutas) — cuidador/sin sesión ve Inicio/Mascotas/Directorio/Perfil,
+  empresa ve Inicio/Agenda/Directorio/Perfil. "Inicio" se ramifica dentro del mismo
+  `app/(tabs)/index.tsx` en `CuidadorHomeScreen` (el dashboard de siempre) y `BusinessHomeScreen`
+  (nuevo: conteo de solicitudes pendientes, próxima cita confirmada, accesos rápidos a Perfil del
+  negocio/Horarios/Servicios/Plan) — nunca se mezclan (hecho: 2026-09-01, `app/(tabs)/_layout.tsx`,
+  `app/(tabs)/index.tsx`). Se quitó el link redundante "Solicitudes de cita" del panel de
+  `app/(tabs)/perfil.tsx` porque ahora es la tab "Agenda" directamente.
+- [x] **Personalización de marca del negocio**: `establishmentProfileSchema`
+  (`packages/shared/src/schemas.ts`) extendido con `logo_url`/`cover_image_url`, opcionales,
+  restringidos a `http(s)://` con el mismo patrón de seguridad de `petDocumentSchema.document_url`
+  (evita XSS vía esquema `javascript:` al renderizarse como `<Image>`) — aditivo, no rompe
+  `apps/web` (confirmado con `npm run typecheck`, las 3 workspaces en verde). Nuevo componente
+  `components/ui/RemoteImage.tsx` (imagen remota con fallback a ícono Lucide si no hay URL o si
+  falla la carga). Campos "Logo (URL)" y "Foto de portada (URL)" con vista previa agregados a
+  `app/negocio-perfil.tsx`; logo reflejado en `components/EstablishmentCard.tsx` (tarjeta del
+  directorio) y en `app/establecimiento/[id].tsx` (ficha pública, además de un banner opcional con
+  `cover_image_url` si existe) (hecho: 2026-09-01).
+
+Pendiente honesto de esta ronda (no se alcanzó a hacer, no se maquilla):
+
+- [ ] (2026-09-01) La agenda del prestador (`app/(tabs)/agenda.tsx`) depende de que
+  `service_requests.preferred_datetime` tenga un valor — hoy ningún formulario mobile permite al
+  cuidador proponer fecha/hora al solicitar cita (`app/establecimiento/[id].tsx` solo manda
+  `service_id`/`pet_id`/`notes`), así que en la práctica la sección "Próximas citas confirmadas"
+  quedará vacía hasta que (a) se agregue un selector de fecha/hora deseada al formulario de
+  solicitud, o (b) el prestador la fije manualmente en algún flujo nuevo. No se hizo por estar fuera
+  del alcance literal de los 5 pedidos (que era mostrar la agenda a partir de datos ya existentes,
+  no agregar un campo nuevo al formulario de solicitud) — queda como tarea natural de seguimiento.
+- [ ] (2026-09-01) El picker nativo de fecha en iOS usa `display="inline"` con un botón "Listo" para
+  cerrarlo (el modo `"default"` de iOS no es un modal flotante fuera de un `Modal` propio) — no se
+  probó en un dispositivo/simulador iOS real dentro de esta tarea (solo se verificó que compila y
+  que el export web sigue funcionando); revisar la UX exacta la primera vez que se corra en iOS.
+- [ ] (2026-09-01) La subida real de logo/portada de archivo (no URL) sigue pendiente, igual que la
+  de `pet_documents` — mismo criterio ya anotado en el resto del backlog (sección 9): evaluar
+  Supabase Storage con policies por dueño del establecimiento.
+- [ ] (2026-09-01) El resumen de negocio (`BusinessHomeScreen` en `app/(tabs)/index.tsx`) no se
+  probó contra el proyecto Supabase real con datos de `service_requests` confirmadas — se verificó
+  que compila y que el flujo de demo/sin-sesión sigue cayendo al dashboard de cuidador, pero no hubo
+  forma de correr la app en un dispositivo/emulador dentro de este entorno para confirmar
+  visualmente las dos tarjetas de resumen contra datos reales.
+
 ## 7. Despliegue
 
 Decisión (2026-09-01): Vercel, importando el repo de GitHub (`felipebaez07/PETAPP`) directamente —

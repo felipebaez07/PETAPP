@@ -1,7 +1,6 @@
 import {
   AlertCircle,
   Building2,
-  CalendarCheck,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -188,7 +187,6 @@ export default function ProfileScreen() {
                   { label: 'Perfil del negocio', icon: Building2, href: '/negocio-perfil' as const },
                   { label: 'Horarios', icon: Clock, href: '/negocio-horarios' as const },
                   { label: 'Servicios', icon: ListChecks, href: '/negocio-servicios' as const },
-                  { label: 'Solicitudes de cita', icon: CalendarCheck, href: '/negocio-solicitudes' as const },
                   { label: 'Mi plan', icon: CreditCard, href: '/negocio-plan' as const },
                 ].map((item, index, arr) => (
                   <Pressable

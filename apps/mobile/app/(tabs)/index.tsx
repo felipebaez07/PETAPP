@@ -1,6 +1,21 @@
-import { APP_TAGLINE, DEMO_PREVENTIVE_EVENTS, type PreventiveEvent } from '@petapp/shared';
+import {
+  APP_TAGLINE,
+  DEMO_PREVENTIVE_EVENTS,
+  type Establishment,
+  type PreventiveEvent,
+} from '@petapp/shared';
 import { useRouter } from 'expo-router';
-import { Building2, CalendarCheck2, PartyPopper, Plus } from 'lucide-react-native';
+import {
+  Building2,
+  CalendarCheck2,
+  CalendarClock,
+  ChevronRight,
+  Clock,
+  CreditCard,
+  ListChecks,
+  PartyPopper,
+  Plus,
+} from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -10,14 +25,201 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { usePets } from '@/contexts/PetsContext';
+import { getCurrentUser, type CurrentUser } from '@/lib/auth';
 import { fetchPreventiveEventsForPets } from '@/lib/data';
+import { formatAgendaDateTime } from '@/lib/labels';
 import { supabase } from '@/lib/supabase';
 
 function sortByDueDate(events: PreventiveEvent[]): PreventiveEvent[] {
   return [...events].sort((a, b) => a.due_date.localeCompare(b.due_date));
 }
 
+/**
+ * "Inicio" se ramifica por rol (spec.md sección 6, punto 4): un cuidador nunca debe ver el
+ * dashboard de negocio y viceversa. Sin sesión, se usa el dashboard de cuidador (como hoy
+ * con datos de demo) mientras se resuelve — o si nunca hay sesión — el rol del usuario.
+ */
 export default function HomeScreen() {
+  const [user, setUser] = useState<CurrentUser | null | undefined>(undefined);
+
+  useEffect(() => {
+    let active = true;
+    getCurrentUser()
+      .then((current) => {
+        if (active) setUser(current);
+      })
+      .catch(() => {
+        if (active) setUser(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (user === undefined) {
+    return <LoadingState label="Cargando tu inicio..." />;
+  }
+
+  if (user?.profile.role === 'establecimiento') {
+    return <BusinessHomeScreen establishment={user.establishment} />;
+  }
+
+  return <CuidadorHomeScreen />;
+}
+
+interface NextAppointment {
+  id: string;
+  preferred_datetime: string;
+  pet_owner: { full_name: string } | null;
+  pet: { name: string } | null;
+  service: { name: string } | null;
+}
+
+/** Dashboard de negocio: resumen de solicitudes + accesos rápidos a la gestión del negocio. */
+function BusinessHomeScreen({ establishment }: { establishment: Establishment | null }) {
+  const router = useRouter();
+  const [pendingCount, setPendingCount] = useState<number | null>(null);
+  const [nextAppointment, setNextAppointment] = useState<NextAppointment | null | undefined>(undefined);
+
+  useEffect(() => {
+    let active = true;
+    if (!establishment) {
+      setPendingCount(null);
+      setNextAppointment(null);
+      return;
+    }
+
+    (async () => {
+      const { count, error: countError } = await supabase
+        .from('service_requests')
+        .select('id', { count: 'exact', head: true })
+        .eq('establishment_id', establishment.id)
+        .eq('status', 'pendiente');
+      if (!active) return;
+      if (countError) {
+        Alert.alert('No se pudo cargar el resumen', countError.message);
+      } else {
+        setPendingCount(count ?? 0);
+      }
+
+      const { data, error } = await supabase
+        .from('service_requests')
+        .select('id, preferred_datetime, pet_owner:profiles(full_name), pet:pets(name), service:services(name)')
+        .eq('establishment_id', establishment.id)
+        .eq('status', 'confirmada')
+        .not('preferred_datetime', 'is', null)
+        .gte('preferred_datetime', new Date().toISOString())
+        .order('preferred_datetime', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (!active) return;
+      if (error) {
+        setNextAppointment(null);
+        return;
+      }
+      setNextAppointment((data as unknown as NextAppointment | null) ?? null);
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [establishment]);
+
+  const quickLinks = [
+    { label: 'Perfil del negocio', icon: Building2, href: '/negocio-perfil' as const },
+    { label: 'Horarios', icon: Clock, href: '/negocio-horarios' as const },
+    { label: 'Servicios', icon: ListChecks, href: '/negocio-servicios' as const },
+    { label: 'Mi plan', icon: CreditCard, href: '/negocio-plan' as const },
+  ];
+
+  return (
+    <ScrollView className="flex-1 bg-background" contentContainerStyle={{ paddingBottom: 32 }}>
+      <ScreenHeader
+        title="Inicio"
+        subtitle={establishment ? `Panel de ${establishment.name}` : 'Panel de tu negocio en PETAPP'}
+      />
+
+      {!establishment ? (
+        <View className="p-5">
+          <EmptyState
+            icon={Building2}
+            title="Completa el perfil de tu negocio"
+            description="Aún no tienes un establecimiento vinculado a tu cuenta. Contacta al equipo de PETAPP para activarlo."
+          />
+        </View>
+      ) : (
+        <View className="gap-5 px-5 pt-5">
+          <View className="flex-row gap-3">
+            <Pressable
+              onPress={() => router.push('/(tabs)/agenda')}
+              accessibilityRole="button"
+              style={({ pressed }) => (pressed ? { transform: [{ scale: 0.97 }] } : undefined)}
+              className="flex-1 gap-2 rounded-xl bg-card p-4 shadow-sm"
+            >
+              <View className="h-11 w-11 items-center justify-center rounded-md bg-backgroundAlt">
+                <CalendarClock size={22} color="#0369A1" />
+              </View>
+              <Text className="font-headingBold text-2xl text-foreground">{pendingCount ?? '—'}</Text>
+              <Text className="font-bodyMedium text-sm text-mutedForeground">
+                Solicitud{pendingCount === 1 ? '' : 'es'} pendiente{pendingCount === 1 ? '' : 's'}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => router.push('/(tabs)/agenda')}
+              accessibilityRole="button"
+              style={({ pressed }) => (pressed ? { transform: [{ scale: 0.97 }] } : undefined)}
+              className="flex-1 gap-2 rounded-xl bg-card p-4 shadow-sm"
+            >
+              <View className="h-11 w-11 items-center justify-center rounded-md bg-backgroundAlt">
+                <CalendarCheck2 size={22} color="#0369A1" />
+              </View>
+              {nextAppointment === undefined ? (
+                <Text className="font-body text-sm text-mutedForeground">Cargando...</Text>
+              ) : nextAppointment ? (
+                <>
+                  <Text className="font-bodySemibold text-sm text-foreground">
+                    {formatAgendaDateTime(nextAppointment.preferred_datetime)}
+                  </Text>
+                  <Text className="font-body text-xs text-mutedForeground" numberOfLines={1}>
+                    {nextAppointment.pet_owner?.full_name ?? 'Cuidador'}
+                    {nextAppointment.pet?.name ? ` · ${nextAppointment.pet.name}` : ''}
+                  </Text>
+                </>
+              ) : (
+                <Text className="font-body text-sm text-mutedForeground">Sin próxima cita</Text>
+              )}
+            </Pressable>
+          </View>
+
+          <View className="gap-3">
+            <Text className="font-heading text-lg text-foreground">Gestionar mi negocio</Text>
+            <View className="overflow-hidden rounded-xl bg-card shadow-sm">
+              {quickLinks.map((item, index, arr) => (
+                <Pressable
+                  key={item.href}
+                  onPress={() => router.push(item.href)}
+                  accessibilityRole="button"
+                  className={[
+                    'min-h-11 flex-row items-center gap-3 px-4 py-3',
+                    index < arr.length - 1 ? 'border-b border-border' : '',
+                  ].join(' ')}
+                >
+                  <item.icon size={20} color="#0369A1" />
+                  <Text className="flex-1 font-bodyMedium text-base text-foreground">{item.label}</Text>
+                  <ChevronRight size={18} color="#64748B" />
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        </View>
+      )}
+    </ScrollView>
+  );
+}
+
+/** Dashboard de cuidador: próximos vencimientos preventivos cruzando todas sus mascotas. */
+function CuidadorHomeScreen() {
   const router = useRouter();
   const { pets, loading: loadingPets, isDemo } = usePets();
   const [events, setEvents] = useState<PreventiveEvent[]>([]);

@@ -1,7 +1,7 @@
 import { establishmentProfileSchema, type EstablishmentProfileFormValues } from '@petapp/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'expo-router';
-import { Building2 } from 'lucide-react-native';
+import { Building2, Image as ImageIcon } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Alert, ScrollView, Text, View } from 'react-native';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FormTextField } from '@/components/ui/FormTextField';
 import { LoadingState } from '@/components/ui/LoadingState';
+import { RemoteImage } from '@/components/ui/RemoteImage';
 import { SwitchField } from '@/components/ui/SwitchField';
 import { getCurrentUser } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
@@ -41,6 +42,8 @@ export default function NegocioPerfilScreen() {
       phone: establishment?.phone ?? '',
       whatsapp_number: establishment?.whatsapp_number ?? '',
       is_24_7: establishment?.is_24_7 ?? false,
+      logo_url: establishment?.logo_url ?? '',
+      cover_image_url: establishment?.cover_image_url ?? '',
     },
     values: establishment
       ? {
@@ -50,9 +53,14 @@ export default function NegocioPerfilScreen() {
           phone: establishment.phone ?? '',
           whatsapp_number: establishment.whatsapp_number ?? '',
           is_24_7: establishment.is_24_7,
+          logo_url: establishment.logo_url ?? '',
+          cover_image_url: establishment.cover_image_url ?? '',
         }
       : undefined,
   });
+
+  const logoUrl = watch('logo_url');
+  const coverImageUrl = watch('cover_image_url');
 
   async function onSubmit(values: EstablishmentProfileFormValues) {
     if (!establishment) return;
@@ -66,6 +74,8 @@ export default function NegocioPerfilScreen() {
         phone: values.phone || null,
         whatsapp_number: values.whatsapp_number || null,
         is_24_7: values.is_24_7,
+        logo_url: values.logo_url || null,
+        cover_image_url: values.cover_image_url || null,
       })
       .eq('id', establishment.id);
 
@@ -128,6 +138,44 @@ export default function NegocioPerfilScreen() {
           value={is24h}
           onValueChange={(value) => setValue('is_24_7', value, { shouldDirty: true })}
         />
+      </View>
+
+      <View className="gap-1">
+        <Text className="font-heading text-lg text-foreground">Personaliza tu marca</Text>
+        <Text className="font-body text-sm text-mutedForeground">
+          Tu logo se ve en el directorio y en tu ficha pública. Por ahora se guarda como enlace — la subida de
+          archivos llega más adelante.
+        </Text>
+      </View>
+
+      <View className="gap-4">
+        <View className="flex-row items-end gap-3">
+          <RemoteImage uri={logoUrl} size={56} icon={Building2} />
+          <View className="flex-1">
+            <FormTextField
+              control={control}
+              name="logo_url"
+              label="Logo (URL)"
+              placeholder="https://..."
+              autoCapitalize="none"
+              keyboardType="url"
+            />
+          </View>
+        </View>
+
+        <View className="flex-row items-end gap-3">
+          <RemoteImage uri={coverImageUrl} size={56} icon={ImageIcon} />
+          <View className="flex-1">
+            <FormTextField
+              control={control}
+              name="cover_image_url"
+              label="Foto de portada (URL)"
+              placeholder="https://..."
+              autoCapitalize="none"
+              keyboardType="url"
+            />
+          </View>
+        </View>
       </View>
 
       {saved ? <Text className="font-body text-sm text-success">Cambios guardados.</Text> : null}
