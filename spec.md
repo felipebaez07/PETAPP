@@ -281,6 +281,24 @@ funciones nuevas (Tabla V del PDF — condiciones de avance):
 - [ ] Prueba de usabilidad con 5 cuidadores (criterio: ≥4 completan perfil+fecha+solicitud sin ayuda)
 - [ ] Piloto operativo 50–100 cuidadores / 5–8 prestadores (criterio: retención 4 semanas ≥30%, ≥60% solicitudes con respuesta, ≥3 prestadores pagan o firman intención)
 
+## 8.1 Login con Google en mobile (2026-09-01)
+
+- [x] `signInWithGoogle()` en `lib/auth.ts` (web: redirect de página; nativo: `expo-web-browser` +
+  esquema propio `petapp://`, sin dependencias nuevas), pantalla `app/auth-callback.tsx`, botón en
+  `(tabs)/perfil.tsx` (oculto al registrarse como empresa, igual que la web) (hecho: 2026-09-01,
+  commit `24711bf`).
+- [ ] **Pendiente del usuario, bloqueante**: agregar en Supabase Dashboard → Authentication → URL
+  Configuration → Redirect URLs (además de lo ya pedido para la web):
+  - `petapp://**` (esquema nativo de la app — mobile real)
+  - `https://petapp-web-ezpl.vercel.app/**` (la vista web de prueba de mobile, dominio distinto al
+    de la web principal)
+  Sin esto, Supabase ignora el `redirectTo` que manda la app y cae al "Site URL" — que es
+  exactamente el síntoma de "me redirige a localhost" que se reportó también en la web principal:
+  ese fix (sección 7 de este documento) tampoco quedó aplicado todavía.
+- [ ] No probado en un dispositivo real (dev client/standalone) — el regreso vía esquema propio
+  (`petapp://`) no lo captura Expo Go, solo una build real de la app. Verificar cuando exista esa
+  build.
+
 ## 9. Backlog / ideas que van surgiendo
 
 (Agregar aquí cualquier tarea nueva que salga en el camino, con fecha.)
