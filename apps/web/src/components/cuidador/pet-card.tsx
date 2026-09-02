@@ -12,7 +12,12 @@ export function PetCard({ pet, pendingCount }: { pet: Pet; pendingCount: number 
         <CardContent className="flex flex-col gap-3 p-5">
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-3">
-              <RemoteImage src={pet.photo_url} size={48} icon={PawPrint} alt={pet.name} />
+              <RemoteImage
+                src={pet.photo_url}
+                size={48}
+                icon={<PawPrint className="size-6 text-secondary" aria-hidden />}
+                alt={pet.name}
+              />
               <div>
                 <h3 className="font-heading text-base font-semibold text-foreground">{pet.name}</h3>
                 <p className="text-sm text-muted-foreground">
