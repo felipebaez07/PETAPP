@@ -1,0 +1,7 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/mascotas/:id", "destination": "/mascotas/[id].html" },
+    { "source": "/establecimiento/:id", "destination": "/establecimiento/[id].html" }
+  ]
+}
