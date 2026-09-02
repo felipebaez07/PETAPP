@@ -283,11 +283,14 @@ export default function PetDetailScreen() {
       <Stack.Screen options={{ title: pet.name }} />
       <ScrollView className="flex-1 bg-background" contentContainerStyle={{ padding: 20, gap: 28 }}>
         <View className="flex-row items-center gap-3 rounded-xl bg-card p-4 shadow-sm">
-          <View className="h-14 w-14 items-center justify-center rounded-md bg-backgroundAlt">
+          <View
+            className="h-14 w-14 items-center justify-center rounded-md bg-backgroundAlt"
+            accessible={false}
+          >
             <SpeciesIcon size={28} color="#059669" />
           </View>
           <View className="flex-1 gap-0.5">
-            <Text className="font-headingBold text-xl text-foreground">{pet.name}</Text>
+            <Text className="font-headingBold text-xl tracking-tight text-foreground">{pet.name}</Text>
             <Text className="font-body text-sm text-mutedForeground">
               {SPECIES_LABELS[pet.species]}
               {pet.breed ? ` · ${pet.breed}` : ''} · {SEX_LABELS[pet.sex]}

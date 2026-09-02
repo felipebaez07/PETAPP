@@ -168,7 +168,7 @@ export default function EstablishmentDetailScreen() {
             <Text className="font-bodySemibold text-xs uppercase tracking-wide text-secondary">
               {CATEGORY_LABELS[establishment.category]}
             </Text>
-            <Text className="font-headingBold text-2xl text-foreground">{establishment.name}</Text>
+            <Text className="font-headingBold text-2xl tracking-tight text-foreground">{establishment.name}</Text>
             <View className="flex-row items-center gap-3">
               <StatusDot
                 open={open}

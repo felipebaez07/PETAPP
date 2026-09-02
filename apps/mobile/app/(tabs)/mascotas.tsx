@@ -9,10 +9,12 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { usePets } from '@/contexts/PetsContext';
+import { useTabBarBottomInset } from '@/lib/tabBar';
 
 export default function PetsScreen() {
   const { pets, loading, isDemo, deletePet } = usePets();
   const router = useRouter();
+  const tabBarBottomInset = useTabBarBottomInset();
 
   function confirmDelete(pet: Pet) {
     Alert.alert('Eliminar mascota', `¿Eliminar a ${pet.name} de tu lista?`, [
@@ -79,7 +81,7 @@ export default function PetsScreen() {
               <PetCard pet={item} onDelete={confirmDelete} />
             </Animated.View>
           )}
-          contentContainerStyle={{ padding: 20 }}
+          contentContainerStyle={{ padding: 20, paddingBottom: tabBarBottomInset }}
         />
       )}
     </View>

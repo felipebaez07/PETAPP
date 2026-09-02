@@ -1,7 +1,9 @@
 import { COLORS } from '@petapp/shared';
+import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
 import { Building2, CalendarClock, Home, PawPrint, UserRound } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
+import { StyleSheet } from 'react-native';
 
 import { getCurrentUser } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
@@ -53,14 +55,26 @@ export default function TabLayout() {
         headerShown: false,
         tabBarActiveTintColor: COLORS.secondary,
         tabBarInactiveTintColor: COLORS.mutedForeground,
+        // Material translúcido real (addendum "Motion & Materials" de MASTER.md: "chrome
+        // flotante con contenido debajo, backdrop-filter blur, nunca apilar dos superficies
+        // translúcidas"). `position: 'absolute'` saca la barra del flujo para que el
+        // contenido de cada tab quede debajo (por eso el ScrollView/FlatList de cada pantalla
+        // de tab usa `useTabBarBottomInset()` de `lib/tabBar.ts` como padding inferior). Sin
+        // `backgroundColor` opaco: `tabBarBackground` ya se encarga de pintar el blur, y este
+        // fork de bottom-tabs (vendido dentro de expo-router) pone
+        // `backgroundColor: 'transparent'` automáticamente en cuanto `tabBarBackground` no es
+        // null.
         tabBarStyle: {
-          backgroundColor: COLORS.card,
-          borderTopColor: COLORS.border,
-          borderTopWidth: 1,
+          position: 'absolute',
+          borderTopWidth: 0,
+          elevation: 0,
           height: 60,
           paddingTop: 6,
           paddingBottom: 8,
         },
+        tabBarBackground: () => (
+          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+        ),
         tabBarLabelStyle: {
           fontFamily: 'SourceSans3_600SemiBold',
           fontSize: 12,

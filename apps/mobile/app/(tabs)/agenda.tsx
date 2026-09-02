@@ -14,6 +14,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { getCurrentUser } from '@/lib/auth';
 import { formatAgendaDateHeader, formatAgendaTime, localDateKey } from '@/lib/labels';
 import { supabase } from '@/lib/supabase';
+import { useTabBarBottomInset } from '@/lib/tabBar';
 
 interface ServiceRequestRow {
   id: string;
@@ -39,6 +40,7 @@ export default function AgendaScreen() {
   const router = useRouter();
   const [establishmentId, setEstablishmentId] = useState<string | null | undefined>(undefined);
   const [requests, setRequests] = useState<ServiceRequestRow[]>([]);
+  const tabBarBottomInset = useTabBarBottomInset();
 
   useEffect(() => {
     getCurrentUser()
@@ -118,7 +120,7 @@ export default function AgendaScreen() {
   let rowIndex = 0;
 
   return (
-    <ScrollView className="flex-1 bg-background" contentContainerStyle={{ paddingBottom: 32 }}>
+    <ScrollView className="flex-1 bg-background" contentContainerStyle={{ paddingBottom: tabBarBottomInset }}>
       <ScreenHeader title="Agenda" subtitle="Qué cuidador viene, con qué mascota y cuándo" />
 
       <View className="gap-5 px-5 pt-5">
@@ -150,7 +152,10 @@ export default function AgendaScreen() {
                           }
                         >
                           <Card className="flex-row items-center gap-3 p-4">
-                            <View className="h-11 w-11 items-center justify-center rounded-md bg-backgroundAlt">
+                            <View
+                              className="h-11 w-11 items-center justify-center rounded-md bg-backgroundAlt"
+                              accessible={false}
+                            >
                               <PawPrint size={20} color="#0369A1" />
                             </View>
                             <View className="flex-1 gap-0.5">

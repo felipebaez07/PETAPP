@@ -29,6 +29,7 @@ import { getCurrentUser, type CurrentUser } from '@/lib/auth';
 import { fetchPreventiveEventsForPets } from '@/lib/data';
 import { formatAgendaDateTime } from '@/lib/labels';
 import { supabase } from '@/lib/supabase';
+import { useTabBarBottomInset } from '@/lib/tabBar';
 
 function sortByDueDate(events: PreventiveEvent[]): PreventiveEvent[] {
   return [...events].sort((a, b) => a.due_date.localeCompare(b.due_date));
@@ -89,6 +90,7 @@ interface NextAppointment {
 /** Dashboard de negocio: resumen de solicitudes + accesos rápidos a la gestión del negocio. */
 function BusinessHomeScreen({ establishment }: { establishment: Establishment | null }) {
   const router = useRouter();
+  const tabBarBottomInset = useTabBarBottomInset();
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const [nextAppointment, setNextAppointment] = useState<NextAppointment | null | undefined>(undefined);
 
@@ -144,7 +146,7 @@ function BusinessHomeScreen({ establishment }: { establishment: Establishment | 
   ];
 
   return (
-    <ScrollView className="flex-1 bg-background" contentContainerStyle={{ paddingBottom: 32 }}>
+    <ScrollView className="flex-1 bg-background" contentContainerStyle={{ paddingBottom: tabBarBottomInset }}>
       <ScreenHeader
         title="Inicio"
         subtitle={establishment ? `Panel de ${establishment.name}` : 'Panel de tu negocio en PETAPP'}
@@ -167,10 +169,13 @@ function BusinessHomeScreen({ establishment }: { establishment: Establishment | 
               style={({ pressed }) => (pressed ? { transform: [{ scale: 0.97 }] } : undefined)}
               className="flex-1 gap-2 rounded-xl bg-card p-4 shadow-sm"
             >
-              <View className="h-11 w-11 items-center justify-center rounded-md bg-backgroundAlt">
+              <View
+                className="h-11 w-11 items-center justify-center rounded-md bg-backgroundAlt"
+                accessible={false}
+              >
                 <CalendarClock size={22} color="#0369A1" />
               </View>
-              <Text className="font-headingBold text-2xl text-foreground">{pendingCount ?? '—'}</Text>
+              <Text className="font-headingBold text-2xl tracking-tight text-foreground">{pendingCount ?? '—'}</Text>
               <Text className="font-bodyMedium text-sm text-mutedForeground">
                 Solicitud{pendingCount === 1 ? '' : 'es'} pendiente{pendingCount === 1 ? '' : 's'}
               </Text>
@@ -182,7 +187,10 @@ function BusinessHomeScreen({ establishment }: { establishment: Establishment | 
               style={({ pressed }) => (pressed ? { transform: [{ scale: 0.97 }] } : undefined)}
               className="flex-1 gap-2 rounded-xl bg-card p-4 shadow-sm"
             >
-              <View className="h-11 w-11 items-center justify-center rounded-md bg-backgroundAlt">
+              <View
+                className="h-11 w-11 items-center justify-center rounded-md bg-backgroundAlt"
+                accessible={false}
+              >
                 <CalendarCheck2 size={22} color="#0369A1" />
               </View>
               {nextAppointment === undefined ? (
@@ -233,6 +241,7 @@ function BusinessHomeScreen({ establishment }: { establishment: Establishment | 
 /** Dashboard de cuidador: próximos vencimientos preventivos cruzando todas sus mascotas. */
 function CuidadorHomeScreen() {
   const router = useRouter();
+  const tabBarBottomInset = useTabBarBottomInset();
   const { pets, loading: loadingPets, isDemo } = usePets();
   const [events, setEvents] = useState<PreventiveEvent[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
@@ -304,7 +313,7 @@ function CuidadorHomeScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-background" contentContainerStyle={{ paddingBottom: 32 }}>
+    <ScrollView className="flex-1 bg-background" contentContainerStyle={{ paddingBottom: tabBarBottomInset }}>
       <ScreenHeader title="Inicio" subtitle={APP_TAGLINE} />
 
       {isDemo ? (
@@ -365,7 +374,10 @@ function CuidadorHomeScreen() {
             style={({ pressed }) => (pressed ? { transform: [{ scale: 0.97 }] } : undefined)}
             className="flex-1 items-center gap-2 rounded-xl bg-card p-4 shadow-sm"
           >
-            <View className="h-11 w-11 items-center justify-center rounded-md bg-backgroundAlt">
+            <View
+              className="h-11 w-11 items-center justify-center rounded-md bg-backgroundAlt"
+              accessible={false}
+            >
               <Plus size={22} color="#0369A1" />
             </View>
             <Text className="text-center font-bodySemibold text-sm text-foreground">Agregar mascota</Text>
@@ -377,7 +389,10 @@ function CuidadorHomeScreen() {
             style={({ pressed }) => (pressed ? { transform: [{ scale: 0.97 }] } : undefined)}
             className="flex-1 items-center gap-2 rounded-xl bg-card p-4 shadow-sm"
           >
-            <View className="h-11 w-11 items-center justify-center rounded-md bg-backgroundAlt">
+            <View
+              className="h-11 w-11 items-center justify-center rounded-md bg-backgroundAlt"
+              accessible={false}
+            >
               <Building2 size={22} color="#0369A1" />
             </View>
             <Text className="text-center font-bodySemibold text-sm text-foreground">Ver directorio</Text>

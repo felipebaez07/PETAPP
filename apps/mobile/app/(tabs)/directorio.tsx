@@ -16,6 +16,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { fetchEstablishments } from '@/lib/data';
+import { useTabBarBottomInset } from '@/lib/tabBar';
 
 const CATEGORY_FILTERS: Array<{ value: ProviderCategory | 'todas'; label: string }> = [
   { value: 'todas', label: 'Todas' },
@@ -33,6 +34,7 @@ export default function DirectoryScreen() {
   const [openNowOnly, setOpenNowOnly] = useState(false);
   const [is24hOnly, setIs24hOnly] = useState(false);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const tabBarBottomInset = useTabBarBottomInset();
 
   useEffect(() => {
     let active = true;
@@ -160,7 +162,7 @@ export default function DirectoryScreen() {
               <EstablishmentCard establishment={item} />
             </Animated.View>
           )}
-          contentContainerStyle={{ padding: 20, paddingTop: 16 }}
+          contentContainerStyle={{ padding: 20, paddingTop: 16, paddingBottom: tabBarBottomInset }}
         />
       )}
     </View>

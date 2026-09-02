@@ -23,6 +23,9 @@ export function RemoteImage({ uri, size, icon: Icon, iconColor = '#0369A1', clas
     <View
       className={`items-center justify-center overflow-hidden rounded-md bg-backgroundAlt ${className ?? ''}`}
       style={{ width: size, height: size }}
+      // Decorativo: siempre acompaña un texto (nombre del establecimiento/mascota) que ya
+      // transmite la misma información — logo/portada real o el ícono de reemplazo.
+      accessible={false}
     >
       {showFallback ? (
         <Icon size={Math.round(size * 0.5)} color={iconColor} />

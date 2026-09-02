@@ -14,7 +14,7 @@ import {
   UserRound,
 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Platform, Pressable, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 
@@ -24,6 +24,7 @@ import { LoadingState } from '@/components/ui/LoadingState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { getCurrentUser, signInWithGoogle, type CurrentUser } from '@/lib/auth';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { useTabBarBottomInset } from '@/lib/tabBar';
 import { APP_NAME, type UserRole } from '@petapp/shared';
 
 type AuthMode = 'login' | 'signup';
@@ -57,6 +58,12 @@ const WELCOME_OPTIONS: {
 
 export default function ProfileScreen() {
   const router = useRouter();
+  // La tab bar es un material translúcido flotante (`position: 'absolute'`, ver
+  // app/(tabs)/_layout.tsx) — esta pantalla no tenía ScrollView (todo su contenido cabía
+  // en un View fijo), así que sin este padding la última fila del menú de negocio podía
+  // quedar debajo del blur. Se agregó ScrollView en las tres variantes de esta pantalla
+  // (sesión activa, elección de rol, formulario) para poder aplicarlo.
+  const tabBarBottomInset = useTabBarBottomInset();
   const [user, setUser] = useState<CurrentUser | null | undefined>(undefined);
   const [entryStep, setEntryStep] = useState<EntryStep>('choice');
   const [mode, setMode] = useState<AuthMode>('login');
@@ -183,7 +190,10 @@ export default function ProfileScreen() {
 
   if (user) {
     return (
-      <View className="flex-1 bg-background">
+      <ScrollView
+        className="flex-1 bg-background"
+        contentContainerStyle={{ paddingBottom: tabBarBottomInset }}
+      >
         <ScreenHeader title="Perfil" subtitle={`Tu cuenta en ${APP_NAME}`} />
         <View className="gap-4 p-5">
           <View className="flex-row items-center gap-3 rounded-xl bg-card p-4 shadow-sm">
@@ -205,7 +215,10 @@ export default function ProfileScreen() {
               style={({ pressed }) => (pressed ? { transform: [{ scale: 0.98 }] } : undefined)}
               className="flex-row items-center gap-3 rounded-xl bg-card p-4 shadow-sm"
             >
-              <View className="h-11 w-11 items-center justify-center rounded-md bg-backgroundAlt">
+              <View
+                className="h-11 w-11 items-center justify-center rounded-md bg-backgroundAlt"
+                accessible={false}
+              >
                 <PawPrint size={20} color="#0369A1" />
               </View>
               <View className="flex-1">
@@ -250,13 +263,16 @@ export default function ProfileScreen() {
 
           <Button label="Cerrar sesión" variant="outline" icon={LogOut} onPress={handleSignOut} />
         </View>
-      </View>
+      </ScrollView>
     );
   }
 
   if (entryStep === 'choice') {
     return (
-      <View className="flex-1 bg-background">
+      <ScrollView
+        className="flex-1 bg-background"
+        contentContainerStyle={{ paddingBottom: tabBarBottomInset }}
+      >
         <ScreenHeader
           title={`Bienvenido a ${APP_NAME}`}
           subtitle="Seguimiento preventivo, documentos y prestadores verificados en un solo lugar"
@@ -285,14 +301,17 @@ export default function ProfileScreen() {
             </Animated.View>
           ))}
         </View>
-      </View>
+      </ScrollView>
     );
   }
 
   const chosenOption = WELCOME_OPTIONS.find((option) => option.value === role) ?? WELCOME_OPTIONS[0];
 
   return (
-    <View className="flex-1 bg-background">
+    <ScrollView
+      className="flex-1 bg-background"
+      contentContainerStyle={{ paddingBottom: tabBarBottomInset }}
+    >
       <ScreenHeader title="Perfil" subtitle={`Tu cuenta en ${APP_NAME}`} />
 
       <Animated.View
@@ -420,6 +439,6 @@ export default function ProfileScreen() {
           />
         </View>
       </Animated.View>
-    </View>
+    </ScrollView>
   );
 }

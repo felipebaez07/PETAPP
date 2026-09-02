@@ -33,7 +33,10 @@ export function PetDocumentRow({ document, onDelete }: PetDocumentRowProps) {
       style={({ pressed }) => (pressed ? { opacity: 0.85 } : undefined)}
       className="flex-row items-center gap-3 rounded-xl bg-card p-4 shadow-sm"
     >
-      <View className="h-11 w-11 items-center justify-center rounded-md bg-backgroundAlt">
+      <View
+        className="h-11 w-11 items-center justify-center rounded-md bg-backgroundAlt"
+        accessible={false}
+      >
         <Icon size={20} color="#0369A1" />
       </View>
 

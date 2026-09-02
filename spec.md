@@ -6,7 +6,7 @@
 > tareas completadas — quedan como historial de qué se decidió y cuándo. Si una tarea se descarta,
 > se dice explícitamente por qué (`descartado: ...`) en vez de borrarla.
 >
-> Última actualización: 2026-09-01.
+> Última actualización: 2026-09-02.
 
 ## 0. Por qué existe este documento
 
@@ -438,3 +438,212 @@ Se corrió la skill `code-review` (nivel alto) sobre todo el diff del pivot (`83
 - [ ] (2026-09-01) `app/(tabs)/index.tsx` solo muestra los primeros 6 vencimientos pendientes (cruzando todas las mascotas) sin paginación ni un "ver todos" hacia una vista de calendario completa — suficiente para el piloto, pero si el número de mascotas/eventos crece conviene una pantalla dedicada de calendario.
 - [ ] (2026-09-01) El "check con spring de rebote leve" del addendum de Motion se implementó con la animación `entering` de Reanimated (`ZoomIn.springify()`) al montar el ícono de completado; el gesto de swipe-con-momentum mencionado en el mismo addendum ("swipe para completar recordatorio") no se implementó porque `react-native-gesture-handler` no es dependencia del proyecto todavía — si se quiere ese gesto, agregar la dependencia de forma deliberada (requiere rebuild nativo) en una tarea aparte.
 - [ ] (2026-09-01) Documentos de mascota siguen siendo solo enlace/URL de texto (`pet_documents.document_url`), tal como pide el alcance actual — subida real de archivo a Supabase Storage queda pendiente para una fase posterior (ya anotado como tarea explícita en la sección de la web, sección 5).
+
+## 10. Subida real de archivos en web (foto de mascota y documentos, 2026-09-02)
+
+Base de esta ronda: commit `33f0f36` ("Base para subida real de fotos") ya había dejado la
+migración `supabase/migrations/0007_pet_media_storage.sql` escrita (dos buckets — `pet-photos`
+público, `pet-documents` privado — con policies por dueño usando la convención de ruta
+`<auth.uid()>/<pet_id>/<archivo>`) y el tipo `PetDocument`/`petDocumentSchema` ya soportando
+`storage_path` además de `document_url`. Esta ronda fue solo `apps/web` (mobile queda pendiente,
+ver más abajo): conectar esa base con UI real de carga de archivos.
+
+- [x] **Foto de mascota** — `components/cuidador/pet-form.tsx` ahora tiene un `<input type="file"
+  accept="image/*">` con vista previa (object URL) antes de guardar, validado en el cliente con
+  el nuevo helper `lib/uploads.ts` (`validatePhotoFile`: debe ser `image/*` y ≤5MB — no confía
+  solo en el atributo `accept` del input). Flujo de creación: primero se crea la fila en `pets`
+  sin foto vía la Server Action existente `createPet` (sin tocar su firma), y solo entonces,
+  con el `pet_id` real ya conocido, se sube el archivo desde el navegador
+  (`createSupabaseBrowserClient()`, sesión del usuario, nunca service role) a
+  `pet-photos/<ownerId>/<petId>/photo.<ext>`, se obtiene la URL pública con `getPublicUrl` y se
+  actualiza `pets.photo_url` con un `update` directo desde el cliente — permitido por la policy
+  `pets_owner_full_access` ya existente (RLS por `owner_id = auth.uid()`), no hizo falta una
+  Server Action nueva para ese último paso. Si la subida falla, la mascota queda creada sin foto
+  y se avisa en vez de bloquear el flujo completo. `ownerId` se pasa como prop desde el Server
+  Component (`app/cuidador/mascotas/page.tsx` → `AddPetPanel` → `PetForm`) en vez de pedirlo al
+  cliente de Supabase, para no depender de una llamada extra a `auth.getUser()` en el navegador
+  (hecho: 2026-09-02, `components/cuidador/pet-form.tsx`, `components/cuidador/add-pet-panel.tsx`,
+  `app/cuidador/mascotas/page.tsx`, `lib/uploads.ts`).
+- [x] **Mostrar la foto** — nuevo componente `components/ui/remote-image.tsx` (equivalente web de
+  `apps/mobile/components/ui/RemoteImage.tsx`: `<img>` con fallback a un ícono Lucide si no hay
+  URL o si falla la carga, nunca un cuadro roto; se usa `<img>` nativo en vez de `next/image`
+  porque el dominio de Storage varía por proyecto de Supabase). Usado en
+  `components/cuidador/pet-card.tsx` (48px, junto al nombre) y en el header de
+  `app/cuidador/mascotas/[id]/page.tsx` (64px) — no existía ningún lugar donde `pet.photo_url` se
+  renderizara antes de esta ronda (hecho: 2026-09-02).
+- [x] **Documento de mascota** — `components/cuidador/add-document-panel.tsx` tiene ahora un
+  toggle "Subir un archivo" / "Pegar un enlace". Modo archivo: `<input type="file" accept="image/*,
+  application/pdf">` validado con `validateDocumentFile` (imagen o PDF, ≤10MB), se sube a
+  `pet-documents/<ownerId>/<petId>/<uuid>.<ext>` (bucket privado) y se guarda `storage_path`
+  (no una URL) en `pet_documents`, con `document_url` en `null`. Modo enlace: exactamente el
+  comportamiento anterior (`document_url` pegado a mano, `storage_path` en `null`). La Server
+  Action `createPetDocument` (`app/cuidador/mascotas/[id]/actions.ts`) ahora inserta también
+  `storage_path` (antes se ignoraba aunque el schema ya lo tenía) y rechaza explícitamente el
+  caso "ninguno de los dos" antes de tocar la base — la app valida "al menos uno" porque
+  `petDocumentSchema` deja ambos campos opcionales a nivel de zod a propósito (mobile hace
+  `.omit()` sobre el mismo schema), reforzado como última defensa por el `CHECK
+  pet_documents_has_source` de la migración 0007 (hecho: 2026-09-02).
+- [x] **Abrir un documento subido** — `components/cuidador/document-row.tsx` distingue tres
+  casos: `document_url` (enlace externo, como antes, `<a target="_blank">` directo),
+  `storage_path` (archivo subido) y ninguno de los dos (fila sin botón de abrir, no debería
+  pasar por el CHECK de la base pero el componente no asume). Para `storage_path` se agregó la
+  Server Action `getSignedDocumentUrl(documentId)` en `[id]/actions.ts`: busca el documento,
+  **verifica que pertenece a una mascota del usuario autenticado con el mismo patrón
+  `assertOwnsPet` ya usado en el resto del archivo** (además de la RLS de `pet_documents`, que
+  ya lo exige del lado de la base — esta es una segunda barrera explícita, no un reemplazo), y
+  recién entonces llama `createSignedUrl(path, 60)` (60 segundos). El botón "Abrir" llama a esta
+  acción bajo demanda al hacer click y solo entonces hace `window.open(url, '_blank')` — no se
+  precomputa ninguna URL firmada al renderizar la lista completa (hecho: 2026-09-02).
+- [x] Todo el acceso a Storage sigue el mismo principio que el resto del proyecto: siempre con
+  el cliente que lleva la sesión del usuario (`createSupabaseBrowserClient()` en el navegador
+  para las subidas, `createSupabaseServerClient()` en la Server Action de URL firmada), nunca
+  una service-role key — las policies de `storage.objects` de 0007 son las que de verdad deciden
+  quién puede leer/escribir cada archivo (hecho: 2026-09-02).
+- [x] `npm run typecheck` en verde en las 3 workspaces después de estos cambios; no se tocó
+  `packages/shared` (los tipos/schemas que hacían falta ya estaban ahí desde la base del
+  commit `33f0f36`) (hecho: 2026-09-02).
+
+**Pendiente honesto de esta ronda (no se alcanzó a hacer o no se pudo probar, no se maquilla):**
+
+- [ ] **Nada de esto se probó contra el proyecto Supabase real** — la migración
+  `0007_pet_media_storage.sql` sigue sin aplicarse en el proyecto remoto (`nnsjospqprfygmxnlszb`);
+  eso lo aplica el usuario manualmente por el SQL Editor, como las anteriores. Hasta que no se
+  aplique, cualquier intento real de subir una foto o un documento en el deploy de Vercel va a
+  fallar con "bucket not found". Se verificó únicamente que el código compila y que la lógica es
+  coherente leyéndolo, no que funcione en runtime.
+- [ ] No se probó en un navegador real ningún paso del flujo (seleccionar archivo, ver la vista
+  previa, que la subida realmente llegue al bucket, que la URL firmada realmente abra el PDF/
+  imagen) — este entorno no tiene forma de correr `next dev` y hacer click a través de la UI.
+  Primera vez que se use en real, revisar sobre todo: (a) que el `contentType` que manda
+  `.upload()` sea el que Supabase Storage espera para que el navegador abra el PDF/imagen en vez
+  de forzar la descarga, (b) que 60 segundos de validez de la URL firmada alcancen en una
+  conexión lenta entre el click y que el navegador termine de abrir la pestaña nueva.
+- [ ] No se implementó edición de foto para una mascota ya existente — `PetForm` hoy solo se usa
+  en modo creación (`AddPetPanel`), no hay un flujo de "editar mascota" en la web todavía (no
+  existía antes de esta ronda tampoco), así que cambiar la foto de una mascota ya creada no tiene
+  UI por ahora.
+- [ ] `apps/mobile` sigue exactamente igual que antes de esta ronda (fuera de alcance explícito
+  del pedido): la foto de mascota y los documentos en mobile siguen usando solo campos de
+  URL/enlace de texto. Portar este mismo patrón (input de archivo + Storage) a mobile es trabajo
+  aparte — ya estaba anotado en el backlog de mobile (sección 6.1) para logo/portada de negocio,
+  y ahora aplica igual para `pets.photo_url` y `pet_documents` de mobile.
+- [ ] No se agregó borrado del archivo en Storage al eliminar una mascota o un documento
+  (`deletePetDocument`, `deletePreventiveEvent` etc. solo borran la fila de la base) — un
+  documento eliminado deja su archivo huérfano en el bucket `pet-documents` hasta que se limpie
+  a mano o se agregue esa lógica en una pasada futura. No se pidió explícitamente en el alcance
+  de esta tarea y no se resolvió por no ampliar el riesgo sin poder probarlo.
+
+## 11. Pulido visual "Apple-like" en mobile (2026-09-02)
+
+Pedido explícito del dueño del proyecto: pasada de pulido de profundidad/materiales, jerarquía,
+tipografía y accesibilidad en `apps/mobile`, **sin tocar ni un color de marca** (azul clínico
+`#0369A1` + menta `#10B981` de `design-system/petapp/MASTER.md` intactos, confirmado). Se apoyó
+en el addendum "Motion & Materials" del mismo MASTER.md y en un hallazgo de accesibilidad de la
+skill `ui-ux-pro-max` (`app-interface.csv`). Cinco frentes:
+
+- [x] **Tab bar con material translúcido real** (`app/(tabs)/_layout.tsx`): antes era opaca
+  (`backgroundColor: COLORS.card` + `borderTopWidth: 1`). Se instaló `expo-blur`
+  (`npx expo install expo-blur`, resuelto solo en `apps/mobile`, sin tocar `apps/web` ni
+  `supabase/`) y se agregó `tabBarBackground: () => <BlurView intensity={80} tint="light"
+  style={StyleSheet.absoluteFill} />` con `tabBarStyle: { position: 'absolute', borderTopWidth: 0,
+  elevation: 0, ... }` — este fork interno de `@react-navigation/bottom-tabs` que trae
+  `expo-router` (vendido en `node_modules/expo-router/build/react-navigation/bottom-tabs`, no
+  hay dependencia directa a `@react-navigation/bottom-tabs` en el proyecto) ya pone
+  `backgroundColor: 'transparent'` automáticamente en cuanto `tabBarBackground` no es `null`, así
+  que no hizo falta forzarlo a mano. `expo-blur` tiene implementación web propia
+  (`BlurView.web.tsx`, usa `backdrop-filter` CSS) — Metro la resuelve sola vía `.web.tsx`, igual
+  que el patrón ya usado en `DatePickerField.web.tsx`, sin necesitar ningún `Platform.select` en
+  el sitio de uso (hecho: 2026-09-02, `app/(tabs)/_layout.tsx`).
+  - Efecto secundario del `position: 'absolute'`: la tab bar deja de reservar su propio espacio
+    en el layout, así que el contenido de cada tab podía terminar tapado por el blur flotante.
+    Se agregó `lib/tabBar.ts` (`TAB_BAR_HEIGHT` + hook `useTabBarBottomInset()`, que suma el alto
+    fijo de la barra + `useSafeAreaInsets().bottom` + un respiro de 16px) y se aplicó como
+    `paddingBottom` del `contentContainerStyle` en las 4 pantallas de tabs
+    (`(tabs)/index.tsx` — ambas variantes cuidador/negocio —, `(tabs)/agenda.tsx`,
+    `(tabs)/mascotas.tsx`, `(tabs)/directorio.tsx`). `(tabs)/perfil.tsx` no tenía ningún
+    `ScrollView` (todo su contenido vivía en un `View` fijo) — se le agregó `ScrollView` en sus
+    tres variantes (sesión activa, elección de rol, formulario de login/registro) para poder
+    aplicar el mismo padding; antes de este cambio, un menú de negocio largo ya corría el riesgo
+    de quedar cortado por el borde inferior de la pantalla sin poder hacer scroll, y con la barra
+    flotante ese riesgo se volvía peor (hecho: 2026-09-02, `lib/tabBar.ts`, `app/(tabs)/perfil.tsx`
+    y los 4 archivos de tabs mencionados).
+  - No se implementó ninguna transición de scroll-edge (opcional según el addendum) — el chrome
+    flotante ya se ve bien tanto sobre contenido claro como sobre el header azul de cada pantalla
+    sin ella.
+  - `prefers-reduced-transparency`: no existe una API directa equivalente en React Native; se
+    verificó que el texto de las tabs (`tabBarActiveTintColor`/`tabBarInactiveTintColor`) usa
+    colores sólidos, no depende de la transparencia para ser legible, así que no hacía falta un
+    fallback adicional.
+- [x] **Tipografía — tracking negativo en headings grandes**: `components/ui/ScreenHeader.tsx`
+  ya tenía `tracking-tight` en su título (`text-3xl`), pero tres headings grandes sueltos no lo
+  tenían y quedaban con el tracking por defecto (más "espaciado", menos premium): el contador de
+  solicitudes pendientes en `(tabs)/index.tsx` (`text-2xl`), el nombre de la mascota en
+  `app/mascotas/[id].tsx` (`text-xl`) y el nombre del establecimiento en
+  `app/establecimiento/[id].tsx` (`text-2xl`). Se agregó `tracking-tight` a los tres (mapea al
+  `-0.025em` de la escala default de Tailwind, que NativeWind resuelve a un valor absoluto en px
+  según el `fontSize` de cada `Text` — mismo mecanismo que ya usaba `ScreenHeader` sin problema)
+  (hecho: 2026-09-02). El texto de cuerpo no se tocó (se queda con tracking normal, tal como pide
+  el addendum). Confirmado además que la escala de tamaños de `tailwind.config.js` no sobreescribe
+  `fontSize` (usa los defaults de Tailwind: `text-sm` 14px / `text-base` 16px), cumpliendo el
+  mínimo de MASTER.md sin necesitar cambios.
+- [x] **Accesibilidad — íconos decorativos marcados como no accesibles**: se agregó
+  `accessible={false}` a los `View` contenedor de íconos puramente decorativos que acompañan un
+  texto que ya describe lo mismo (el ejemplo citado, "PawPrint/Building2 genérico al lado de un
+  título"): el ícono de especie en `components/PetCard.tsx` y `app/mascotas/[id].tsx`, el ícono
+  de tipo de documento en `components/PetDocumentRow.tsx`, el ícono `PawPrint` de las citas de
+  `(tabs)/agenda.tsx`, los cuatro íconos de accesos rápidos/resumen en `(tabs)/index.tsx`
+  (`CalendarClock`, `CalendarCheck2`, `Plus`, `Building2`), el ícono `PawPrint` del acceso "Mis
+  mascotas" en `(tabs)/perfil.tsx`, y el logo/portada (o su ícono de reemplazo) de
+  `components/ui/RemoteImage.tsx` — este último siempre aparece junto al nombre del
+  establecimiento/mascota, así que es redundante en las tres pantallas donde se usa. **No se tocó**
+  ningún ícono que sea el único indicativo de una acción (los botones de eliminar ya tenían
+  `accessibilityLabel` propio en el `Pressable` padre, igual que el checkbox de completar de
+  `PreventiveEventRow`) (hecho: 2026-09-02). Confirmado con Grep: cero usos de
+  `allowFontScaling={false}` en toda la app (Dynamic Type nunca se bloquea). Revisado el
+  espaciado táctil entre elementos tocables adyacentes (filas de chips, botones de accesos
+  rápidos, menús) — ya usaban `gap-2` o más en todos los casos encontrados, no se necesitó
+  ningún cambio.
+- [x] **Motion — transiciones entre pantallas**: confirmado con Grep que ninguna `Stack.Screen`
+  de `app/_layout.tsx` (ni de ningún otro `_layout.tsx`) desactiva la animación nativa
+  (`animation: 'none'` no aparece en ningún lado); el Stack sigue usando las transiciones nativas
+  de iOS/Android sin reinventarlas con Reanimated. La única pantalla modal
+  (`mascotas/nueva.tsx`, `presentation: 'modal'`) es la única con `presentation:` distinto del
+  default, y React Navigation ya la abre/cierra por el mismo eje sin overrides adicionales — no
+  hizo falta ningún cambio en este frente, solo la verificación.
+- [x] **Profundidad — revisión de sombras dobles**: se revisó `components/ui/Card.tsx` y todos
+  sus usos (además de los `View` con `shadow-sm`/`shadow-xs` que replican el mismo patrón visual
+  sin pasar por el componente, ej. `EstablishmentCard`, `PetCard`, filas de horarios/servicios) —
+  en ningún caso una fila con su propia sombra vive anidada dentro de otro contenedor con sombra
+  propia; los "contenedores tabla" (horarios, servicios) usan un solo `shadow-sm` externo con
+  filas internas separadas por `border-b`, no por sombras repetidas, y las filas de listas
+  (`PetCard`, `PreventiveEventRow`, `PetDocumentRow`, `EstablishmentCard`) son siempre hermanas
+  directas de un `Animated.View`/`Pressable`, nunca hijas de otro `View` con sombra. No se
+  encontró ningún caso real de sombra doble apilada — no se necesitó ningún cambio de código en
+  este frente, solo la verificación explícita.
+
+**Verificación de esta pasada:** `npm run typecheck` en verde en las 3 workspaces
+(`apps/web`, `apps/mobile`, `packages/shared`) y `npx expo export --platform web` dentro de
+`apps/mobile` sin errores (20 rutas, igual cantidad que antes de esta pasada) — confirmado que
+`expo-blur` no rompe el bundle web gracias a su implementación `.web.tsx` nativa.
+
+**Pendiente honesto de esta pasada:**
+
+- [ ] No se probó en un dispositivo/simulador real (mismo límite ya reconocido en secciones
+  anteriores de mobile) — no hay forma de confirmar visualmente en este entorno que el blur se
+  vea bien en iOS/Android nativos (solo se verificó `expo export --platform web`, donde el blur
+  usa `backdrop-filter` de CSS en vez del blur nativo real). En Android además, `expo-blur` solo
+  hace blur real de verdad (vía `RenderNode`) en Android 12+; en versiones anteriores cae a un
+  overlay semitransparente sin difuminado real — sigue siendo un material translúcido coherente
+  con el addendum, pero no es blur gaussiano de verdad ahí. Revisar la primera vez que se corra
+  en un dispositivo/emulador real.
+- [ ] El respiro de `useTabBarBottomInset()` (16px) es un valor fijo elegido a criterio, no
+  medido contra el resultado real en pantalla — si en un dispositivo real se ve muy justo o
+  demasiado holgado, ajustar ese número en `lib/tabBar.ts` en vez de tocar cada pantalla.
+  `(tabs)/perfil.tsx` ahora tiene `ScrollView` en sus tres variantes, pero no se verificó
+  visualmente que el contenido más largo (menú de negocio completo) efectivamente haga scroll
+  sin cortes en un dispositivo real.
+- [ ] La revisión de "espaciado táctil ≥8dp" e "íconos decorativos" fue manual sobre los
+  patrones más comunes de la app (chips, accesos rápidos, avatares de ícono); no se hizo una
+  auditoría exhaustiva de cada `Pressable` de cada pantalla — es posible que quede algún caso
+  suelto no cubierto por los patrones revisados.
+- [ ] No se tocó `packages/shared` — ningún ajuste de este alcance lo necesitó.
