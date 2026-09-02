@@ -7,6 +7,7 @@ import { Alert, ScrollView, Text, View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
 import { ChipSelectField } from '@/components/ui/ChipSelectField';
+import { DatePickerField } from '@/components/ui/DatePickerField';
 import { FormTextField } from '@/components/ui/FormTextField';
 import { SwitchField } from '@/components/ui/SwitchField';
 import { usePets } from '@/contexts/PetsContext';
@@ -82,11 +83,11 @@ export default function NewPetScreen() {
 
       <ChipSelectField control={control} name="sex" label="Sexo" options={SEX_OPTIONS} />
 
-      <FormTextField
+      <DatePickerField
         control={control}
         name="birth_date"
         label="Fecha de nacimiento (opcional)"
-        placeholder="AAAA-MM-DD"
+        placeholder="Selecciona una fecha"
         helperText="Si no la sabes con exactitud, puedes dejarla en blanco."
       />
 
