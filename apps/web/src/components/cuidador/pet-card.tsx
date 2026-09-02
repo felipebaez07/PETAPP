@@ -1,7 +1,8 @@
 import Link from 'next/link';
-import { Cake, ShieldCheck, Syringe } from 'lucide-react';
+import { Cake, PawPrint, ShieldCheck, Syringe } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { RemoteImage } from '@/components/ui/remote-image';
 import { SPECIES_LABELS, type Pet } from '@petapp/shared';
 
 export function PetCard({ pet, pendingCount }: { pet: Pet; pendingCount: number }) {
@@ -10,12 +11,15 @@ export function PetCard({ pet, pendingCount }: { pet: Pet; pendingCount: number 
       <Card className="h-full group-hover:shadow-md group-hover:-translate-y-0.5">
         <CardContent className="flex flex-col gap-3 p-5">
           <div className="flex items-start justify-between gap-2">
-            <div>
-              <h3 className="font-heading text-base font-semibold text-foreground">{pet.name}</h3>
-              <p className="text-sm text-muted-foreground">
-                {SPECIES_LABELS[pet.species]}
-                {pet.breed ? ` · ${pet.breed}` : ''}
-              </p>
+            <div className="flex items-center gap-3">
+              <RemoteImage src={pet.photo_url} size={48} icon={PawPrint} alt={pet.name} />
+              <div>
+                <h3 className="font-heading text-base font-semibold text-foreground">{pet.name}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {SPECIES_LABELS[pet.species]}
+                  {pet.breed ? ` · ${pet.breed}` : ''}
+                </p>
+              </div>
             </div>
             {pendingCount > 0 && (
               <Badge variant="accent">

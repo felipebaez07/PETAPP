@@ -1,9 +1,10 @@
 import { notFound } from 'next/navigation';
-import { CalendarHeart, FileStack, ShieldCheck, Syringe } from 'lucide-react';
+import { CalendarHeart, FileStack, PawPrint, ShieldCheck, Syringe } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { RemoteImage } from '@/components/ui/remote-image';
 import { RevealItem } from '@/components/motion/reveal-item';
 import { AddPreventiveEventPanel } from '@/components/cuidador/add-preventive-event-panel';
 import { PreventiveEventRow } from '@/components/cuidador/preventive-event-row';
@@ -35,12 +36,15 @@ export default async function PetDetailPage({ params }: { params: Promise<{ id: 
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="font-heading text-2xl font-bold text-foreground">{pet.name}</h1>
-          <p className="text-sm text-muted-foreground">
-            {SPECIES_LABELS[pet.species]}
-            {pet.breed ? ` · ${pet.breed}` : ''}
-          </p>
+        <div className="flex items-center gap-4">
+          <RemoteImage src={pet.photo_url} size={64} icon={PawPrint} alt={pet.name} />
+          <div>
+            <h1 className="font-heading text-2xl font-bold text-foreground">{pet.name}</h1>
+            <p className="text-sm text-muted-foreground">
+              {SPECIES_LABELS[pet.species]}
+              {pet.breed ? ` · ${pet.breed}` : ''}
+            </p>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           {pet.vaccinated && (
@@ -93,7 +97,7 @@ export default async function PetDetailPage({ params }: { params: Promise<{ id: 
           <CardDescription>Carné de vacunación, historia clínica y otros soportes.</CardDescription>
         </CardHeader>
         <CardContent>
-          <AddDocumentPanel petId={pet.id} />
+          <AddDocumentPanel petId={pet.id} ownerId={user.profile.id} />
           {pet.documents.length === 0 ? (
             <EmptyState
               icon={<FileStack className="size-8 text-secondary" aria-hidden />}

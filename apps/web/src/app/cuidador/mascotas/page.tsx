@@ -32,7 +32,7 @@ export default async function MascotasPage() {
         </p>
       </div>
 
-      <AddPetPanel />
+      <AddPetPanel ownerId={user.profile.id} />
 
       {pets.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border bg-card/50 p-10 text-center">

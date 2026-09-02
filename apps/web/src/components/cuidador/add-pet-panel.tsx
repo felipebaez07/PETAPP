@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PetForm } from './pet-form';
 import { SPRING_SHEET } from '@/lib/motion';
 
-export function AddPetPanel() {
+export function AddPetPanel({ ownerId }: { ownerId: string }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -35,7 +35,7 @@ export function AddPetPanel() {
                 </Button>
               </CardHeader>
               <CardContent>
-                <PetForm onDone={() => setOpen(false)} />
+                <PetForm ownerId={ownerId} onDone={() => setOpen(false)} />
               </CardContent>
             </Card>
           </motion.div>
