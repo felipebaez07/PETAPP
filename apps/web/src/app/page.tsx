@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { FadeInSection } from '@/components/motion/fade-in-section';
+import { getCurrentUser } from '@/lib/auth';
 import { APP_NAME, PILOT_CITY } from '@petapp/shared';
 
 const STEPS = [
@@ -63,7 +64,18 @@ const PILOT_STATS = [
   { value: '11 / 32', label: 'Puesto de Ibagué entre capitales del país' },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  // Los CTA de "empezar" no tienen sentido para alguien que ya inició sesión — mostraban
+  // "Soy cuidador / Soy prestador veterinario" incluso con el navbar diciendo "Hola, Felipe",
+  // como si no se hubiera identificado el rol todavía. Se reemplazan por un único acceso
+  // directo a lo que esa persona ya usa.
+  const user = await getCurrentUser();
+  const loggedInCta = user
+    ? user.profile.role === 'establecimiento'
+      ? { label: 'Ir a mi panel', href: '/panel' }
+      : { label: 'Ir a mis mascotas', href: '/cuidador/mascotas' }
+    : null;
+
   return (
     <div>
       {/* Hero — único lugar del sitio con gradiente decorativo, por regla del design system */}
@@ -81,17 +93,25 @@ export default function HomePage() {
             cuando la necesitas.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Button asChild size="lg" variant="secondary">
-              <Link href="/panel/registro">Soy cuidador</Link>
-            </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="border-white/40 bg-transparent text-white hover:bg-white/10"
-            >
-              <Link href="/unete">Soy prestador veterinario, únete al piloto</Link>
-            </Button>
+            {loggedInCta ? (
+              <Button asChild size="lg" variant="secondary">
+                <Link href={loggedInCta.href}>{loggedInCta.label}</Link>
+              </Button>
+            ) : (
+              <>
+                <Button asChild size="lg" variant="secondary">
+                  <Link href="/panel/registro">Soy cuidador</Link>
+                </Button>
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="border-white/40 bg-transparent text-white hover:bg-white/10"
+                >
+                  <Link href="/unete">Soy prestador veterinario, únete al piloto</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -222,12 +242,20 @@ export default function HomePage() {
             ¿Listo/a para empezar?
           </h2>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button asChild size="lg">
-              <Link href="/panel/registro">Soy cuidador</Link>
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link href="/unete">Soy prestador veterinario, únete al piloto</Link>
-            </Button>
+            {loggedInCta ? (
+              <Button asChild size="lg">
+                <Link href={loggedInCta.href}>{loggedInCta.label}</Link>
+              </Button>
+            ) : (
+              <>
+                <Button asChild size="lg">
+                  <Link href="/panel/registro">Soy cuidador</Link>
+                </Button>
+                <Button asChild size="lg" variant="outline">
+                  <Link href="/unete">Soy prestador veterinario, únete al piloto</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </FadeInSection>
