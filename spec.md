@@ -312,6 +312,27 @@ funciones nuevas (Tabla V del PDF — condiciones de avance):
 - [ ] Pendiente: mismo panel de admin todavía no existe en mobile (decisión 2026-09-01: no hace
   falta por ahora, la web alcanza para administrar el piloto).
 
+## 8.3 Revisión de código de toda la sesión (2026-09-02)
+
+Se corrió la skill `code-review` (nivel alto) sobre todo el diff del pivot (`8382ec8..HEAD`,
+114 archivos). Encontró 10 bugs reales, los 10 corregidos (hecho: 2026-09-02, commit `bacfdb8`):
+
+- [x] **Seguridad (IDOR)**: `service_requests` aceptaba cualquier `pet_id` sin validar dueño —
+  corregido en la app (`directorio/[slug]/actions.ts`) y en RLS (`0006_service_request_pet_ownership.sql`,
+  necesario porque mobile inserta directo desde el cliente).
+- [x] `seed.sql` truncaba tablas renombradas por 0005, rompía `supabase db reset`.
+- [x] Formulario "Únete al piloto" seguía ofreciendo categorías que el schema ya rechaza, sin mostrar el error.
+- [x] `apps/mobile/lib/auth.ts` reintrodujo el bug de `.maybeSingle()` que web ya había evitado.
+- [x] Bug de zona horaria (UTC vs. local) reimplementado mal e independiente en 3 lugares —
+  nuevo helper compartido `todayLocalDateString()` en `packages/shared/src/utils.ts`.
+- [x] Fecha de nacimiento en `pet-card.tsx` (web) se mostraba un día antes siempre.
+- [x] Dos fetches sin `.catch()` en mobile escondían errores de red como estados vacíos.
+- [x] Barra de tabs de mobile no escuchaba `onAuthStateChange`, quedaba con el rol anterior tras cambiar de cuenta.
+
+- [ ] **Pendiente del usuario, bloqueante para la app móvil real**: aplicar
+  `supabase/migrations/0006_service_request_pet_ownership.sql` en el SQL Editor del proyecto real
+  (mismo proceso que 0005). Sin esto, el hueco de seguridad del `pet_id` sigue abierto en producción.
+
 ## 9. Backlog / ideas que van surgiendo
 
 (Agregar aquí cualquier tarea nueva que salga en el camino, con fecha.)
