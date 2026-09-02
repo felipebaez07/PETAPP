@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { Building2, ChevronRight, MapPin, ShieldCheck } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 
+import { Badge } from './ui/Badge';
 import { RemoteImage } from './ui/RemoteImage';
 import { StatusDot } from './ui/StatusDot';
 
@@ -31,12 +32,7 @@ export function EstablishmentCard({ establishment }: { establishment: Establishm
 
           <View className="flex-row items-center gap-3">
             <StatusDot open={open} openLabel={establishment.is_24_7 ? 'Abierto 24/7' : 'Abierto ahora'} />
-            {verified ? (
-              <View className="flex-row items-center gap-1">
-                <ShieldCheck size={14} color="#059669" />
-                <Text className="font-bodyMedium text-xs text-success">Verificado</Text>
-              </View>
-            ) : null}
+            {verified ? <Badge label="Verificado" tone="success" icon={ShieldCheck} /> : null}
           </View>
 
           {establishment.address ? (

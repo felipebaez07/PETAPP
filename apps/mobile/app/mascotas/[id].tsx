@@ -474,8 +474,17 @@ export default function PetDetailScreen() {
             />
           ) : (
             <View className="gap-2.5">
-              {documents.map((doc) => (
-                <PetDocumentRow key={doc.id} document={doc} onDelete={handleDeleteDocument} />
+              {documents.map((doc, index) => (
+                <Animated.View
+                  key={doc.id}
+                  entering={
+                    index < 8
+                      ? FadeInDown.duration(240).delay(index * 35).springify().damping(26).stiffness(220)
+                      : undefined
+                  }
+                >
+                  <PetDocumentRow document={doc} onDelete={handleDeleteDocument} />
+                </Animated.View>
               ))}
             </View>
           )}

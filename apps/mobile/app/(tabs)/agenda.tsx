@@ -46,7 +46,10 @@ export default function AgendaScreen() {
         setEstablishmentId(user?.establishment?.id ?? null);
         if (user?.establishment) loadRequests(user.establishment.id);
       })
-      .catch(() => setEstablishmentId(null));
+      .catch(() => {
+        Alert.alert('No se pudo cargar tu cuenta', 'Intenta de nuevo en unos segundos.');
+        setEstablishmentId(null);
+      });
   }, []);
 
   async function loadRequests(id: string) {

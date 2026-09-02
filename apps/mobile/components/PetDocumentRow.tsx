@@ -48,6 +48,7 @@ export function PetDocumentRow({ document, onDelete }: PetDocumentRowProps) {
           accessibilityRole="button"
           accessibilityLabel={`Eliminar documento ${document.title}`}
           hitSlop={8}
+          style={({ pressed }) => (pressed ? { opacity: 0.6 } : undefined)}
           className="h-9 w-9 items-center justify-center rounded-sm"
         >
           <Trash2 size={17} color="#DC2626" />

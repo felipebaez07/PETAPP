@@ -202,6 +202,7 @@ export default function ProfileScreen() {
             <Pressable
               onPress={() => router.push('/(tabs)/mascotas')}
               accessibilityRole="button"
+              style={({ pressed }) => (pressed ? { transform: [{ scale: 0.98 }] } : undefined)}
               className="flex-row items-center gap-3 rounded-xl bg-card p-4 shadow-sm"
             >
               <View className="h-11 w-11 items-center justify-center rounded-md bg-backgroundAlt">
@@ -232,6 +233,7 @@ export default function ProfileScreen() {
                     key={item.href}
                     onPress={() => router.push(item.href)}
                     accessibilityRole="button"
+                    style={({ pressed }) => (pressed ? { backgroundColor: '#E7EEF2' } : undefined)}
                     className={[
                       'min-h-11 flex-row items-center gap-3 px-4 py-3',
                       index < arr.length - 1 ? 'border-b border-border' : '',
@@ -300,6 +302,7 @@ export default function ProfileScreen() {
         <Pressable
           onPress={goBackToChoice}
           accessibilityRole="button"
+          style={({ pressed }) => (pressed ? { opacity: 0.7 } : undefined)}
           className="min-h-11 flex-row items-center gap-1.5 self-start"
         >
           <ChevronLeft size={18} color="#0369A1" />

@@ -15,6 +15,7 @@ export function Chip({ label, selected, onPress, icon: Icon }: ChipProps) {
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected }}
+      style={({ pressed }) => (pressed ? { transform: [{ scale: 0.97 }] } : undefined)}
       className={`min-h-11 flex-row items-center gap-1.5 rounded-sm border px-3 ${
         selected ? 'border-primary bg-primary' : 'border-border bg-card'
       }`}

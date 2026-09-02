@@ -244,6 +244,84 @@ Pendiente honesto de esta ronda (no se alcanzó a hacer, no se maquilla):
   forma de correr la app en un dispositivo/emulador dentro de este entorno para confirmar
   visualmente las dos tarjetas de resumen contra datos reales.
 
+### 6.2 Auditoría de consistencia visual/UX de mobile (2026-09-02)
+
+Auditoría completa de `apps/mobile/app/` contra el checklist de `design-system/petapp/MASTER.md`
+(iconografía, estados vacíos/carga/error, motion, feedback táctil, accesibilidad, badges, paridad
+con web) más verificación con lectura de código de los cinco cambios recientes descritos al usuario.
+Se corrigió todo lo que se encontró mal en vez de solo reportarlo.
+
+**Bug real encontrado y corregido (no solo de estilo):** `app/negocio-horarios.tsx` se quedaba
+colgado en el spinner de carga para siempre si la cuenta no era de negocio — el guard
+`establishment === undefined || days.length === 0` nunca deja de ser cierto en ese caso porque
+`days` solo se llena dentro del `if (user?.establishment)`, así que la rama "Solo para cuentas de
+negocio" nunca se alcanzaba. Corregido separando los tres guards (`establishment === undefined` →
+cargando cuenta; `establishment === null` → empty state; `days.length === 0` → cargando horarios,
+ya con `establishment` resuelto) (hecho: 2026-09-02, `app/negocio-horarios.tsx`).
+
+**Estados de error silenciosos corregidos** (fetch que fallaba y caía a "no tienes cuenta de
+negocio" o a datos de demo en vez de avisar, mismo antipatrón ya corregido una vez en la sección
+8.3 y reintroducido en estos puntos): se agregó `Alert.alert('No se pudo cargar tu cuenta',
+'Intenta de nuevo en unos segundos.')` en el `.catch()` de `getCurrentUser()` de
+`app/(tabs)/agenda.tsx`, `app/negocio-horarios.tsx`, `app/negocio-servicios.tsx`,
+`app/negocio-perfil.tsx` y `app/negocio-plan.tsx`. También `contexts/PetsContext.tsx` no tenía
+ningún `.catch()` en la carga de `pets` — un error de red dejaba al propietario viendo las
+mascotas de demo (`Max`/`Mishi`) en silencio en vez de las suyas; se agregó manejo de `error` y
+`.catch()` con el mismo aviso (hecho: 2026-09-02).
+
+**Consistencia de badges corregida:** `components/EstablishmentCard.tsx` reinventaba el badge de
+"Verificado" con un `<View>`+`<Text>` suelto en vez de usar `components/ui/Badge.tsx`, mientras que
+`app/establecimiento/[id].tsx` (la ficha del mismo establecimiento) sí usaba `Badge` — dos
+implementaciones visuales distintas para el mismo estado. `components/PreventiveEventRow.tsx`
+tenía el mismo problema con el estado próximo/vencido/completado (punto de color + texto suelto en
+vez de `Badge`). Ambos ahora usan `Badge` con los tonos ya definidos (`success`/`secondary`/
+`destructive`) (hecho: 2026-09-02).
+
+**Feedback táctil agregado** a `Pressable`s que no tenían ninguna respuesta visual en
+`onPressIn`/`style={({pressed}) => ...}` (checklist "tarjetas, botones custom, filas de lista"):
+el toggle "Mis mascotas" y la lista "Gestionar mi negocio" de `app/(tabs)/perfil.tsx`, la lista de
+accesos rápidos de `BusinessHomeScreen` en `app/(tabs)/index.tsx`, el botón "+" de
+`app/(tabs)/mascotas.tsx`, el botón de eliminar servicio de `app/negocio-servicios.tsx`, los
+botones de eliminar de `components/PetCard.tsx`/`PetDocumentRow.tsx`/`PreventiveEventRow.tsx`, el
+selector de `components/ui/DatePickerField.tsx` (campo y botón "Listo" de iOS) y el componente
+compartido `components/ui/Chip.tsx` (afecta todos los filtros/selectores de la app de una sola vez)
+(hecho: 2026-09-02).
+
+**Motion faltante agregado:** la lista de documentos en `app/mascotas/[id].tsx` no tenía animación
+de entrada (aparecía de golpe) mientras que la lista de eventos preventivos en la misma pantalla sí
+la tenía — se agregó el mismo `FadeInDown.duration(240).delay(index*35).springify().damping(26)
+.stiffness(220)` con tope de 8 filas (hecho: 2026-09-02).
+
+**Verificado, sin cambios necesarios:**
+- Botón "Continuar con Google" en `app/(tabs)/perfil.tsx`: se oculta exactamente cuando
+  `mode === 'signup' && role === 'establecimiento'` (línea ~330), con el copy explicativo
+  correspondiente cuando está oculto. Bien integrado visualmente.
+- `DatePickerField` se usa exactamente en los 3 lugares correctos (`mascotas/[id].tsx` → `due_date`,
+  `mascotas/nueva.tsx` → `birth_date`, `establecimiento/[id].tsx` → `preferred_datetime` en
+  `mode="datetime"`) — se buscó con Grep cualquier `FormTextField` sobre un campo de fecha y no
+  apareció ninguno.
+- El botón "Mis mascotas" en el menú de negocio de `perfil.tsx` navega a `/(tabs)/mascotas` (tab
+  oculta con `href: null` pero ruta siempre registrada, patrón ya usado por el resto de la app) y no
+  rompe el layout del resto del menú — visualmente es una tarjeta más, consistente con el resto.
+- Cero emojis como ícono en toda `apps/mobile/app` (buscado con Grep por rango Unicode de emoji).
+- Estados vacíos, de carga y de error de `(tabs)/directorio.tsx` y `establecimiento/[id].tsx` ya
+  estaban bien resueltos (EmptyState explícito para error de carga, no solo un `Alert`).
+
+**Pendiente honesto (no corregido en esta pasada):**
+- [ ] La barra de tabs (`app/(tabs)/_layout.tsx`) inicializa `isBusiness = false` de forma síncrona
+  y solo lo corrige tras que `getCurrentUser()` resuelve — para una cuenta de negocio esto significa
+  un parpadeo real y visible: la tab "Mascotas" aparece primero y cambia a "Agenda" un instante
+  después. Es un efecto secundario del mismo patrón ya documentado a propósito en la sección 6.1
+  (tabs condicionales con `href: null`, sin caché síncrona del rol). Arreglarlo de raíz requeriría
+  cachear el rol de forma síncrona (p. ej. `AsyncStorage` o mantener la sesión en un contexto
+  cargado antes del primer render) — se dejó fuera de esta pasada por el riesgo de tocar el flujo
+  de autenticación sin poder probarlo en un dispositivo real dentro de este entorno.
+- [ ] No se tocó el "check con spring de rebote leve" (`ZoomIn` en `PreventiveEventRow.tsx`) ni la
+  paleta de colores — ya cumplían el addendum de Motion & Materials tal cual estaba.
+- [ ] No se corrió la app en un dispositivo/emulador real para confirmar visualmente los cambios de
+  esta pasada (mismo límite que ya reconoce la sección 6.1) — se verificó con `npm run typecheck`
+  (3 workspaces en verde) y `npx expo export --platform web` (20 rutas, sin errores) únicamente.
+
 ## 7. Despliegue
 
 Decisión (2026-09-01): Vercel, importando el repo de GitHub (`felipebaez07/PETAPP`) directamente —

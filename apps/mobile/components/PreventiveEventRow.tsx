@@ -3,6 +3,8 @@ import { AlertTriangle, CalendarClock, CheckCircle2, Circle, Trash2 } from 'luci
 import { Pressable, Text, View } from 'react-native';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 
+import { Badge, type BadgeTone } from './ui/Badge';
+
 export type PreventiveEventVisualStatus = 'proximo' | 'vencido' | 'completado';
 
 function getStatus(event: PreventiveEvent): PreventiveEventVisualStatus {
@@ -10,13 +12,10 @@ function getStatus(event: PreventiveEvent): PreventiveEventVisualStatus {
   return event.due_date < todayLocalDateString() ? 'vencido' : 'proximo';
 }
 
-const STATUS_STYLES: Record<
-  PreventiveEventVisualStatus,
-  { label: string; dot: string; text: string }
-> = {
-  proximo: { label: 'Próximo', dot: 'bg-secondary', text: 'text-secondaryForeground' },
-  vencido: { label: 'Vencido', dot: 'bg-destructive', text: 'text-destructive' },
-  completado: { label: 'Completado', dot: 'bg-success', text: 'text-success' },
+const STATUS_STYLES: Record<PreventiveEventVisualStatus, { label: string; tone: BadgeTone }> = {
+  proximo: { label: 'Próximo', tone: 'secondary' },
+  vencido: { label: 'Vencido', tone: 'destructive' },
+  completado: { label: 'Completado', tone: 'success' },
 };
 
 interface PreventiveEventRowProps {
@@ -56,11 +55,7 @@ export function PreventiveEventRow({ event, onToggleComplete, onDelete, showPetN
       </Pressable>
 
       <View className="flex-1 gap-1.5">
-        <View className="flex-row items-center gap-2">
-          {status === 'vencido' ? <AlertTriangle size={14} color="#DC2626" /> : null}
-          <View className={`h-1.5 w-1.5 rounded-full ${styles.dot}`} />
-          <Text className={`font-bodySemibold text-xs uppercase tracking-wide ${styles.text}`}>{styles.label}</Text>
-        </View>
+        <Badge label={styles.label} tone={styles.tone} icon={status === 'vencido' ? AlertTriangle : undefined} />
 
         <Text
           className={`font-heading text-base ${isCompleted ? 'text-mutedForeground line-through' : 'text-foreground'}`}
@@ -85,6 +80,7 @@ export function PreventiveEventRow({ event, onToggleComplete, onDelete, showPetN
           accessibilityRole="button"
           accessibilityLabel={`Eliminar recordatorio ${event.title}`}
           hitSlop={8}
+          style={({ pressed }) => (pressed ? { opacity: 0.6 } : undefined)}
           className="h-9 w-9 items-center justify-center rounded-sm"
         >
           <Trash2 size={17} color="#DC2626" />

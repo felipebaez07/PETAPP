@@ -54,7 +54,10 @@ export default function NegocioHorariosScreen() {
           setDays(buildInitialDays((data as EstablishmentHours[]) ?? []));
         }
       })
-      .catch(() => setEstablishment(null));
+      .catch(() => {
+        Alert.alert('No se pudo cargar tu cuenta', 'Intenta de nuevo en unos segundos.');
+        setEstablishment(null);
+      });
   }, []);
 
   function updateDay(index: number, patch: Partial<DayState>) {
@@ -83,8 +86,8 @@ export default function NegocioHorariosScreen() {
     setSaved(true);
   }
 
-  if (establishment === undefined || days.length === 0) {
-    return <LoadingState label="Cargando horarios..." />;
+  if (establishment === undefined) {
+    return <LoadingState label="Cargando tu cuenta..." />;
   }
 
   if (establishment === null) {
@@ -97,6 +100,10 @@ export default function NegocioHorariosScreen() {
         onAction={() => router.back()}
       />
     );
+  }
+
+  if (days.length === 0) {
+    return <LoadingState label="Cargando horarios..." />;
   }
 
   return (

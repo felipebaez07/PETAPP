@@ -49,6 +49,7 @@ export default function NegocioPlanScreen() {
         else setPlan(null);
       })
       .catch(() => {
+        Alert.alert('No se pudo cargar tu cuenta', 'Intenta de nuevo en unos segundos.');
         setEstablishmentId(null);
         setPlan(null);
       });

@@ -61,7 +61,10 @@ export default function NegocioServiciosScreen() {
         setEstablishmentId(user?.establishment?.id ?? null);
         if (user?.establishment) loadServices(user.establishment.id);
       })
-      .catch(() => setEstablishmentId(null));
+      .catch(() => {
+        Alert.alert('No se pudo cargar tu cuenta', 'Intenta de nuevo en unos segundos.');
+        setEstablishmentId(null);
+      });
   }, []);
 
   async function loadServices(id: string) {
@@ -171,6 +174,8 @@ export default function NegocioServiciosScreen() {
                   onPress={() => handleDelete(service.id, service.name)}
                   accessibilityRole="button"
                   accessibilityLabel={`Eliminar ${service.name}`}
+                  hitSlop={8}
+                  style={({ pressed }) => (pressed ? { opacity: 0.6 } : undefined)}
                   className="h-9 w-9 items-center justify-center rounded-sm"
                 >
                   <Trash2 size={18} color="#DC2626" />

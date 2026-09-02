@@ -122,6 +122,7 @@ export function DatePickerField<TFieldValues extends FieldValues>({
               onPress={openPicker}
               accessibilityRole="button"
               accessibilityLabel={label}
+              style={({ pressed }) => (pressed ? { opacity: 0.85 } : undefined)}
               className={`min-h-11 flex-row items-center gap-2 rounded-sm border bg-card px-3 ${
                 error ? 'border-destructive' : 'border-border'
               }`}
@@ -150,6 +151,7 @@ export function DatePickerField<TFieldValues extends FieldValues>({
                 <Pressable
                   onPress={() => setIosPickerOpen(false)}
                   accessibilityRole="button"
+                  style={({ pressed }) => (pressed ? { opacity: 0.7 } : undefined)}
                   className="items-center border-t border-border py-3"
                 >
                   <Text className="font-bodySemibold text-sm text-primary">Listo</Text>

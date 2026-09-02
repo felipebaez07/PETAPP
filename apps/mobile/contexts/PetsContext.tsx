@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Alert } from 'react-native';
 
 import type { Pet, PetFormValues } from '@petapp/shared';
 import { getCurrentUser } from '@/lib/auth';
@@ -72,12 +73,22 @@ export function PetsProvider({ children }: { children: ReactNode }) {
       .then(async (user) => {
         if (!active || !user) return;
         setOwnerId(user.profile.id);
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('pets')
           .select('*')
           .eq('owner_id', user.profile.id)
           .order('created_at', { ascending: false });
-        if (active) setPets((data as Pet[] | null) ?? []);
+        if (!active) return;
+        if (error) {
+          // Sin este catch, un error de red dejaba `pets` en el seed de demo sin avisar,
+          // como si de verdad no hubiera mascotas guardadas para este propietario.
+          Alert.alert('No se pudieron cargar tus mascotas', 'Intenta de nuevo en unos segundos.');
+          return;
+        }
+        setPets((data as Pet[] | null) ?? []);
+      })
+      .catch(() => {
+        if (active) Alert.alert('No se pudo cargar tu cuenta', 'Intenta de nuevo en unos segundos.');
       })
       .finally(() => {
         if (active) setLoading(false);

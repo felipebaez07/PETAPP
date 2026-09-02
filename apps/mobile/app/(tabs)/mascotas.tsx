@@ -42,6 +42,7 @@ export default function PetsScreen() {
             onPress={() => router.push('/mascotas/nueva')}
             accessibilityRole="button"
             accessibilityLabel="Agregar mascota"
+            style={({ pressed }) => (pressed ? { opacity: 0.7 } : undefined)}
             className="h-11 w-11 items-center justify-center rounded-md bg-white/15"
           >
             <Plus size={22} color="#FFFFFF" />

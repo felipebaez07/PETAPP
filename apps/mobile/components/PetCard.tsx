@@ -39,6 +39,7 @@ export function PetCard({ pet, onDelete }: { pet: Pet; onDelete?: (pet: Pet) => 
             accessibilityRole="button"
             accessibilityLabel={`Eliminar ${pet.name}`}
             hitSlop={8}
+            style={({ pressed }) => (pressed ? { opacity: 0.6 } : undefined)}
             className="h-9 w-9 items-center justify-center rounded-sm"
           >
             <Trash2 size={18} color="#DC2626" />

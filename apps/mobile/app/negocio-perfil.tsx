@@ -24,7 +24,10 @@ export default function NegocioPerfilScreen() {
   useEffect(() => {
     getCurrentUser()
       .then((user) => setEstablishment(user?.establishment ?? null))
-      .catch(() => setEstablishment(null));
+      .catch(() => {
+        Alert.alert('No se pudo cargar tu cuenta', 'Intenta de nuevo en unos segundos.');
+        setEstablishment(null);
+      });
   }, []);
 
   const {

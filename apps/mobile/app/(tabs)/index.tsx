@@ -200,6 +200,7 @@ function BusinessHomeScreen({ establishment }: { establishment: Establishment | 
                   key={item.href}
                   onPress={() => router.push(item.href)}
                   accessibilityRole="button"
+                  style={({ pressed }) => (pressed ? { backgroundColor: '#E7EEF2' } : undefined)}
                   className={[
                     'min-h-11 flex-row items-center gap-3 px-4 py-3',
                     index < arr.length - 1 ? 'border-b border-border' : '',
