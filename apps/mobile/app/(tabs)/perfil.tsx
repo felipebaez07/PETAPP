@@ -14,7 +14,7 @@ import {
   UserRound,
 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, Text, TextInput, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 
@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { getCurrentUser, type CurrentUser } from '@/lib/auth';
+import { getCurrentUser, signInWithGoogle, type CurrentUser } from '@/lib/auth';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { APP_NAME, type UserRole } from '@petapp/shared';
 
@@ -65,6 +65,7 @@ export default function ProfileScreen() {
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState<UserRole>('propietario');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -148,6 +149,24 @@ export default function ProfileScreen() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleGoogleSignIn() {
+    setError(null);
+    setGoogleLoading(true);
+    const { error: googleError } = await signInWithGoogle();
+    if (googleError) {
+      setError(googleError);
+      setGoogleLoading(false);
+      return;
+    }
+    // En web, signInWithGoogle ya redirigió la página fuera de la app — nada más que hacer.
+    // En nativo, si llegó hasta acá sin error, la sesión ya quedó guardada.
+    if (Platform.OS !== 'web') {
+      const current = await getCurrentUser();
+      setUser(current);
+    }
+    setGoogleLoading(false);
   }
 
   async function handleSignOut() {
@@ -284,6 +303,30 @@ export default function ProfileScreen() {
             <Chip label="Iniciar sesión" selected={mode === 'login'} onPress={() => setMode('login')} />
             <Chip label="Registrarse" selected={mode === 'signup'} onPress={() => setMode('signup')} />
           </View>
+
+          {/* Google siempre crea/entra a una cuenta de cuidador (propietario) — no hay forma de
+              pasarle el rol elegido al flujo de OAuth. Si se está registrando como empresa, se
+              oculta y se explica, igual que ya hace `apps/web/src/components/panel/auth-form.tsx`. */}
+          {!(mode === 'signup' && role === 'establecimiento') ? (
+            <View className="gap-2">
+              <Button
+                label={googleLoading ? 'Redirigiendo…' : 'Continuar con Google'}
+                variant="outline"
+                onPress={handleGoogleSignIn}
+                loading={googleLoading}
+              />
+              <View className="flex-row items-center gap-3">
+                <View className="h-px flex-1 bg-border" />
+                <Text className="font-body text-xs text-mutedForeground">o con tu correo</Text>
+                <View className="h-px flex-1 bg-border" />
+              </View>
+            </View>
+          ) : (
+            <Text className="font-body text-xs text-mutedForeground">
+              Con Google solo se crean cuentas de cuidador. Para registrar tu negocio, usa el formulario
+              con correo abajo.
+            </Text>
+          )}
 
           {mode === 'signup' ? (
             <View className="gap-1.5">
