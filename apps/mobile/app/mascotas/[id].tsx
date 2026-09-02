@@ -9,24 +9,36 @@ import {
 } from '@petapp/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Cat, CheckCircle2, ClipboardPlus, Dog, FilePlus2, PawPrint, XCircle } from 'lucide-react-native';
+import { Camera, Cat, CheckCircle2, ClipboardPlus, Dog, FilePlus2, PawPrint, XCircle } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Alert, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { z } from 'zod';
 
 import { Button } from '@/components/ui/Button';
+import { Chip } from '@/components/ui/Chip';
 import { ChipSelectField } from '@/components/ui/ChipSelectField';
 import { DatePickerField } from '@/components/ui/DatePickerField';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FormTextField } from '@/components/ui/FormTextField';
+import { RemoteImage } from '@/components/ui/RemoteImage';
 import { PetDocumentRow } from '@/components/PetDocumentRow';
 import { PreventiveEventRow } from '@/components/PreventiveEventRow';
 import { usePets } from '@/contexts/PetsContext';
 import { fetchPetDocumentsByPet, fetchPreventiveEventsByPet } from '@/lib/data';
 import { formatPetAge, SEX_LABELS } from '@/lib/labels';
 import { supabase } from '@/lib/supabase';
+import {
+  fileExtensionFromName,
+  generateFileId,
+  pickDocumentFile,
+  pickImageFromLibrary,
+  uploadFileToBucket,
+  validateDocumentAsset,
+  validatePhotoAsset,
+  type PickedFile,
+} from '@/lib/uploads';
 
 const SPECIES_ICON = { perro: Dog, gato: Cat, otro: PawPrint } as const;
 
@@ -78,12 +90,16 @@ function sortByCompletedDesc(events: PreventiveEvent[]): PreventiveEvent[] {
 export default function PetDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { pets, isDemo } = usePets();
+  const { pets, isDemo, updatePetPhoto } = usePets();
   const pet = useMemo(() => pets.find((p) => p.id === id), [pets, id]);
 
   const [events, setEvents] = useState<PreventiveEvent[]>([]);
   const [documents, setDocuments] = useState<PetDocument[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [documentMode, setDocumentMode] = useState<'file' | 'link'>(isDemo ? 'link' : 'file');
+  const [documentAsset, setDocumentAsset] = useState<PickedFile | null>(null);
+  const [documentAssetError, setDocumentAssetError] = useState<string | null>(null);
 
   // El cuidador pidió distinguir claramente lo pendiente (próximo/vencido, ver
   // PreventiveEventRow) del historial de lo ya hecho, en vez de una sola lista mezclada.
@@ -224,14 +240,106 @@ export default function PetDetailScreen() {
     ]);
   }
 
+  async function handlePickPetPhoto() {
+    if (isDemo) {
+      Alert.alert('Inicia sesión', 'Necesitas una cuenta para guardar una foto real de tu mascota.');
+      return;
+    }
+    const asset = await pickImageFromLibrary();
+    if (!asset) return;
+    const validationError = validatePhotoAsset(asset);
+    if (validationError) {
+      Alert.alert('Foto no válida', validationError);
+      return;
+    }
+
+    setUploadingPhoto(true);
+    const ext = fileExtensionFromName(asset.name, 'jpg');
+    const path = `${pet!.owner_id}/${pet!.id}/photo.${ext}`;
+    const { error: uploadError } = await uploadFileToBucket('pet-photos', path, asset);
+    if (uploadError) {
+      setUploadingPhoto(false);
+      Alert.alert('No se pudo subir la foto', 'Intenta de nuevo en unos segundos.');
+      return;
+    }
+    const { data } = supabase.storage.from('pet-photos').getPublicUrl(path);
+    const { error: updateError } = await supabase.from('pets').update({ photo_url: data.publicUrl }).eq('id', pet!.id);
+    setUploadingPhoto(false);
+    if (updateError) {
+      Alert.alert('No se pudo actualizar la foto', updateError.message);
+      return;
+    }
+    updatePetPhoto(pet!.id, data.publicUrl);
+  }
+
+  async function handlePickDocumentImage() {
+    setDocumentAssetError(null);
+    const asset = await pickImageFromLibrary();
+    if (!asset) return;
+    const validationError = validateDocumentAsset(asset);
+    if (validationError) {
+      setDocumentAssetError(validationError);
+      return;
+    }
+    setDocumentAsset(asset);
+  }
+
+  async function handlePickDocumentPdf() {
+    setDocumentAssetError(null);
+    const asset = await pickDocumentFile();
+    if (!asset) return;
+    const validationError = validateDocumentAsset(asset);
+    if (validationError) {
+      setDocumentAssetError(validationError);
+      return;
+    }
+    setDocumentAsset(asset);
+  }
+
   async function handleAddDocument(values: DocumentFormValues) {
+    if (documentMode === 'file') {
+      if (isDemo) {
+        Alert.alert('Inicia sesión', 'Necesitas una cuenta para subir un archivo real.');
+        return;
+      }
+      if (!documentAsset) {
+        setDocumentAssetError('Selecciona un archivo.');
+        return;
+      }
+      const ext = fileExtensionFromName(documentAsset.name, documentAsset.mimeType === 'application/pdf' ? 'pdf' : 'jpg');
+      const path = `${pet!.owner_id}/${pet!.id}/${generateFileId()}.${ext}`;
+      const { error: uploadError } = await uploadFileToBucket('pet-documents', path, documentAsset);
+      if (uploadError) {
+        Alert.alert('No se pudo subir el archivo', 'Intenta de nuevo en unos segundos.');
+        return;
+      }
+      const { data, error } = await supabase
+        .from('pet_documents')
+        .insert({ pet_id: pet!.id, title: values.title, document_type: values.document_type, storage_path: path })
+        .select()
+        .single();
+      if (error) {
+        Alert.alert('No se pudo agregar el documento', error.message);
+        return;
+      }
+      setDocuments((prev) => [data as PetDocument, ...prev]);
+      documentForm.reset(EMPTY_DOCUMENT);
+      setDocumentAsset(null);
+      return;
+    }
+
+    // Modo enlace: comportamiento existente, `document_url` pegado a mano.
+    if (!values.document_url) {
+      documentForm.setError('document_url', { message: 'Pega un enlace.' });
+      return;
+    }
     if (isDemo) {
       const newDocument: PetDocument = {
         id: `local-document-${Date.now()}`,
         pet_id: pet!.id,
         title: values.title,
-        document_url: values.document_url || null,
-        storage_path: values.storage_path ?? null,
+        document_url: values.document_url,
+        storage_path: null,
         document_type: values.document_type,
         uploaded_by: null,
         created_at: new Date().toISOString(),
@@ -283,12 +391,29 @@ export default function PetDetailScreen() {
       <Stack.Screen options={{ title: pet.name }} />
       <ScrollView className="flex-1 bg-background" contentContainerStyle={{ padding: 20, gap: 28 }}>
         <View className="flex-row items-center gap-3 rounded-xl bg-card p-4 shadow-sm">
-          <View
-            className="h-14 w-14 items-center justify-center rounded-md bg-backgroundAlt"
-            accessible={false}
+          <Pressable
+            onPress={handlePickPetPhoto}
+            disabled={uploadingPhoto}
+            accessibilityRole="button"
+            accessibilityLabel="Cambiar foto de la mascota"
+            style={({ pressed }) => (pressed ? { opacity: 0.8 } : undefined)}
           >
-            <SpeciesIcon size={28} color="#059669" />
-          </View>
+            <View className="h-14 w-14 items-center justify-center">
+              {uploadingPhoto ? (
+                <View className="h-14 w-14 items-center justify-center rounded-md bg-backgroundAlt">
+                  <ActivityIndicator color="#0369A1" />
+                </View>
+              ) : (
+                <RemoteImage uri={pet.photo_url} size={56} icon={SpeciesIcon} iconColor="#059669" />
+              )}
+              <View
+                className="absolute -bottom-1 -right-1 h-5 w-5 items-center justify-center rounded-full bg-primary"
+                accessible={false}
+              >
+                <Camera size={11} color="#FFFFFF" />
+              </View>
+            </View>
+          </Pressable>
           <View className="flex-1 gap-0.5">
             <Text className="font-headingBold text-xl tracking-tight text-foreground">{pet.name}</Text>
             <Text className="font-body text-sm text-mutedForeground">
@@ -452,15 +577,52 @@ export default function PetDetailScreen() {
               label="Tipo"
               options={DOCUMENT_TYPE_OPTIONS}
             />
-            <FormTextField
-              control={documentForm.control}
-              name="document_url"
-              label="Enlace del documento"
-              placeholder="https://..."
-              helperText="Por ahora se guarda como enlace — la subida de archivos llega más adelante."
-              autoCapitalize="none"
-              keyboardType="url"
-            />
+
+            <View className="flex-row gap-2">
+              <Chip label="Subir un archivo" selected={documentMode === 'file'} onPress={() => setDocumentMode('file')} />
+              <Chip label="Pegar un enlace" selected={documentMode === 'link'} onPress={() => setDocumentMode('link')} />
+            </View>
+
+            {documentMode === 'file' ? (
+              <View className="gap-2">
+                <Text className="font-bodySemibold text-sm text-foreground">Archivo (imagen o PDF, máx. 10MB)</Text>
+                <View className="flex-row gap-2">
+                  <View className="flex-1">
+                    <Button label="Elegir imagen" variant="outline" fullWidth onPress={handlePickDocumentImage} />
+                  </View>
+                  <View className="flex-1">
+                    <Button label="Elegir PDF" variant="outline" fullWidth onPress={handlePickDocumentPdf} />
+                  </View>
+                </View>
+                {documentAsset ? (
+                  <Text className="font-body text-sm text-mutedForeground" numberOfLines={1}>
+                    Seleccionado: {documentAsset.name ?? 'archivo'}
+                  </Text>
+                ) : null}
+                {documentAssetError ? (
+                  <Text className="font-body text-xs text-destructive">{documentAssetError}</Text>
+                ) : null}
+                <Text className="font-body text-xs text-mutedForeground">
+                  Se guarda en un espacio privado — solo tú puedes generar un enlace para verlo.
+                </Text>
+                {isDemo ? (
+                  <Text className="font-body text-xs text-mutedForeground">
+                    Inicia sesión para subir un archivo real.
+                  </Text>
+                ) : null}
+              </View>
+            ) : (
+              <FormTextField
+                control={documentForm.control}
+                name="document_url"
+                label="Enlace del documento"
+                placeholder="https://..."
+                helperText="Útil si el documento ya vive en otro sitio (ej. Google Drive)."
+                autoCapitalize="none"
+                keyboardType="url"
+              />
+            )}
+
             <Button
               label="Agregar documento"
               variant="outline"
@@ -487,7 +649,7 @@ export default function PetDetailScreen() {
                       : undefined
                   }
                 >
-                  <PetDocumentRow document={doc} onDelete={handleDeleteDocument} />
+                  <PetDocumentRow document={doc} petId={pet.id} onDelete={handleDeleteDocument} />
                 </Animated.View>
               ))}
             </View>

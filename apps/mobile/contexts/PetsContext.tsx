@@ -54,6 +54,10 @@ interface PetsContextValue {
   isDemo: boolean;
   addPet: (values: PetFormValues) => Promise<Pet | null>;
   deletePet: (id: string) => Promise<boolean>;
+  /** Refleja localmente una foto ya subida a Storage (la subida y el `update` en `pets` ya
+   * ocurrieron por separado, ver `lib/uploads.ts`) — evita recargar todas las mascotas solo
+   * para ver la foto nueva. */
+  updatePetPhoto: (id: string, photoUrl: string) => void;
 }
 
 const PetsContext = createContext<PetsContextValue | null>(null);
@@ -178,9 +182,13 @@ export function PetsProvider({ children }: { children: ReactNode }) {
     [ownerId]
   );
 
+  const updatePetPhoto = useCallback((id: string, photoUrl: string) => {
+    setPets((prev) => prev.map((pet) => (pet.id === id ? { ...pet, photo_url: photoUrl } : pet)));
+  }, []);
+
   const value = useMemo<PetsContextValue>(
-    () => ({ pets, loading, isDemo: !ownerId, addPet, deletePet }),
-    [pets, loading, ownerId, addPet, deletePet]
+    () => ({ pets, loading, isDemo: !ownerId, addPet, deletePet, updatePetPhoto }),
+    [pets, loading, ownerId, addPet, deletePet, updatePetPhoto]
   );
 
   return <PetsContext.Provider value={value}>{children}</PetsContext.Provider>;

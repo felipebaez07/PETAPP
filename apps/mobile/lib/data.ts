@@ -94,3 +94,37 @@ export async function fetchPetDocumentsByPet(petId: string): Promise<PetDocument
   if (error) throw error;
   return (data ?? []) as PetDocument[];
 }
+
+/**
+ * Genera una URL firmada (60s) para abrir un documento subido al bucket privado
+ * `pet-documents`. No hay servidor intermedio en mobile (a diferencia de la Server Action
+ * `getSignedDocumentUrl` de `apps/web`), así que la verificación de dueño ocurre en esta
+ * misma llamada: el `select` filtra por `id` **y** `pet_id` a la vez, y la RLS de
+ * `pet_documents` (solo el dueño de la mascota puede leer sus filas) ya deniega cualquier
+ * documento que no sea del usuario autenticado — si no hay fila, no se genera ninguna URL.
+ * Nunca se acepta un `storage_path` que no venga de una fila que el usuario pudo leer.
+ */
+export async function getSignedPetDocumentUrl(
+  documentId: string,
+  petId: string
+): Promise<{ url: string | null; error: string | null }> {
+  if (!isSupabaseConfigured) {
+    return { url: null, error: 'No disponible en modo demo.' };
+  }
+
+  const { data: doc, error: fetchError } = await supabase
+    .from('pet_documents')
+    .select('storage_path')
+    .eq('id', documentId)
+    .eq('pet_id', petId)
+    .maybeSingle();
+  if (fetchError || !doc?.storage_path) {
+    return { url: null, error: 'Documento no encontrado.' };
+  }
+
+  const { data, error } = await supabase.storage.from('pet-documents').createSignedUrl(doc.storage_path, 60);
+  if (error || !data) {
+    return { url: null, error: error?.message ?? 'No se pudo generar el enlace.' };
+  }
+  return { url: data.signedUrl, error: null };
+}

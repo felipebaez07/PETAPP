@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { Cat, CheckCircle2, ChevronRight, Dog, PawPrint, Trash2, XCircle } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 
+import { RemoteImage } from '@/components/ui/RemoteImage';
 import { formatPetAge, SEX_LABELS } from '@/lib/labels';
 
 const SPECIES_ICON = { perro: Dog, gato: Cat, otro: PawPrint } as const;
@@ -23,12 +24,7 @@ export function PetCard({ pet, onDelete }: { pet: Pet; onDelete?: (pet: Pet) => 
       className="mb-3 gap-3 rounded-xl bg-card p-4 shadow-sm"
     >
       <View className="flex-row items-center gap-3">
-        <View
-          className="h-12 w-12 items-center justify-center rounded-md bg-backgroundAlt"
-          accessible={false}
-        >
-          <SpeciesIcon size={24} color="#059669" />
-        </View>
+        <RemoteImage uri={pet.photo_url} size={48} icon={SpeciesIcon} iconColor="#059669" />
         <View className="flex-1">
           <Text className="font-heading text-base text-foreground">{pet.name}</Text>
           <Text className="font-body text-sm text-mutedForeground">

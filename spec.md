@@ -519,11 +519,117 @@ ver más abajo): conectar esa base con UI real de carga de archivos.
   en modo creación (`AddPetPanel`), no hay un flujo de "editar mascota" en la web todavía (no
   existía antes de esta ronda tampoco), así que cambiar la foto de una mascota ya creada no tiene
   UI por ahora.
-- [ ] `apps/mobile` sigue exactamente igual que antes de esta ronda (fuera de alcance explícito
-  del pedido): la foto de mascota y los documentos en mobile siguen usando solo campos de
-  URL/enlace de texto. Portar este mismo patrón (input de archivo + Storage) a mobile es trabajo
-  aparte — ya estaba anotado en el backlog de mobile (sección 6.1) para logo/portada de negocio,
-  y ahora aplica igual para `pets.photo_url` y `pet_documents` de mobile.
+
+## 12. Subida real de archivos en mobile (foto de mascota y documentos, 2026-09-02)
+
+Puerto a `apps/mobile` de la sección 10 (que había sido solo `apps/web`). Misma base ya
+aplicada en producción (`0007_pet_media_storage.sql`, dos buckets — `pet-photos` público,
+`pet-documents` privado — con policies por dueño usando `<auth.uid()>/<pet_id>/<archivo>`).
+No se tocó `apps/web`, `packages/shared` ni `supabase/` — no hizo falta ningún campo ni
+migración nueva, la base de la sección 10 ya alcanzaba para mobile.
+
+- [x] **Diferencia real con web, investigada antes de escribir código**: el navegador sube el
+  `File` del `<input>` directo; React Native no tiene un `File`/`Blob` completo equivalente.
+  El patrón usado (documentado por Supabase para Expo/React Native) es leer el URI local del
+  picker con `fetch(uri).arrayBuffer()` — Expo soporta `fetch` sobre URIs `file://`/
+  `content://`/`blob:` locales — y subir ese `ArrayBuffer` a `storage.from(bucket).upload()`.
+  Nuevo `apps/mobile/lib/uploads.ts`: `validatePhotoAsset`/`validateDocumentAsset` (mismos
+  límites que web: imagen ≤5MB para foto, imagen o PDF ≤10MB para documento — revisa
+  `mimeType`/`size` real del asset, no confía en lo que el picker "debería" filtrar),
+  `pickImageFromLibrary` (pide permiso con `ImagePicker.requestMediaLibraryPermissionsAsync()`
+  y avisa con `Alert.alert` si se deniega, en vez de fallar en silencio), `pickDocumentFile`
+  (`expo-document-picker`, admite `image/*` y `application/pdf`), `uploadFileToBucket` y
+  helpers de nombre de archivo (hecho: 2026-09-02).
+- [x] Instalado `expo-image-picker` y `expo-document-picker` con `npx expo install` (versiones
+  correctas para SDK 57: `~57.0.15` y `~57.0.1`). Agregado el plugin `expo-image-picker` a
+  `app.json` con `photosPermission` en español (texto que verá el usuario de iOS al pedir
+  permiso de fotos) — `expo-document-picker` no necesitó entrada en `plugins`, no pide ningún
+  permiso de Info.plist para el selector de archivos del sistema (hecho: 2026-09-02,
+  `apps/mobile/app.json`).
+- [x] **Foto de mascota al crear** (`app/mascotas/nueva.tsx`): círculo de vista previa +
+  botón "Elegir foto (opcional)"/"Cambiar foto". Igual que web: primero se crea la mascota
+  (`usePets().addPet`, ya existente), y solo con el `pet_id` real devuelto se sube el archivo
+  a `pet-photos/<pet.owner_id>/<pet.id>/photo.<ext>` y se hace `update` de `pets.photo_url`
+  con la URL pública (`getPublicUrl`, bucket público). En modo demo (`isDemo`, sin
+  `auth.uid()` real) la foto simplemente no se sube — la mascota queda creada igual. Si la
+  subida falla, se avisa y la mascota queda guardada sin foto, sin bloquear el flujo (hecho:
+  2026-09-02, `app/mascotas/nueva.tsx`).
+- [x] **Cambiar foto desde la ficha de una mascota ya existente** — el pedido original lo
+  dejaba opcional/"si el tiempo lo permite"; se hizo. En `app/mascotas/[id].tsx` la foto del
+  header ahora es tocable (`RemoteImage` + badge de cámara), sube a la misma ruta con
+  `upsert: true` (reemplaza la foto anterior) y refleja el cambio al instante con una función
+  nueva `updatePetPhoto(id, url)` agregada a `PetsContext` (evita recargar todas las mascotas
+  solo para ver la foto nueva). En modo demo, tocarla muestra un aviso pidiendo iniciar sesión
+  en vez de intentar subir sin `auth.uid()` real (hecho: 2026-09-02, `contexts/PetsContext.tsx`,
+  `app/mascotas/[id].tsx`).
+- [x] **Mostrar la foto** — `components/PetCard.tsx` ahora usa `RemoteImage` (ya existía,
+  compartido con logo/portada de negocio) con `uri={pet.photo_url}` y fallback al ícono de
+  especie, en vez de mostrar siempre el ícono. Mismo componente reutilizado en el header de
+  `app/mascotas/[id].tsx` (hecho: 2026-09-02).
+- [x] **Documento de mascota** — en `app/mascotas/[id].tsx`, el formulario de "agregar
+  documento" ahora tiene un toggle con `Chip` ("Subir un archivo" / "Pegar un enlace"), igual
+  patrón que el toggle de web. Modo archivo: dos botones ("Elegir imagen" vía
+  `expo-image-picker`, "Elegir PDF" vía `expo-document-picker`, ambos guardan el mismo estado
+  de archivo elegido) — se sube a `pet-documents/<pet.owner_id>/<pet.id>/<id-corto>.<ext>`
+  (bucket privado) y se guarda el **path** en `pet_documents.storage_path`, dejando
+  `document_url` en `null`. Modo enlace: exactamente el comportamiento anterior (`document_url`
+  a mano). En modo demo, el modo archivo muestra un aviso ("inicia sesión para subir un
+  archivo real") en vez de fingir una subida que no existe (hecho: 2026-09-02).
+- [x] **Abrir un documento subido** — `components/PetDocumentRow.tsx` ya no ignora
+  `storage_path` (antes tenía un comentario "queda pendiente" y no hacía nada al tocarlo si
+  no había `document_url`). Ahora, al tocar la fila: si hay `document_url` lo abre directo
+  (como antes); si hay `storage_path`, pide una URL firmada de 60s **en ese momento** (nunca
+  precalculada al renderizar la lista) con la función nueva `getSignedPetDocumentUrl(documentId,
+  petId)` de `apps/mobile/lib/data.ts`, y recién con esa URL llama `openExternalUrl`. Como
+  mobile no tiene servidor intermedio (a diferencia de la Server Action `getSignedDocumentUrl`
+  de web), la verificación de dueño ocurre en la misma consulta: el `select` filtra por `id`
+  **y** `pet_id` a la vez, y la RLS de `pet_documents` (solo el dueño de la mascota puede leer
+  sus filas) deniega cualquier documento ajeno — si no hay fila, no se genera ninguna URL;
+  nunca se acepta un `storage_path` arbitrario que no venga de una fila que el usuario pudo
+  leer (hecho: 2026-09-02, `components/PetDocumentRow.tsx`, `lib/data.ts`).
+- [x] Todo el acceso a Storage sigue con el cliente `supabase` de sesión del usuario (el mismo
+  cliente único de `lib/supabase.ts`, nunca una service-role key) — las policies de
+  `storage.objects` de 0007 son las que de verdad deciden quién puede leer/escribir cada
+  archivo (hecho: 2026-09-02).
+- [x] `npm run typecheck` en verde en las 3 workspaces y `npx expo export --platform web`
+  sin errores dentro de `apps/mobile` (20 rutas, misma cantidad que antes de esta ronda) —
+  confirmado que `expo-image-picker`/`expo-document-picker` no rompen el bundle web (ambos
+  tienen soporte web propio, no hizo falta ningún archivo `.web.tsx` ni `Platform.select`
+  para las funciones de picker) (hecho: 2026-09-02).
+
+**Pendiente honesto de esta ronda (no se alcanzó a hacer o no se pudo probar, no se maquilla):**
+
+- [ ] No se probó en un dispositivo/simulador real ningún paso del flujo (pedir permiso de
+  galería, elegir imagen/PDF, que la subida realmente llegue al bucket, que la URL firmada
+  realmente abra el documento) — este entorno no tiene forma de correr la app nativa. Cuando
+  se pruebe por primera vez, revisar sobre todo: (a) que `fetch(uri).arrayBuffer()` funcione
+  igual en Android que en iOS para URIs `content://` (el comportamiento de `fetch` sobre URIs
+  locales puede variar entre engines/versión de Expo — es el punto más frágil de todo este
+  cambio, al no poder probarlo aquí), (b) que el permiso de galería se pida y deniegue
+  correctamente en ambas plataformas, (c) que `expo-document-picker` en Android realmente deje
+  elegir tanto imágenes como PDFs con el filtro `['image/*', 'application/pdf']`.
+- [ ] `expo export --platform web` no ejecuta los config plugins de `app.json` (esos solo
+  aplican en `expo prebuild`/build nativo), así que agregar el plugin `expo-image-picker` con
+  `photosPermission` en español no se pudo verificar de forma end-to-end en este entorno —
+  solo se confirmó que el JSON es válido. Revisar el texto del permiso la primera vez que se
+  genere un build nativo (iOS pedirá ese texto exacto al usuario).
+- [ ] No se implementó borrado del archivo en Storage al eliminar una mascota o un documento
+  (mismo pendiente ya anotado para web en la sección 10) — un documento o foto reemplazada
+  deja el archivo anterior huérfano en el bucket hasta limpieza manual o una pasada futura.
+  `upsert: true` en la foto de mascota sobrescribe el archivo en la misma ruta (mismo nombre
+  `photo.<ext>`), así que ahí no se acumula basura salvo que cambie la extensión entre subidas
+  (ej. de `.jpg` a `.png` dejaría el `.jpg` viejo huérfano) — no se resolvió por alcance.
+- [ ] El id corto de nombre de archivo (`generateFileId()` en `lib/uploads.ts`, basado en
+  `Date.now()`+`Math.random()`) no es criptográficamente aleatorio como el `crypto.randomUUID()`
+  que usa web — se prefirió no agregar `expo-crypto` como dependencia nueva solo para esto.
+  No es un problema de seguridad (el control de acceso real lo da la policy de Storage sobre
+  el prefijo `<auth.uid()>/<pet_id>/`, no que el nombre de archivo sea impredecible), pero si
+  se agrega `expo-crypto` más adelante por otro motivo, conviene migrar a `Crypto.randomUUID()`
+  por prolijidad.
+- [x] (2026-09-02) `apps/mobile` seguía exactamente igual que esta ronda de web (fuera de
+  alcance explícito de esa tarea): la foto de mascota y los documentos en mobile solo usaban
+  campos de URL/enlace de texto. Portado el mismo patrón (picker + Storage) a mobile — ver
+  sección 12. Sigue pendiente el logo/portada de negocio en mobile (no era parte de este pedido).
 - [ ] No se agregó borrado del archivo en Storage al eliminar una mascota o un documento
   (`deletePetDocument`, `deletePreventiveEvent` etc. solo borran la fila de la base) — un
   documento eliminado deja su archivo huérfano en el bucket `pet-documents` hasta que se limpie
