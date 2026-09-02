@@ -329,9 +329,9 @@ Se corrió la skill `code-review` (nivel alto) sobre todo el diff del pivot (`83
 - [x] Dos fetches sin `.catch()` en mobile escondían errores de red como estados vacíos.
 - [x] Barra de tabs de mobile no escuchaba `onAuthStateChange`, quedaba con el rol anterior tras cambiar de cuenta.
 
-- [ ] **Pendiente del usuario, bloqueante para la app móvil real**: aplicar
-  `supabase/migrations/0006_service_request_pet_ownership.sql` en el SQL Editor del proyecto real
-  (mismo proceso que 0005). Sin esto, el hueco de seguridad del `pet_id` sigue abierto en producción.
+- [x] `0006_service_request_pet_ownership.sql` aplicada en el proyecto real vía SQL Editor —
+  el hueco de seguridad del `pet_id` en `service_requests` queda cerrado también en producción
+  (hecho: 2026-09-02).
 
 ## 9. Backlog / ideas que van surgiendo
 
