@@ -72,8 +72,9 @@ Migración nueva: `supabase/migrations/0005_pivot_preventivo.sql`.
 - [x] Nueva tabla `preventive_events` (calendario preventivo): `pet_id`, `type` (`vacuna`/`control`/`desparasitacion`/`otro`), `title`, `due_date`, `completed_at`, `reminder_sent_at`, `notes` + RLS por dueño de mascota (hecho: 2026-09-01)
 - [x] Nueva tabla `pet_documents` (documentos/soportes básicos): `pet_id`, `title`, `document_url`, `document_type` + RLS por dueño de mascota (hecho: 2026-09-01)
 - [x] Nueva tabla `provider_plans` (plan B2B del prestador): `establishment_id`, `plan_code` (`basico`/`pro`), `status` (`prueba`/`activa`/`pausada`/`cancelada`), trigger que impide que el propio prestador se auto-active el plan (mismo patrón que `prevent_establishment_self_verification`) (hecho: 2026-09-01)
-- [ ] **Pendiente del usuario**: aplicar `0005_pivot_preventivo.sql` sobre el proyecto Supabase real (`nnsjospqprfygmxnlszb`). No se aplicó automáticamente porque dropea tablas con datos — requiere confirmación explícita. Ver sección 7.
-- [ ] Regenerar tipos con `generate_typescript_types` (o mantener el mapeo manual en `packages/shared/src/types.ts`, que ya se actualizó a mano) una vez aplicada la migración real.
+- [x] Aplicar `0005_pivot_preventivo.sql` sobre el proyecto Supabase real (`nnsjospqprfygmxnlszb`) — aplicada manualmente por el usuario vía SQL Editor (hecho: 2026-09-01). En el primer intento falló el paso 2 (`establishments_prevent_self_verification` bloqueaba el `UPDATE` porque el SQL Editor no tiene `auth.uid()`); se corrigió desactivando el trigger puntualmente para ese `UPDATE` (commit `1f55f99`) y se re-corrió el archivo completo con éxito.
+- [ ] Regenerar tipos con `generate_typescript_types` (o mantener el mapeo manual en `packages/shared/src/types.ts`, que ya se actualizó a mano) — pendiente, opcional mientras el mapeo manual siga sincronizado.
+- [ ] Conectar las variables de entorno reales (`NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY`) en el deploy de Vercel — ya es seguro hacerlo, el esquema remoto ya tiene `service_requests`/`preventive_events`/`pet_documents`/`provider_plans`.
 
 ## 4. Paquete compartido (`packages/shared`)
 
