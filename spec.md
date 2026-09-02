@@ -299,6 +299,19 @@ funciones nuevas (Tabla V del PDF — condiciones de avance):
   (`petapp://`) no lo captura Expo Go, solo una build real de la app. Verificar cuando exista esa
   build.
 
+## 8.2 Cuenta super-admin (2026-09-01)
+
+- [x] Se creó una cuenta dedicada de administración (`super@superadminpetapp.com`, correo propio
+  del piloto, no ligada a Google) y se promovió a `role = 'admin'` en `profiles` vía SQL Editor.
+  El mismo gotcha del trigger `establishments_prevent_self_verification` (sección 7) aplica aquí:
+  `profiles_prevent_role_change` también bloquea el `UPDATE` sin sesión de admin activa, así que
+  la consulta de promoción desactiva/reactiva ese trigger puntualmente. Verificado con `role='admin'`
+  en la base real (hecho: 2026-09-01).
+- Con esta cuenta ya se puede entrar a `/panel/admin/aliados` (verificar/rechazar prestadores) y
+  `/panel/admin/solicitudes` (convertir solicitudes de "Únete al piloto" en establecimientos reales).
+- [ ] Pendiente: mismo panel de admin todavía no existe en mobile (decisión 2026-09-01: no hace
+  falta por ahora, la web alcanza para administrar el piloto).
+
 ## 9. Backlog / ideas que van surgiendo
 
 (Agregar aquí cualquier tarea nueva que salga en el camino, con fecha.)
