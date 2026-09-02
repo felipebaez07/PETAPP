@@ -3,6 +3,7 @@ import {
   Building2,
   CalendarCheck,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   Clock,
   CreditCard,
@@ -10,10 +11,12 @@ import {
   LogOut,
   Lock,
   Mail,
+  PawPrint,
   UserRound,
 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 
 import { Button } from '@/components/ui/Button';
@@ -25,6 +28,7 @@ import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { APP_NAME, type UserRole } from '@petapp/shared';
 
 type AuthMode = 'login' | 'signup';
+type EntryStep = 'choice' | 'form';
 
 const ROLE_LABELS: Record<string, string> = {
   propietario: 'Propietario/a de mascota',
@@ -32,14 +36,30 @@ const ROLE_LABELS: Record<string, string> = {
   admin: 'Administrador',
 };
 
-const SIGNUP_ROLE_OPTIONS: { value: UserRole; label: string }[] = [
-  { value: 'propietario', label: 'Soy propietario/a de mascota' },
-  { value: 'establecimiento', label: 'Tengo un negocio o fundación aliada' },
+const WELCOME_OPTIONS: {
+  value: UserRole;
+  icon: typeof PawPrint;
+  title: string;
+  description: string;
+}[] = [
+  {
+    value: 'propietario',
+    icon: PawPrint,
+    title: 'Soy cuidador',
+    description: 'Lleva el calendario preventivo de tus mascotas, guarda documentos y solicita citas.',
+  },
+  {
+    value: 'establecimiento',
+    icon: Building2,
+    title: 'Tengo un negocio veterinario',
+    description: 'Aparece en el directorio verificado y recibe solicitudes de cita de cuidadores.',
+  },
 ];
 
 export default function ProfileScreen() {
   const router = useRouter();
   const [user, setUser] = useState<CurrentUser | null | undefined>(undefined);
+  const [entryStep, setEntryStep] = useState<EntryStep>('choice');
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -48,6 +68,19 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  function chooseRole(value: UserRole) {
+    setRole(value);
+    setError(null);
+    setSuccess(null);
+    setEntryStep('form');
+  }
+
+  function goBackToChoice() {
+    setEntryStep('choice');
+    setError(null);
+    setSuccess(null);
+  }
 
   useEffect(() => {
     let active = true;
@@ -123,6 +156,7 @@ export default function ProfileScreen() {
     setUser(null);
     setEmail('');
     setPassword('');
+    setEntryStep('choice');
   }
 
   if (user === undefined) {
@@ -181,19 +215,68 @@ export default function ProfileScreen() {
     );
   }
 
+  if (entryStep === 'choice') {
+    return (
+      <View className="flex-1 bg-background">
+        <ScreenHeader
+          title={`Bienvenido a ${APP_NAME}`}
+          subtitle="Seguimiento preventivo, documentos y prestadores verificados en un solo lugar"
+        />
+        <View className="gap-3 p-5">
+          {WELCOME_OPTIONS.map((option, index) => (
+            <Animated.View
+              key={option.value}
+              entering={FadeInDown.duration(260).delay(index * 60).springify().damping(26).stiffness(220)}
+            >
+              <Pressable
+                onPress={() => chooseRole(option.value)}
+                accessibilityRole="button"
+                style={({ pressed }) => (pressed ? { transform: [{ scale: 0.98 }] } : undefined)}
+                className="flex-row items-center gap-4 rounded-xl bg-card p-5 shadow-sm"
+              >
+                <View className="h-14 w-14 items-center justify-center rounded-full bg-backgroundAlt">
+                  <option.icon size={26} color="#0369A1" />
+                </View>
+                <View className="flex-1 gap-1">
+                  <Text className="font-heading text-base text-foreground">{option.title}</Text>
+                  <Text className="font-body text-sm text-mutedForeground">{option.description}</Text>
+                </View>
+                <ChevronRight size={20} color="#64748B" />
+              </Pressable>
+            </Animated.View>
+          ))}
+        </View>
+      </View>
+    );
+  }
+
+  const chosenOption = WELCOME_OPTIONS.find((option) => option.value === role) ?? WELCOME_OPTIONS[0];
+
   return (
     <View className="flex-1 bg-background">
       <ScreenHeader title="Perfil" subtitle={`Tu cuenta en ${APP_NAME}`} />
 
-      <View className="gap-6 p-5">
+      <Animated.View
+        entering={FadeInDown.duration(240).springify().damping(22).stiffness(200)}
+        className="gap-6 p-5"
+      >
+        <Pressable
+          onPress={goBackToChoice}
+          accessibilityRole="button"
+          className="min-h-11 flex-row items-center gap-1.5 self-start"
+        >
+          <ChevronLeft size={18} color="#0369A1" />
+          <Text className="font-bodyMedium text-sm text-primary">Cambiar</Text>
+        </Pressable>
+
         <View className="flex-row items-center gap-3 rounded-xl bg-card p-4 shadow-sm">
           <View className="h-12 w-12 items-center justify-center rounded-full bg-backgroundAlt">
-            <UserRound size={24} color="#0369A1" />
+            <chosenOption.icon size={24} color="#0369A1" />
           </View>
           <View className="flex-1">
-            <Text className="font-heading text-base text-foreground">Propietario</Text>
+            <Text className="font-heading text-base text-foreground">{chosenOption.title}</Text>
             <Text className="font-body text-sm text-mutedForeground">
-              Lleva el calendario preventivo de tus mascotas y solicita citas con prestadores verificados.
+              {mode === 'login' ? 'Inicia sesión en tu cuenta.' : chosenOption.description}
             </Text>
           </View>
         </View>
@@ -205,36 +288,20 @@ export default function ProfileScreen() {
           </View>
 
           {mode === 'signup' ? (
-            <>
-              <View className="gap-1.5">
-                <Text className="font-bodySemibold text-sm text-foreground">Nombre completo</Text>
-                <View className="min-h-11 flex-row items-center gap-2 rounded-sm border border-border bg-card px-3">
-                  <UserRound size={18} color="#64748B" />
-                  <TextInput
-                    value={fullName}
-                    onChangeText={setFullName}
-                    placeholder="Tu nombre"
-                    placeholderTextColor="#64748B"
-                    autoCapitalize="words"
-                    className="min-h-11 flex-1 font-body text-base text-foreground"
-                  />
-                </View>
+            <View className="gap-1.5">
+              <Text className="font-bodySemibold text-sm text-foreground">Nombre completo</Text>
+              <View className="min-h-11 flex-row items-center gap-2 rounded-sm border border-border bg-card px-3">
+                <UserRound size={18} color="#64748B" />
+                <TextInput
+                  value={fullName}
+                  onChangeText={setFullName}
+                  placeholder="Tu nombre"
+                  placeholderTextColor="#64748B"
+                  autoCapitalize="words"
+                  className="min-h-11 flex-1 font-body text-base text-foreground"
+                />
               </View>
-
-              <View className="gap-1.5">
-                <Text className="font-bodySemibold text-sm text-foreground">¿Cómo usarás {APP_NAME}?</Text>
-                <View className="gap-2">
-                  {SIGNUP_ROLE_OPTIONS.map((option) => (
-                    <Chip
-                      key={option.value}
-                      label={option.label}
-                      selected={role === option.value}
-                      onPress={() => setRole(option.value)}
-                    />
-                  ))}
-                </View>
-              </View>
-            </>
+            </View>
           ) : null}
 
           <View className="gap-1.5">
@@ -288,7 +355,7 @@ export default function ProfileScreen() {
             loading={loading}
           />
         </View>
-      </View>
+      </Animated.View>
     </View>
   );
 }
