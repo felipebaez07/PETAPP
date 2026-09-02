@@ -174,10 +174,29 @@ Tareas:
 
 ## 7. Despliegue
 
-- [ ] Confirmar con el usuario si aplica `0005_pivot_preventivo.sql` al proyecto Supabase real ahora o después de revisar el diff (es destructivo para marketplace/foro/adopciones).
-- [ ] Web → Vercel: crear proyecto, variables de entorno `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY`, `vercel.json` si hace falta config de monorepo (root directory `apps/web`).
-- [ ] Mobile → vista previa: `npx expo export --platform web` a un hosting estático (Vercel/Cloudflare Pages) para poder verla desde el navegador sin instalar Expo Go, o `eas update`/`eas build` si se prefiere la app real (requiere cuenta Expo/EAS del usuario).
-- [ ] Documentar en este spec la URL final una vez desplegado.
+Decisión (2026-09-01): Vercel, importando el repo de GitHub (`felipebaez07/PETAPP`) directamente —
+sin CLI. Requiere que el usuario haga login en vercel.com con su cuenta (el agente no puede completar
+ese OAuth). Pasos exactos:
+
+- [ ] **Web**: en vercel.com → "Add New Project" → importar `felipebaez07/PETAPP` → Root Directory =
+  `apps/web` (Vercel detecta Next.js solo). Variables de entorno: `NEXT_PUBLIC_SUPABASE_URL` y
+  `NEXT_PUBLIC_SUPABASE_ANON_KEY` (copiarlas de `apps/web/.env.local`, no se versionan). Primer
+  deploy recomendado **sin** esas variables (modo demo con datos de ejemplo) para revisar el
+  rediseño sin depender del estado de la migración remota — ver el punto de abajo.
+- [ ] **Mobile (vista previa en navegador)**: verificado que `npx expo export --platform web` genera
+  un bundle estático limpio en `apps/mobile/dist` (18 rutas, sin errores, `dist/` ya está en
+  `.gitignore`). Segundo proyecto en Vercel → mismo repo → Root Directory = `apps/mobile` → Build
+  Command `npx expo export --platform web` → Output Directory `dist`. Dará una URL navegable de la
+  app móvil (React Native Web) sin necesitar cuenta de Expo/EAS ni instalar Expo Go. Para la app
+  nativa real (build instalable) sí hace falta `eas build`, que requiere cuenta Expo aparte — queda
+  para cuando se necesite probar en un dispositivo físico.
+- [ ] **Orden importante con Supabase**: el proyecto real (`nnsjospqprfygmxnlszb`) todavía tiene el
+  esquema viejo (`reservations`, `products`, `forum_posts`, `adoption_*` sin renombrar). Si se
+  conectan las variables de entorno reales antes de aplicar `0005_pivot_preventivo.sql`, las
+  pantallas nuevas que leen `service_requests`/`preventive_events`/`pet_documents`/`provider_plans`
+  van a fallar. Aplicar la migración (SQL Editor de Supabase) **antes** de pasar el deploy de web a
+  modo real, o mantenerlo en modo demo hasta ese momento.
+- [ ] Documentar aquí las URLs finales una vez desplegado (web y mobile-web).
 
 ## 8. Validación (del documento de negocio, sección VIII)
 
