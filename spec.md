@@ -197,7 +197,8 @@ ese OAuth). Pasos exactos:
   pantallas nuevas que leen `service_requests`/`preventive_events`/`pet_documents`/`provider_plans`
   van a fallar. Aplicar la migración (SQL Editor de Supabase) **antes** de pasar el deploy de web a
   modo real, o mantenerlo en modo demo hasta ese momento.
-- [ ] Documentar aquí las URLs finales una vez desplegado (web y mobile-web).
+- [x] **Web desplegada**: https://petapp-web-topaz.vercel.app (Vercel, proyecto `felipebaez07`, Root Directory `apps/web`, con las variables reales conectadas). Verificado el 2026-09-01: `/directorio` (14 prestadores veterinaria/profesional, todos "Pendiente de verificación" — correcto, nadie ha sido contactado todavía) y `/panel/login` cargan sin errores contra el Supabase real ya migrado (hecho: 2026-09-01).
+- [ ] Documentar aquí la URL de mobile-web una vez desplegado.
 
 ## 8. Validación (del documento de negocio, sección VIII)
 
