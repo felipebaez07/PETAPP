@@ -35,6 +35,7 @@ export default function NegocioHorariosScreen() {
   const [establishment, setEstablishment] = useState<Establishment | null | undefined>(undefined);
   const [isBusinessAccount, setIsBusinessAccount] = useState(false);
   const [days, setDays] = useState<DayState[]>([]);
+  const [is24h, setIs24h] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -43,6 +44,7 @@ export default function NegocioHorariosScreen() {
       .then(async (user) => {
         setIsBusinessAccount(user?.profile.role === 'establecimiento');
         setEstablishment(user?.establishment ?? null);
+        setIs24h(user?.establishment?.is_24_7 ?? false);
         if (user?.establishment) {
           const { data, error } = await supabase
             .from('establishment_hours')
@@ -70,6 +72,20 @@ export default function NegocioHorariosScreen() {
   async function handleSubmit() {
     if (!establishment) return;
     setSubmitting(true);
+
+    // `is_24_7` vive en `establishments`, no en `establishment_hours` — el usuario buscaba este
+    // toggle en esta pantalla (donde tiene más sentido a simple vista) y solo existía en
+    // "Perfil del negocio" (negocio-perfil.tsx). Se guarda desde acá también, sin duplicar la columna.
+    const { error: is24hError } = await supabase
+      .from('establishments')
+      .update({ is_24_7: is24h })
+      .eq('id', establishment.id);
+    if (is24hError) {
+      setSubmitting(false);
+      Alert.alert('No se pudo guardar', is24hError.message);
+      return;
+    }
+
     const rows = days.map((d) => ({
       establishment_id: establishment.id,
       day_of_week: d.day_of_week,
@@ -128,6 +144,27 @@ export default function NegocioHorariosScreen() {
         </Text>
       </View>
 
+      <Pressable
+        onPress={() => setIs24h((v) => !v)}
+        accessibilityRole="switch"
+        accessibilityState={{ checked: is24h }}
+        className="flex-row items-center justify-between gap-3 rounded-xl bg-card p-4 shadow-sm"
+      >
+        <Text className="font-bodySemibold text-base text-foreground">Atendemos las 24 horas, todos los días</Text>
+        <Switch
+          value={is24h}
+          onValueChange={setIs24h}
+          trackColor={{ false: '#D6E4EA', true: '#10B981' }}
+          thumbColor="#FFFFFF"
+        />
+      </Pressable>
+
+      {is24h ? (
+        <Text className="font-body text-sm text-mutedForeground">
+          Con esto activado no hace falta definir horarios por día — el directorio ya te muestra como
+          &quot;Abierto 24/7&quot;.
+        </Text>
+      ) : (
       <View className="overflow-hidden rounded-xl bg-card shadow-sm">
         {days.map((day, index) => (
           <View
@@ -184,6 +221,7 @@ export default function NegocioHorariosScreen() {
           </View>
         ))}
       </View>
+      )}
 
       {saved ? <Text className="font-body text-sm text-success">Horarios actualizados.</Text> : null}
 

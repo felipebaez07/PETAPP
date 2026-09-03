@@ -20,9 +20,10 @@ function buildInitialDays(hours: EstablishmentHours[]): DayInput[] {
   });
 }
 
-export function HoursForm({ hours }: { hours: EstablishmentHours[] }) {
+export function HoursForm({ hours, is24h: initialIs24h }: { hours: EstablishmentHours[]; is24h: boolean }) {
   const router = useRouter();
   const [days, setDays] = useState<DayInput[]>(buildInitialDays(hours));
+  const [is24h, setIs24h] = useState(initialIs24h);
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   const updateDay = (index: number, patch: Partial<DayInput>) => {
@@ -32,14 +33,26 @@ export function HoursForm({ hours }: { hours: EstablishmentHours[] }) {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus('saving');
-    const result = await updateHours(days);
+    const result = await updateHours(days, is24h);
     setStatus(result.ok ? 'saved' : 'error');
     if (result.ok) router.refresh();
   };
 
   return (
     <form onSubmit={onSubmit} className="space-y-3">
-      {days.map((day, index) => (
+      <div className="flex items-center gap-2 border-b border-border pb-3">
+        <Checkbox id="is_24_7" checked={is24h} onCheckedChange={(v) => setIs24h(Boolean(v))} />
+        <Label htmlFor="is_24_7" className="cursor-pointer text-sm font-medium">
+          Atendemos las 24 horas, todos los días
+        </Label>
+      </div>
+      {is24h ? (
+        <p className="text-sm text-muted-foreground">
+          Con esto activado no hace falta definir horarios por día — el directorio ya te muestra como
+          &quot;Abierto 24/7&quot;.
+        </p>
+      ) : (
+        days.map((day, index) => (
         <div key={day.day_of_week} className="flex flex-wrap items-center gap-3 border-b border-border pb-3 last:border-0">
           <span className="w-24 shrink-0 text-sm font-medium text-foreground">{DAY_LABELS[day.day_of_week]}</span>
           <div className="flex items-center gap-2">
@@ -70,7 +83,8 @@ export function HoursForm({ hours }: { hours: EstablishmentHours[] }) {
             </div>
           )}
         </div>
-      ))}
+        ))
+      )}
       {status === 'error' && <p className="text-sm text-destructive">No se pudo guardar. Intenta de nuevo.</p>}
       {status === 'saved' && <p className="text-sm text-success">Horarios actualizados.</p>}
       <Button type="submit" disabled={status === 'saving'}>

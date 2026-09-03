@@ -24,7 +24,7 @@ export default async function HorariosPage() {
           <CardDescription>Se usa para el filtro &quot;Abierto ahora&quot; del directorio público.</CardDescription>
         </CardHeader>
         <CardContent>
-          <HoursForm hours={(hours ?? []) as EstablishmentHours[]} />
+          <HoursForm hours={(hours ?? []) as EstablishmentHours[]} is24h={user.establishment.is_24_7} />
         </CardContent>
       </Card>
     </div>
