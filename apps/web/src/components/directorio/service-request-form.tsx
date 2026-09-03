@@ -46,6 +46,17 @@ export function ServiceRequestForm({
     setStatus('saving');
     setErrorMessage(null);
     const formData = new FormData(e.currentTarget);
+
+    // El <input type="datetime-local"> da "AAAA-MM-DDTHH:mm" en hora LOCAL del navegador, sin
+    // offset. Esta conversión a ISO tiene que pasar aquí, en el cliente — si se hiciera en el
+    // Server Action, `new Date("2026-09-10T15:00")` en un servidor de Vercel (que corre en UTC)
+    // interpretaría "15:00" como UTC, no como la hora local real del cuidador en Colombia,
+    // corriendo la cita 5 horas. Mismo cuidado que ya tiene `DatePickerField.web.tsx` en mobile.
+    const localDateTime = formData.get('preferred_datetime_local');
+    if (typeof localDateTime === 'string' && localDateTime) {
+      formData.set('preferred_datetime', new Date(localDateTime).toISOString());
+    }
+
     const result = await createServiceRequest(formData);
     if (result.ok) {
       setStatus('sent');
@@ -92,6 +103,16 @@ export function ServiceRequestForm({
           </select>
         </div>
       )}
+      <div className="space-y-1.5">
+        <Label htmlFor="preferred_datetime_local">Fecha y hora preferida (opcional)</Label>
+        <input
+          id="preferred_datetime_local"
+          name="preferred_datetime_local"
+          type="datetime-local"
+          className="w-full rounded-sm border border-input bg-card px-3 py-2 text-sm text-foreground"
+        />
+        <p className="text-xs text-muted-foreground">Si no eliges una, coordinamos por WhatsApp.</p>
+      </div>
       <div className="space-y-1.5">
         <Label htmlFor="notes">Notas (opcional)</Label>
         <Textarea id="notes" name="notes" placeholder="Ej. horario preferido, motivo de la visita" rows={2} />

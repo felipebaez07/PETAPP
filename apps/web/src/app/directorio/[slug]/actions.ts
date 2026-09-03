@@ -19,10 +19,12 @@ export async function createServiceRequest(formData: FormData): Promise<ServiceR
 
   const serviceId = String(formData.get('service_id') ?? '').trim();
   const petId = String(formData.get('pet_id') ?? '').trim();
+  const preferredDatetime = String(formData.get('preferred_datetime') ?? '').trim();
   const parsed = serviceRequestSchema.safeParse({
     establishment_id: String(formData.get('establishment_id') ?? '').trim(),
     service_id: serviceId || undefined,
     pet_id: petId || undefined,
+    preferred_datetime: preferredDatetime || undefined,
     notes: String(formData.get('notes') ?? '').trim(),
   });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos.' };
@@ -49,6 +51,7 @@ export async function createServiceRequest(formData: FormData): Promise<ServiceR
     establishment_id: parsed.data.establishment_id,
     service_id: parsed.data.service_id || null,
     pet_id: parsed.data.pet_id || null,
+    preferred_datetime: parsed.data.preferred_datetime || null,
     notes: parsed.data.notes || null,
   });
   if (error) return { ok: false, error: error.message };

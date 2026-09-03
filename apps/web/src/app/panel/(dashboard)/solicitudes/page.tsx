@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { CalendarClock } from 'lucide-react';
+import { CalendarClock, PawPrint } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -28,6 +28,32 @@ const STATUS_BADGE_VARIANT: Record<ServiceRequestStatus, 'default' | 'success' |
   no_asistio: 'destructive',
 };
 
+/** "AAAA-MM-DD" en hora LOCAL — no `iso.slice(0, 10)` (esa da la fecha en UTC, que en Colombia
+ * -UTC-5- corre al día siguiente cualquier cita entre las 7pm y medianoche local). Mismo helper
+ * que ya existe como `localDateKey` en `apps/mobile/lib/labels.ts`, reimplementado aquí porque
+ * web no comparte ese archivo (es específico de Expo Router, no de `packages/shared`). */
+function localDateKey(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso.slice(0, 10);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatDateHeader(dateKey: string): string {
+  const date = new Date(`${dateKey}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return dateKey;
+  const label = date.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' });
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+function formatTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' });
+}
+
 export default async function SolicitudesPage() {
   const user = await getCurrentUser();
   if (!user?.establishment) redirect('/panel');
@@ -43,6 +69,20 @@ export default async function SolicitudesPage() {
 
   const rows = (requests ?? []) as unknown as ServiceRequestRow[];
 
+  // Agenda: solo solicitudes ya confirmadas y con fecha/hora acordada, agrupadas por día — lo
+  // que pidió el prestador ("qué día viene tal cuidador con tal mascota"), no la lista plana de
+  // abajo. Mismo criterio que ya tiene apps/mobile/app/(tabs)/agenda.tsx.
+  const confirmedWithDate = rows
+    .filter((r) => r.status === 'confirmada' && r.preferred_datetime)
+    .sort((a, b) => a.preferred_datetime!.localeCompare(b.preferred_datetime!));
+  const agendaGroups: { dateKey: string; items: ServiceRequestRow[] }[] = [];
+  for (const request of confirmedWithDate) {
+    const dateKey = localDateKey(request.preferred_datetime!);
+    const existing = agendaGroups.find((g) => g.dateKey === dateKey);
+    if (existing) existing.items.push(request);
+    else agendaGroups.push({ dateKey, items: [request] });
+  }
+
   return (
     <div className="max-w-3xl">
       <h1 className="mb-2 font-heading text-2xl font-bold text-foreground">Solicitudes de cita</h1>
@@ -51,6 +91,49 @@ export default async function SolicitudesPage() {
         volumen y tasa de respuesta.
       </p>
 
+      <div className="mb-8">
+        <h2 className="mb-3 font-heading text-lg font-semibold text-foreground">Agenda — próximas citas confirmadas</h2>
+        {agendaGroups.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center gap-2 p-6 text-center">
+              <CalendarClock className="size-6 text-muted-foreground" aria-hidden />
+              <p className="text-sm text-muted-foreground">
+                Cuando confirmes una solicitud con fecha y hora, aparecerá aquí agrupada por día.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {agendaGroups.map((group) => (
+              <div key={group.dateKey}>
+                <p className="mb-2 font-heading text-xs font-semibold uppercase tracking-wide text-secondary">
+                  {formatDateHeader(group.dateKey)}
+                </p>
+                <div className="space-y-2">
+                  {group.items.map((item) => (
+                    <Card key={item.id}>
+                      <CardContent className="flex items-center gap-3 p-3">
+                        <PawPrint className="size-5 shrink-0 text-secondary" aria-hidden />
+                        <div>
+                          <p className="font-heading text-sm font-semibold text-foreground">
+                            {formatTime(item.preferred_datetime!)}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {item.pet_owner?.full_name ?? 'Cuidador'}
+                            {item.pet?.name ? ` · ${item.pet.name}` : ''}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <h2 className="mb-3 font-heading text-lg font-semibold text-foreground">Todas las solicitudes</h2>
       {rows.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-2 p-10 text-center">
@@ -78,12 +161,19 @@ export default async function SolicitudesPage() {
                 </CardHeader>
                 <CardContent className="flex flex-wrap items-end justify-between gap-3">
                   <div className="text-sm text-muted-foreground">
+                    {r.preferred_datetime && (
+                      <p>
+                        Fecha preferida: {formatDateHeader(localDateKey(r.preferred_datetime))} ·{' '}
+                        {formatTime(r.preferred_datetime)}
+                      </p>
+                    )}
                     {r.pet_owner?.phone && <p>Tel: {r.pet_owner.phone}</p>}
                     {r.notes && <p>Nota: {r.notes}</p>}
                   </div>
                   <form action={updateServiceRequestStatus} className="flex items-center gap-2">
                     <input type="hidden" name="id" value={r.id} />
                     <select
+                      key={r.status}
                       name="status"
                       defaultValue={r.status}
                       className="h-9 rounded-sm border border-input bg-card px-2 text-sm"
