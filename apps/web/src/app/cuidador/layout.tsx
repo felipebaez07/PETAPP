@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { PawPrint } from 'lucide-react';
+import { PawPrint, CalendarClock } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { isSupabaseConfigured } from '@/lib/supabase/config';
 
@@ -22,13 +22,22 @@ export default async function CuidadorLayout({ children }: { children: React.Rea
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-      <Link
-        href="/cuidador/mascotas"
-        className="mb-6 inline-flex items-center gap-2 font-heading text-sm font-semibold text-muted-foreground transition-colors duration-200 hover:text-foreground"
-      >
-        <PawPrint className="size-4" />
-        Tus mascotas
-      </Link>
+      <div className="mb-6 flex flex-wrap gap-5">
+        <Link
+          href="/cuidador/mascotas"
+          className="inline-flex items-center gap-2 font-heading text-sm font-semibold text-muted-foreground transition-colors duration-200 hover:text-foreground"
+        >
+          <PawPrint className="size-4" />
+          Tus mascotas
+        </Link>
+        <Link
+          href="/cuidador/citas"
+          className="inline-flex items-center gap-2 font-heading text-sm font-semibold text-muted-foreground transition-colors duration-200 hover:text-foreground"
+        >
+          <CalendarClock className="size-4" />
+          Tus citas
+        </Link>
+      </div>
       {children}
     </div>
   );
