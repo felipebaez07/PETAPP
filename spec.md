@@ -428,6 +428,33 @@ Se corrió la skill `code-review` (nivel alto) sobre todo el diff del pivot (`83
   2026-09-02, commit `4b4a6b6`, encontrado con logs reales de Vercel que el usuario copió del
   dashboard).
 
+- [x] (2026-09-02) **Bug real encontrado probando en producción**: el registro con `role='establecimiento'`
+  guardaba bien el rol, pero en web el botón "Continuar con Google" seguía visible/activo incluso con esa
+  categoría elegida (solo había una advertencia de letra chica) — a diferencia de mobile, que sí lo oculta.
+  Corregido: se oculta el botón de Google en `auth-form.tsx` cuando `mode==='registro' && role==='establecimiento'`,
+  igual que ya hacía mobile (hecho: 2026-09-02).
+- [x] (2026-09-02) **Bug real, la causa de fondo de "me registro como veterinario pero no veo el menú
+  correspondiente"**: no existía ninguna forma de que una cuenta `establecimiento` recién registrada
+  creara su propio `establishments` — la única vía era "Únete al piloto" + conversión manual de un admin,
+  pensado para gente sin cuenta. Corregido en web (commit `4027cd9`) y mobile (commit `66da595`):
+  autoservicio de creación de negocio, queda en `verification_status='pendiente'` como cualquier otro.
+- [x] (2026-09-02) **Bug real**: en `/panel/admin/aliados`, tras darle "Actualizar" a un negocio, el
+  badge de estado se actualizaba bien pero el `<select>` de abajo seguía mostrando el valor viejo.
+  Causa: `<select defaultValue={...}>` es un input no controlado — React solo aplica `defaultValue` al
+  montar, no en cada re-render, así que tras `revalidatePath` el mismo nodo DOM no recogía el valor
+  nuevo aunque el prop sí hubiera cambiado. Corregido con `key={establishment.verification_status}`
+  para forzar el remonte cuando el estado real cambia (hecho: 2026-09-02, commit `56ae798`).
+- [x] (2026-09-02) **Bug de seguridad/RLS real, encontrado probando "Solicitar cita" con una mascota
+  seleccionada**: "infinite recursion detected in policy for relation 'service_requests'". Causa: la
+  policy de `0006_service_request_pet_ownership.sql` (INSERT en `service_requests`, verifica dueño
+  consultando `pets`) y la policy `pets_read_via_reservation` de `0004_bugfixes.sql` (agosto 2026, en
+  `pets`, consulta `service_requests` para que un establecimiento vea la mascota de quien le reservó)
+  se disparan una a la otra en bucle — ninguna de las dos es incorrecta por separado, el ciclo solo
+  aparece al combinarlas y no se detecta leyendo el SQL, solo ejecutándolo de verdad. Corregido con
+  `supabase/migrations/0008_fix_service_requests_pet_ownership_recursion.sql`: función `security definer`
+  `pet_belongs_to_user()` (mismo patrón que `is_admin()`) para que el chequeo de dueño no vuelva a
+  disparar la RLS de `pets` (hecho: 2026-09-02, aplicada en el proyecto real).
+
 - [ ] (2026-09-01) Migración nueva para exponer "próximos vencimientos" al prestador en su resumen del
   panel: una policy de RLS en `preventive_events` que dé `select` a un `establecimiento` únicamente para
   mascotas con al menos una `service_request` en estado `confirmada`/`completada` con ese establecimiento.
