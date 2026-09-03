@@ -147,6 +147,7 @@ export function DatePickerField<TFieldValues extends FieldValues>({
                   mode={mode}
                   display="inline"
                   onChange={handleIosChange}
+                  minuteInterval={mode === 'datetime' ? 30 : undefined}
                 />
                 <Pressable
                   onPress={() => setIosPickerOpen(false)}
@@ -173,6 +174,7 @@ export function DatePickerField<TFieldValues extends FieldValues>({
                 mode="time"
                 display="default"
                 onChange={handleAndroidTimePicked}
+                minuteInterval={30}
               />
             ) : null}
           </View>

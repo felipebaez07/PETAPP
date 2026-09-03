@@ -83,6 +83,7 @@ export function DatePickerField<TFieldValues extends FieldValues>({
                 value={inputValue}
                 onChange={handleChange}
                 onBlur={onBlur}
+                step={mode === 'datetime' ? 1800 : undefined}
                 style={{
                   flex: 1,
                   border: 'none',
