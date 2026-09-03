@@ -46,6 +46,23 @@ const optionalHttpUrlSchema = z
   .optional()
   .or(z.literal(''));
 
+/**
+ * Autoservicio: un usuario ya registrado con `role='establecimiento'` crea su propio negocio
+ * (antes solo existía la conversión manual de una solicitud de "Únete al piloto" por un admin —
+ * ver `partnerApplicationSchema` arriba, pensado para gente que TODAVÍA no tiene cuenta). El
+ * negocio creado así arranca en `verification_status='pendiente'` igual que cualquier otro, sigue
+ * pasando por la validación del superadmin — este formulario no evita ese paso, solo evita
+ * quedar sin ningún negocio vinculado después de un registro correcto.
+ */
+export const createEstablishmentSchema = z.object({
+  name: z.string().min(1, 'El nombre es obligatorio').max(120),
+  category: z.enum(['veterinaria', 'profesional']),
+  address: z.string().max(200).optional().or(z.literal('')),
+  phone: z.string().max(20).optional().or(z.literal('')),
+  whatsapp_number: z.string().max(20).optional().or(z.literal('')),
+});
+export type CreateEstablishmentValues = z.infer<typeof createEstablishmentSchema>;
+
 export const establishmentProfileSchema = z.object({
   name: z.string().min(1, 'El nombre es obligatorio').max(120),
   description: z.string().max(500).optional().or(z.literal('')),

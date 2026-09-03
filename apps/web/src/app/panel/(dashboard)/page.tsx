@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { VerifiedBadge } from '@/components/directorio/verified-badge';
+import { CreateEstablishmentForm } from '@/components/panel/create-establishment-form';
 import { CATEGORY_LABELS } from '@petapp/shared';
 
 export default async function DashboardHomePage() {
@@ -45,15 +46,18 @@ export default async function DashboardHomePage() {
 
   if (!user.establishment) {
     return (
-      <div>
-        <h1 className="font-heading text-2xl font-bold text-foreground">Aún no tienes un establecimiento vinculado</h1>
-        <p className="mt-2 max-w-md text-muted-foreground">
-          Si ya enviaste tu solicitud desde &quot;Únete al piloto&quot;, nuestro equipo vinculará tu cuenta pronto. Si
-          no la has enviado, hazlo para empezar el onboarding.
+      <div className="max-w-lg">
+        <h1 className="font-heading text-2xl font-bold text-foreground">Crea el perfil de tu negocio</h1>
+        <p className="mt-2 text-muted-foreground">
+          Tu cuenta ya está lista como prestador — solo falta este último paso. Tu negocio queda visible en el
+          directorio marcado como &quot;Pendiente de verificación&quot; hasta que el equipo del piloto confirme tus
+          datos.
         </p>
-        <Button asChild className="mt-4">
-          <Link href="/unete">Enviar solicitud de alianza</Link>
-        </Button>
+        <Card className="mt-6">
+          <CardContent className="pt-6">
+            <CreateEstablishmentForm />
+          </CardContent>
+        </Card>
       </div>
     );
   }
