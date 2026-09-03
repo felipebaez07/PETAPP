@@ -1,3 +1,4 @@
+import { roundToNearestHalfHour } from '@petapp/shared';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { CalendarDays } from 'lucide-react-native';
 import { useState } from 'react';
@@ -93,7 +94,10 @@ export function DatePickerField<TFieldValues extends FieldValues>({
 
         function handleIosChange(event: DateTimePickerEvent, selectedDate?: Date) {
           if (event.type === 'dismissed' || !selectedDate) return;
-          onChange(mode === 'date' ? toIsoDate(selectedDate) : selectedDate.toISOString());
+          // `minuteInterval` ya restringe el wheel de iOS a bloques de 30 min, pero se redondea
+          // igual como defensa adicional (mismo criterio que la variante web) por si algún caso
+          // no lo respeta del todo.
+          onChange(mode === 'date' ? toIsoDate(selectedDate) : roundToNearestHalfHour(selectedDate).toISOString());
         }
 
         function handleAndroidDatePicked(event: DateTimePickerEvent, selectedDate?: Date) {
@@ -111,7 +115,10 @@ export function DatePickerField<TFieldValues extends FieldValues>({
         function handleAndroidTimePicked(event: DateTimePickerEvent, selectedTime?: Date) {
           setAndroidStage('idle');
           if (event.type === 'dismissed' || !selectedTime || !pendingDatePart) return;
-          onChange(combineDateAndTime(pendingDatePart, selectedTime).toISOString());
+          // `minuteInterval` ya restringe este picker a bloques de 30 min, pero algunos
+          // fabricantes de Android no lo respetan del todo en su skin nativa — se redondea
+          // igual como defensa adicional.
+          onChange(roundToNearestHalfHour(combineDateAndTime(pendingDatePart, selectedTime)).toISOString());
           setPendingDatePart(null);
         }
 

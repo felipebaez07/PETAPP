@@ -1,3 +1,4 @@
+import { roundToNearestHalfHour } from '@petapp/shared';
 import { CalendarDays } from 'lucide-react-native';
 import type { Control, FieldValues, Path } from 'react-hook-form';
 import { Controller } from 'react-hook-form';
@@ -62,7 +63,10 @@ export function DatePickerField<TFieldValues extends FieldValues>({
             onChange('');
             return;
           }
-          onChange(mode === 'date' ? raw : new Date(raw).toISOString());
+          // El redondeo a 30 min pasa acá, no solo con el `step` del input: algunos navegadores
+          // (Safari confirmado probando) no restringen el selector visual a esos pasos aunque el
+          // atributo esté puesto, dejando elegir minutos sueltos como :37.
+          onChange(mode === 'date' ? raw : roundToNearestHalfHour(new Date(raw)).toISOString());
         }
 
         return (

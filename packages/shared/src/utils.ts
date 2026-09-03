@@ -72,6 +72,19 @@ export function todayLocalDateString(): string {
   return `${year}-${month}-${day}`;
 }
 
+/**
+ * Redondea una fecha al bloque de 30 minutos más cercano (ej. 10:42 → 10:30, 10:46 → 11:00).
+ * El atributo HTML `step` de `<input type="datetime-local">` no basta por sí solo: algunos
+ * navegadores (Safari incluido, confirmado probando) no restringen el selector visual a los
+ * pasos de 30 minutos aunque el `step` esté puesto — solo lo validarían al enviar el formulario,
+ * y de forma inconsistente. Redondear el valor elegido, sin importar qué muestre el picker,
+ * garantiza el intervalo de 30 minutos en cualquier navegador.
+ */
+export function roundToNearestHalfHour(date: Date): Date {
+  const halfHourMs = 30 * 60 * 1000;
+  return new Date(Math.round(date.getTime() / halfHourMs) * halfHourMs);
+}
+
 export function formatPhoneForDisplay(phone: string | null | undefined): string {
   if (!phone) return '';
   const digits = phone.replace(/\D/g, '');

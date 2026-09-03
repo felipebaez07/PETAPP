@@ -6,7 +6,7 @@ import { CheckCircle2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import type { Service, Pet } from '@petapp/shared';
+import { roundToNearestHalfHour, type Service, type Pet } from '@petapp/shared';
 import { SPRING_DEFAULT, REDUCED_MOTION_TRANSITION } from '@/lib/motion';
 import { createServiceRequest } from '@/app/directorio/[slug]/actions';
 
@@ -52,9 +52,12 @@ export function ServiceRequestForm({
     // Server Action, `new Date("2026-09-10T15:00")` en un servidor de Vercel (que corre en UTC)
     // interpretaría "15:00" como UTC, no como la hora local real del cuidador en Colombia,
     // corriendo la cita 5 horas. Mismo cuidado que ya tiene `DatePickerField.web.tsx` en mobile.
+    // El redondeo a 30 min pasa acá (no solo el `step` del input): algunos navegadores no
+    // restringen el selector visual a esos pasos aunque el atributo esté puesto — confirmado
+    // probando en Safari, donde se podían elegir minutos sueltos como :37 o :42.
     const localDateTime = formData.get('preferred_datetime_local');
     if (typeof localDateTime === 'string' && localDateTime) {
-      formData.set('preferred_datetime', new Date(localDateTime).toISOString());
+      formData.set('preferred_datetime', roundToNearestHalfHour(new Date(localDateTime)).toISOString());
     }
 
     const result = await createServiceRequest(formData);
