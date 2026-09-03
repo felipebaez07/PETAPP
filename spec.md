@@ -464,6 +464,13 @@ Se corrió la skill `code-review` (nivel alto) sobre todo el diff del pivot (`83
   solo en mobile, más la fecha visible en cada tarjeta y el mismo fix de `key` para el `<select>` de
   estado (hecho: 2026-09-02, commit `4e51c79`).
 
+- [x] (2026-09-02) Toggle "24/7" agregado al panel de Horarios (antes solo vivía en Perfil del
+  negocio, el usuario lo buscaba y no estaba) — web y mobile (hecho, commit `e98449c`).
+- [x] (2026-09-02) Intervalos de 30 min en los 3 selectores de fecha/hora de cita. Primer intento
+  con `step` de HTML no bastó: Safari no restringe el picker visual a ese paso. Fix real: redondeo
+  programático con `roundToNearestHalfHour()` (nuevo, `packages/shared/src/utils.ts`) en los 4
+  puntos donde se elige hora, no solo el `step` (hecho, commit `1bc5f27`).
+
 - [ ] (2026-09-01) Migración nueva para exponer "próximos vencimientos" al prestador en su resumen del
   panel: una policy de RLS en `preventive_events` que dé `select` a un `establecimiento` únicamente para
   mascotas con al menos una `service_request` en estado `confirmada`/`completada` con ese establecimiento.
