@@ -763,3 +763,61 @@ skill `ui-ux-pro-max` (`app-interface.csv`). Cinco frentes:
   auditoría exhaustiva de cada `Pressable` de cada pantalla — es posible que quede algún caso
   suelto no cubierto por los patrones revisados.
 - [ ] No se tocó `packages/shared` — ningún ajuste de este alcance lo necesitó.
+
+## 13. Autoservicio para crear el negocio en mobile (2026-09-02)
+
+Mismo bug real ya corregido en `apps/web` (commit `4027cd9`), portado a `apps/mobile`: una cuenta
+que se registra correctamente con `role='establecimiento'` no tenía ninguna forma de crear su
+propio negocio (`establishments` row) — la única vía era el formulario público "Únete al piloto"
++ conversión manual de un admin, pensado para gente sin cuenta todavía. El resultado: un prestador
+se registraba bien, iniciaba sesión, y todas las pantallas de negocio le mostraban "Solo para
+cuentas de negocio" (`negocio-perfil.tsx`, `negocio-horarios.tsx`, `negocio-servicios.tsx`,
+`negocio-plan.tsx`, `(tabs)/agenda.tsx`) o "Contacta al equipo de PETAPP para activarlo"
+(`(tabs)/index.tsx`) — dos situaciones distintas (rol equivocado vs. rol correcto sin negocio
+todavía) con un solo mensaje confuso, interpretable como "me logueó como cuidador".
+
+- [x] Nueva pantalla `app/negocio-crear.tsx`: mismo patrón que `create-establishment-form.tsx` de
+  web pero adaptado a cliente directo (mobile no tiene Server Actions) — `react-hook-form` +
+  `zodResolver(createEstablishmentSchema)` (reutilizado tal cual de `packages/shared`, no se
+  duplicó), campos nombre/`FormTextField`, categoría/`ChipSelectField` (limitada a
+  veterinaria/profesional), dirección, teléfono, whatsapp. Al enviar: genera un slug único
+  (query previa a `establishments` por `slug`, sufijo aleatorio de 4 caracteres si ya existe,
+  mismo criterio que `createOwnEstablishment` en web) e inserta directo con
+  `supabase.from('establishments').insert(...)` (`owner_id`, `city: 'Ibagué'`,
+  `verification_status` en su default `'pendiente'` — sigue pasando por la validación del
+  superadmin, este fix no se la salta). Registrada en `app/_layout.tsx`
+  (hecho: 2026-09-02, `app/negocio-crear.tsx`, `app/_layout.tsx`).
+- [x] `(tabs)/index.tsx` (`BusinessHomeScreen`): el `EmptyState` de "sin negocio" ya no dice
+  "Contacta al equipo de PETAPP para activarlo" (ya no es cierto) — ahora invita a crear el
+  negocio con un botón que navega a `negocio-crear` (hecho: 2026-09-02).
+- [x] `negocio-perfil.tsx`, `negocio-horarios.tsx`, `negocio-servicios.tsx`, `negocio-plan.tsx`,
+  `(tabs)/agenda.tsx`: cada uno ahora guarda también si el usuario tiene `role==='establecimiento'`
+  (antes solo guardaban `establishment`/`establishmentId`, sin el rol) y diferencia dos casos donde
+  antes había uno solo: rol equivocado → se mantiene "Solo para cuentas de negocio" (con "Volver");
+  rol `establecimiento` sin negocio vinculado → nuevo mensaje "Todavía no has creado tu negocio"
+  con acción a `negocio-crear` (hecho: 2026-09-02).
+- [x] No se tocó `apps/web`, `supabase/` ni la RLS — la policy `establishments_owner_insert`
+  (`for insert with check (owner_id = auth.uid() or public.is_admin())`, ya en `0001_init.sql`)
+  ya permite este insert directo desde el cliente mobile, no hizo falta ninguna migración nueva.
+
+**Verificación de esta pasada:** `npm run typecheck` en verde en las 3 workspaces y
+`npx expo export --platform web` sin errores dentro de `apps/mobile` (21 rutas, una más que antes
+de esta pasada por `negocio-crear`). Nota de entorno: el typecheck falló en el primer intento
+porque `.expo/types/router.d.ts` (tipos de rutas de Expo Router, generado, gitignored) estaba
+desactualizado — no incluía `negocio-crear` todavía. Se regeneró corriendo `npx expo start --web`
+brevemente en segundo plano hasta que el archivo se actualizó, y recién ahí el typecheck pasó
+limpio; esto es un artefacto local de este entorno, no algo que necesite acción en el repo (se
+regenera solo la próxima vez que cualquiera corra `expo start`).
+
+**Pendiente honesto de esta pasada:**
+
+- [ ] No se probó en un dispositivo/simulador real el flujo completo (crear el negocio, ver que
+  aparece de inmediato en el resto de pantallas de negocio y en `(tabs)/index.tsx`, ver que
+  aparece en el directorio como "Pendiente de verificación") — mismo límite ya reconocido en
+  secciones anteriores de mobile, este entorno no tiene forma de correr la app nativa.
+- [ ] `negocio-crear.tsx` no revalida ni refresca ningún estado global después de crear el
+  negocio (a diferencia de web, que usa `revalidatePath`) — se apoya en que cada pantalla vuelve a
+  llamar `getCurrentUser()` en su propio `useEffect` al montarse, así que `router.replace('/(tabs)')`
+  basta para que el dashboard de negocio recargue con el negocio recién creado. No se verificó en
+  un dispositivo real que la navegación por defecto de Expo Router realmente desmonte/remonte la
+  tab de inicio en todos los casos (ej. si el usuario ya tenía esa tab activa en memoria).

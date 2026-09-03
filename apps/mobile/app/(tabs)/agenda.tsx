@@ -39,12 +39,14 @@ const STATUS_TONE: Record<ServiceRequestStatus, BadgeTone> = {
 export default function AgendaScreen() {
   const router = useRouter();
   const [establishmentId, setEstablishmentId] = useState<string | null | undefined>(undefined);
+  const [isBusinessAccount, setIsBusinessAccount] = useState(false);
   const [requests, setRequests] = useState<ServiceRequestRow[]>([]);
   const tabBarBottomInset = useTabBarBottomInset();
 
   useEffect(() => {
     getCurrentUser()
       .then((user) => {
+        setIsBusinessAccount(user?.profile.role === 'establecimiento');
         setEstablishmentId(user?.establishment?.id ?? null);
         if (user?.establishment) loadRequests(user.establishment.id);
       })
@@ -106,13 +108,24 @@ export default function AgendaScreen() {
   }
 
   if (establishmentId === null) {
+    if (!isBusinessAccount) {
+      return (
+        <EmptyState
+          icon={CalendarCheck}
+          title="Solo para cuentas de negocio"
+          description="Inicia sesión con una cuenta de establecimiento aliado para ver tu agenda."
+          actionLabel="Volver"
+          onAction={() => router.back()}
+        />
+      );
+    }
     return (
       <EmptyState
         icon={CalendarCheck}
-        title="Solo para cuentas de negocio"
-        description="Inicia sesión con una cuenta de establecimiento aliado para ver tu agenda."
-        actionLabel="Volver"
-        onAction={() => router.back()}
+        title="Todavía no has creado tu negocio"
+        description="Tu cuenta ya está lista como prestador — crea el perfil de tu negocio para empezar a recibir solicitudes."
+        actionLabel="Crear mi negocio"
+        onAction={() => router.push('/negocio-crear')}
       />
     );
   }

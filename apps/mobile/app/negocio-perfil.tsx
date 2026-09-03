@@ -19,11 +19,15 @@ import type { Establishment } from '@petapp/shared';
 export default function NegocioPerfilScreen() {
   const router = useRouter();
   const [establishment, setEstablishment] = useState<Establishment | null | undefined>(undefined);
+  const [isBusinessAccount, setIsBusinessAccount] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     getCurrentUser()
-      .then((user) => setEstablishment(user?.establishment ?? null))
+      .then((user) => {
+        setIsBusinessAccount(user?.profile.role === 'establecimiento');
+        setEstablishment(user?.establishment ?? null);
+      })
       .catch(() => {
         Alert.alert('No se pudo cargar tu cuenta', 'Intenta de nuevo en unos segundos.');
         setEstablishment(null);
@@ -94,13 +98,24 @@ export default function NegocioPerfilScreen() {
   }
 
   if (establishment === null) {
+    if (!isBusinessAccount) {
+      return (
+        <EmptyState
+          icon={Building2}
+          title="Solo para cuentas de negocio"
+          description="Inicia sesión con una cuenta de establecimiento aliado para editar tu perfil."
+          actionLabel="Volver"
+          onAction={() => router.back()}
+        />
+      );
+    }
     return (
       <EmptyState
         icon={Building2}
-        title="Solo para cuentas de negocio"
-        description="Inicia sesión con una cuenta de establecimiento aliado para editar tu perfil."
-        actionLabel="Volver"
-        onAction={() => router.back()}
+        title="Todavía no has creado tu negocio"
+        description="Tu cuenta ya está lista como prestador — crea el perfil de tu negocio para empezar a aparecer en el directorio."
+        actionLabel="Crear mi negocio"
+        onAction={() => router.push('/negocio-crear')}
       />
     );
   }

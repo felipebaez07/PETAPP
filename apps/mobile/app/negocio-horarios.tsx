@@ -33,6 +33,7 @@ function buildInitialDays(hours: EstablishmentHours[]): DayState[] {
 export default function NegocioHorariosScreen() {
   const router = useRouter();
   const [establishment, setEstablishment] = useState<Establishment | null | undefined>(undefined);
+  const [isBusinessAccount, setIsBusinessAccount] = useState(false);
   const [days, setDays] = useState<DayState[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -40,6 +41,7 @@ export default function NegocioHorariosScreen() {
   useEffect(() => {
     getCurrentUser()
       .then(async (user) => {
+        setIsBusinessAccount(user?.profile.role === 'establecimiento');
         setEstablishment(user?.establishment ?? null);
         if (user?.establishment) {
           const { data, error } = await supabase
@@ -91,13 +93,24 @@ export default function NegocioHorariosScreen() {
   }
 
   if (establishment === null) {
+    if (!isBusinessAccount) {
+      return (
+        <EmptyState
+          icon={Clock}
+          title="Solo para cuentas de negocio"
+          description="Inicia sesión con una cuenta de establecimiento aliado para editar tus horarios."
+          actionLabel="Volver"
+          onAction={() => router.back()}
+        />
+      );
+    }
     return (
       <EmptyState
         icon={Clock}
-        title="Solo para cuentas de negocio"
-        description="Inicia sesión con una cuenta de establecimiento aliado para editar tus horarios."
-        actionLabel="Volver"
-        onAction={() => router.back()}
+        title="Todavía no has creado tu negocio"
+        description="Tu cuenta ya está lista como prestador — crea el perfil de tu negocio antes de definir tus horarios."
+        actionLabel="Crear mi negocio"
+        onAction={() => router.push('/negocio-crear')}
       />
     );
   }

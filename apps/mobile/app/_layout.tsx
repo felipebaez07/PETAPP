@@ -69,6 +69,7 @@ export default function RootLayout() {
             options={{ title: 'Agregar mascota', presentation: 'modal' }}
           />
           <Stack.Screen name="mascotas/[id]" options={{ title: 'Mascota' }} />
+          <Stack.Screen name="negocio-crear" options={{ title: 'Crear tu negocio' }} />
           <Stack.Screen name="negocio-perfil" options={{ title: 'Perfil del negocio' }} />
           <Stack.Screen name="negocio-horarios" options={{ title: 'Horarios' }} />
           <Stack.Screen name="negocio-servicios" options={{ title: 'Servicios' }} />

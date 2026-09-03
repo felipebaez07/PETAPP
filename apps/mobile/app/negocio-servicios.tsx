@@ -53,11 +53,13 @@ function ServiceFormFields({
 export default function NegocioServiciosScreen() {
   const router = useRouter();
   const [establishmentId, setEstablishmentId] = useState<string | null | undefined>(undefined);
+  const [isBusinessAccount, setIsBusinessAccount] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
 
   useEffect(() => {
     getCurrentUser()
       .then((user) => {
+        setIsBusinessAccount(user?.profile.role === 'establecimiento');
         setEstablishmentId(user?.establishment?.id ?? null);
         if (user?.establishment) loadServices(user.establishment.id);
       })
@@ -123,13 +125,24 @@ export default function NegocioServiciosScreen() {
   }
 
   if (establishmentId === null) {
+    if (!isBusinessAccount) {
+      return (
+        <EmptyState
+          icon={Wrench}
+          title="Solo para cuentas de negocio"
+          description="Inicia sesión con una cuenta de establecimiento aliado para gestionar tus servicios."
+          actionLabel="Volver"
+          onAction={() => router.back()}
+        />
+      );
+    }
     return (
       <EmptyState
         icon={Wrench}
-        title="Solo para cuentas de negocio"
-        description="Inicia sesión con una cuenta de establecimiento aliado para gestionar tus servicios."
-        actionLabel="Volver"
-        onAction={() => router.back()}
+        title="Todavía no has creado tu negocio"
+        description="Tu cuenta ya está lista como prestador — crea el perfil de tu negocio antes de agregar servicios."
+        actionLabel="Crear mi negocio"
+        onAction={() => router.push('/negocio-crear')}
       />
     );
   }

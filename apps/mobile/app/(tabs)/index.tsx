@@ -156,8 +156,10 @@ function BusinessHomeScreen({ establishment }: { establishment: Establishment | 
         <View className="p-5">
           <EmptyState
             icon={Building2}
-            title="Completa el perfil de tu negocio"
-            description="Aún no tienes un establecimiento vinculado a tu cuenta. Contacta al equipo de PETAPP para activarlo."
+            title="Crea el perfil de tu negocio"
+            description="Tu cuenta ya está lista como prestador — solo falta este último paso para aparecer en el directorio."
+            actionLabel="Crear mi negocio"
+            onAction={() => router.push('/negocio-crear')}
           />
         </View>
       ) : (

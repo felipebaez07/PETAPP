@@ -38,12 +38,14 @@ const STATUS_TONE: Record<ProviderPlan['status'], BadgeTone> = {
 export default function NegocioPlanScreen() {
   const router = useRouter();
   const [establishmentId, setEstablishmentId] = useState<string | null | undefined>(undefined);
+  const [isBusinessAccount, setIsBusinessAccount] = useState(false);
   const [plan, setPlan] = useState<ProviderPlan | null | undefined>(undefined);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     getCurrentUser()
       .then((user) => {
+        setIsBusinessAccount(user?.profile.role === 'establecimiento');
         setEstablishmentId(user?.establishment?.id ?? null);
         if (user?.establishment) loadPlan(user.establishment.id);
         else setPlan(null);
@@ -111,13 +113,24 @@ export default function NegocioPlanScreen() {
   }
 
   if (establishmentId === null) {
+    if (!isBusinessAccount) {
+      return (
+        <EmptyState
+          icon={CreditCard}
+          title="Solo para cuentas de negocio"
+          description="Inicia sesión con una cuenta de establecimiento aliado para gestionar tu plan."
+          actionLabel="Volver"
+          onAction={() => router.back()}
+        />
+      );
+    }
     return (
       <EmptyState
         icon={CreditCard}
-        title="Solo para cuentas de negocio"
-        description="Inicia sesión con una cuenta de establecimiento aliado para gestionar tu plan."
-        actionLabel="Volver"
-        onAction={() => router.back()}
+        title="Todavía no has creado tu negocio"
+        description="Tu cuenta ya está lista como prestador — crea el perfil de tu negocio antes de elegir un plan."
+        actionLabel="Crear mi negocio"
+        onAction={() => router.push('/negocio-crear')}
       />
     );
   }
