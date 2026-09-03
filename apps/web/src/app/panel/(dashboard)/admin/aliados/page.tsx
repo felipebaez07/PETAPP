@@ -50,6 +50,7 @@ export default async function AdminAliadosPage() {
               <form action={updateVerificationStatus} className="flex items-center gap-2">
                 <input type="hidden" name="id" value={establishment.id} />
                 <select
+                  key={establishment.verification_status}
                   name="status"
                   defaultValue={establishment.verification_status}
                   className="h-9 rounded-sm border border-input bg-card px-2 text-sm"
