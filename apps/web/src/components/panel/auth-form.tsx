@@ -95,25 +95,34 @@ export function AuthForm({ mode }: { mode: 'login' | 'registro' }) {
     );
   }
 
+  // Google solo puede crear/entrar a cuentas de cuidador (propietario) — el flujo OAuth no
+  // lleva el rol elegido, ver handle_new_user() en 0001_init.sql. Antes el botón quedaba
+  // visible y funcional aunque se eligiera "establecimiento" en registro, con solo un aviso de
+  // letra chica debajo — un usuario podía seleccionar "prestador veterinario" y de todas formas
+  // terminar con una cuenta de cuidador al tocar Google. En mobile ((tabs)/perfil.tsx) ya se
+  // ocultaba correctamente; acá se quedó a medias. Bug real reportado en pruebas, 2026-09-02.
+  const hideGoogleForBusinessSignup = mode === 'registro' && role === 'establecimiento';
+
   return (
     <div className="space-y-4">
-      <Button
-        type="button"
-        variant="outline"
-        className="w-full gap-2"
-        disabled={googleLoading}
-        onClick={onGoogleClick}
-      >
-        <GoogleIcon />
-        {googleLoading ? 'Redirigiendo…' : 'Continuar con Google'}
-      </Button>
-      {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
-      {mode === 'registro' && (
-        <p className="text-center text-xs text-muted-foreground">
-          Con Google se crea una cuenta de propietario/a de mascota. Si tienes un negocio o fundación
-          aliada, usa el registro con correo abajo para indicarlo.
+      {hideGoogleForBusinessSignup ? (
+        <p className="rounded-sm border border-border bg-muted/50 p-3 text-center text-sm text-muted-foreground">
+          Con Google solo se crean cuentas de cuidador. Para registrar tu negocio o profesión, completa el
+          formulario con correo abajo.
         </p>
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full gap-2"
+          disabled={googleLoading}
+          onClick={onGoogleClick}
+        >
+          <GoogleIcon />
+          {googleLoading ? 'Redirigiendo…' : 'Continuar con Google'}
+        </Button>
       )}
+      {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
       <div className="flex items-center gap-3 text-xs text-muted-foreground">
         <span className="h-px flex-1 bg-border" />
         o con tu correo
