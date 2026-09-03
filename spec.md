@@ -455,6 +455,15 @@ Se corrió la skill `code-review` (nivel alto) sobre todo el diff del pivot (`83
   `pet_belongs_to_user()` (mismo patrón que `is_admin()`) para que el chequeo de dueño no vuelva a
   disparar la RLS de `pets` (hecho: 2026-09-02, aplicada en el proyecto real).
 
+- [x] (2026-09-02) **Bug real**: la web nunca tuvo campo de fecha/hora al solicitar cita (solo se
+  había agregado a mobile), y `/panel/solicitudes` no mostraba `preferred_datetime` en ningún lado
+  pese a traerlo de la base — el prestador no tenía forma de saber a qué hora quería venir el
+  cuidador. Corregido: `service-request-form.tsx` gana `<input type="datetime-local">` (conversión
+  a ISO en el cliente, no en el servidor — Vercel corre en UTC y correría la hora 5 horas para
+  Colombia), y `solicitudes/page.tsx` gana la misma sección "Agenda agrupada por día" que ya existía
+  solo en mobile, más la fecha visible en cada tarjeta y el mismo fix de `key` para el `<select>` de
+  estado (hecho: 2026-09-02, commit `4e51c79`).
+
 - [ ] (2026-09-01) Migración nueva para exponer "próximos vencimientos" al prestador en su resumen del
   panel: una policy de RLS en `preventive_events` que dé `select` a un `establecimiento` únicamente para
   mascotas con al menos una `service_request` en estado `confirmada`/`completada` con ese establecimiento.
