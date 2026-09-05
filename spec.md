@@ -8,6 +8,71 @@
 >
 > Última actualización: 2026-09-02.
 
+## 🔧 Tareas abiertas para el equipo (empezar por acá)
+
+Se agregó esta sección el 2026-09-02 porque el repo ya tiene dos colaboradores nuevos con acceso.
+Es un resumen curado de todo lo que ya quedó anotado como pendiente en el resto del documento
+(secciones 3-13), organizado por área para que cada quien pueda tomar una tarea sin tener que leer
+la bitácora completa. **Al terminar una, muévela a la sección original donde vive (marcándola
+`[x]` con fecha y commit) y bórrala de aquí** — esta lista es un índice de trabajo, no el registro
+histórico definitivo (ese sigue siendo cada sección numerada de abajo).
+
+### 🔴 Seguridad / base de datos — antes de sumar más gente al piloto real
+- [ ] **Activar "Confirm email"** en Supabase Auth (hoy desactivado a propósito para pruebas sin
+  fricción, ver sección 8.1) — antes de invitar usuarios reales, cualquiera puede crear una cuenta
+  con un correo que no le pertenece.
+- [ ] Fase "contract" de la migración 0005: escribir `0006_drop_deprecated.sql` con el `DROP TABLE`
+  real de `zz_deprecated_products/forum_posts/adoption_*` — solo después de confirmar que nadie
+  necesita rescatar nada de ahí (sección 3).
+- [ ] Borrado de archivos huérfanos en Supabase Storage (`pet-photos`/`pet-documents`) al eliminar
+  una mascota o un documento — hoy el archivo se queda huérfano en el bucket (secciones 10, 12).
+- [ ] Migración de RLS para que el prestador vea "próximos vencimientos" de sus pacientes en su
+  resumen del panel — hoy solo puede ver eso si hay una `service_request` confirmada/completada con
+  él, y no está implementado (sección 9 original, primer ítem del backlog viejo).
+
+### 🌐 Web (`apps/web`)
+- [ ] Subida real de logo/portada del negocio como archivo (hoy sigue siendo un campo de URL,
+  a diferencia de la foto de mascota y los documentos que ya suben archivo de verdad).
+- [ ] Permitir cambiar la foto de una mascota ya existente (hoy `PetForm` solo la pide al crearla).
+- [ ] `/panel/registro` no distingue el CTA "Soy cuidador" vs. "Soy prestador" del home — ambos
+  abren el mismo formulario con "cuidador/a" preseleccionado. Si se quiere, agregar un `?rol=` en
+  la URL que preseleccione la opción correcta.
+- [ ] Pantalla de calendario preventivo completo — hoy el Inicio del cuidador (si se agrega, o el
+  widget de la ficha de mascota) no pagina más allá de los primeros vencimientos.
+
+### 📱 Mobile (`apps/mobile`)
+- [ ] **Probar en un dispositivo/simulador real** el flujo completo de subida de fotos (permiso de
+  galería, picker, subida, URL firmada de documentos) — nunca se pudo probar en este entorno, solo
+  se verificó que compila y exporta bien.
+- [ ] Revisar si `expo export --platform web` ejecuta de verdad los config plugins de `app.json`
+  (`expo-image-picker`, `expo-document-picker`, `expo-blur`) — en un build nativo real sí deberían
+  aplicarse, pero no se pudo confirmar en este entorno.
+- [ ] Parpadeo real en la tab bar para cuentas de negocio: `isBusiness` arranca en `false` de forma
+  síncrona y corrige recién cuando resuelve `getCurrentUser()` — se ve "Mascotas" un instante antes
+  de cambiar a "Agenda". Arreglarlo bien pide una caché síncrona del rol (ej. `AsyncStorage`).
+- [ ] Bug de tooling (no de producto): `.expo/types/router.d.ts` no reconoce `mascotas/[id].tsx`
+  como ruta dinámica — hay un `as any` puntual en `PetCard.tsx` y `(tabs)/index.tsx` para no
+  bloquear el typecheck. Pendiente investigar la config de `watchFolders`/rootDir de Metro en el
+  monorepo (parece cruzar rutas de `apps/web`) y quitar el cast.
+- [ ] Probar en dispositivo real la creación de negocio (`negocio-crear.tsx`) — confirmar que la
+  tab bar se actualice sola sin tener que reabrir la app.
+
+### 💡 Decisión de producto pendiente (no es solo código)
+- [ ] **Recordatorios de cita/vacuna fuera de la app**: hoy solo hay recordatorio dentro de la app
+  (widget "Próxima cita"/"Próximos vencimientos"). Si se quiere push (gratis, pide guardar token de
+  dispositivo + un disparador programado) o email (pide cuenta en un proveedor tipo Resend), es una
+  decisión de alcance — avisar antes de que alguien empiece a construirlo.
+- [ ] **Franjas de disponibilidad tipo Calendly**: hoy la cita es "fecha/hora libre redondeada a 30
+  min". Si se quiere que el prestador defina franjas reales disponibles y el cuidador elija solo
+  entre esas (con chequeo de choques), es una feature bastante más grande — confirmar antes de
+  empezar.
+
+### 📋 Validación de negocio (no es código, ver sección 8 completa)
+- [ ] 12 entrevistas a cuidadores (≥8 relatan una dificultad reciente y concreta con varios canales)
+- [ ] 6 entrevistas B2B a prestadores (≥3 aceptan evaluar oferta, ≥2 un piloto pagado)
+- [ ] Prueba de usabilidad con 5 cuidadores (≥4 completan perfil+fecha+solicitud sin ayuda)
+- [ ] Piloto operativo 50–100 cuidadores / 5–8 prestadores
+
 ## 0. Por qué existe este documento
 
 El 2026-09-01 se recibió el documento de negocio `PETAPP: plataforma nacional de seguimiento
