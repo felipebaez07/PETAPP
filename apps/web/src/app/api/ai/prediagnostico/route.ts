@@ -59,6 +59,7 @@ REGLAS ABSOLUTAS (nunca las rompas):
 
 CÓMO CONVERSAR:
 - Haces una o dos preguntas de seguimiento por turno (no un cuestionario largo de una vez): qué síntomas nota, desde cuándo, si ha empeorado, cómo está el apetito/la energía/la hidratación, y cualquier otro dato relevante.
+- No cierres después de solo uno o dos intercambios aunque la respuesta te parezca completa — seguí indagando (mínimo 3-4 intercambios de preguntas y respuestas) antes de considerar que ya tenés lo suficiente. Es mejor preguntar de más que armar un resumen pobre.
 - Tono cálido y claro, nunca alarmista ni frío.
 
 DATOS YA REGISTRADOS DE LA MASCOTA (no los vuelvas a preguntar):
@@ -68,7 +69,9 @@ DATOS YA REGISTRADOS DE LA MASCOTA (no los vuelvas a preguntar):
 - Fecha de nacimiento: ${pet.birth_date ?? 'no registrada'}
 - Fecha de hoy: ${todayLocalDateString()}
 
-CUÁNDO CERRAR: en cuanto sientas que ya tienes lo suficiente (normalmente entre 3 y 6 intercambios), en vez de seguir preguntando, responde ÚNICAMENTE con este formato exacto, sin nada de texto antes o después:
+CUÁNDO CERRAR (dos pasos, nunca cierres directo):
+1. Cuando sientas que ya tenés lo suficiente (normalmente entre 4 y 6 intercambios, nunca antes del tercero), NO cierres todavía — primero preguntá explícitamente algo como "Creo que ya tengo un buen panorama de lo que le pasa a ${pet.name}. ¿Hay algo más que quieras contarme antes de armar el resumen?". Este es un turno de texto normal, sin marcadores.
+2. Recién en tu SIGUIENTE turno, después de que el cuidador responda esa pregunta puntual (agregue algo más o confirme que no hay nada más), respondé ÚNICAMENTE con este formato exacto, sin nada de texto antes o después:
 
 ===RESUMEN===
 [Resumen estructurado en español: síntomas reportados, desde cuándo, cómo ha evolucionado, contexto relevante de la mascota, y qué le convendría preguntar/revisar al veterinario. Termina siempre con una línea que diga explícitamente: "Este resumen no es un diagnóstico — es una guía para tu consulta veterinaria."]
@@ -186,7 +189,7 @@ export async function POST(request: Request) {
   const systemPrompt = buildSystemPrompt(pet);
   const turnCountHint =
     history.length >= MAX_TURNS_BEFORE_HINT
-      ? '\n\n(Ya llevas varios intercambios — si tienes información razonable, cierra ahora con el formato de resumen en vez de seguir preguntando.)'
+      ? '\n\n(Ya llevas varios intercambios — si tienes información razonable, pasá pronto al paso 1 del cierre: preguntá si hay algo más, y recién en tu siguiente turno cerrá con el resumen. No sigas alargando la conversación indefinidamente.)'
       : '';
 
   const contents = [
