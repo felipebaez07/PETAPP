@@ -955,8 +955,8 @@ el lanzamiento a usuarios reales: `docs/legal/registro-legal.md` (LG-001 a LG-00
   `ai_messages` (cada turno). RLS con el mismo patrón que `preventive_events`/`pet_documents`
   (dueño o admin), con `owner_id` desnormalizado en `ai_conversations` a propósito — comparar
   directo contra `auth.uid()` evita repetir el ciclo de recursión de RLS ya corregido en
-  `0008_fix_service_requests_pet_ownership_recursion.sql` (hecho: 2026-09-08, archivo creado,
-  **todavía no aplicada al proyecto Supabase real** — pendiente pegarla en el SQL Editor).
+  `0008_fix_service_requests_pet_ownership_recursion.sql` (hecho: 2026-09-08; aplicada al proyecto
+  Supabase real ese mismo día, confirmado por el usuario).
   Tipos espejo en `packages/shared/src/types.ts` (`AiConversation`, `AiMessage`) y el schema Zod
   del request de chat en `packages/shared/src/schemas.ts` (`aiChatMessageSchema`).
 - [x] **Backend único, compartido por web y mobile**: `apps/web/src/app/api/ai/prediagnostico/route.ts`
@@ -1044,8 +1044,9 @@ tratamientos/recordatorios" que había quedado abierto en la sección 14.
   (`absolute inset-0`, sin z-index) detrás del contenido, y el botón de IA tiene `z-10` para
   quedar clicable por encima suyo sin necesidad de `stopPropagation` (hecho: 2026-09-08).
 - [x] **Ruta de seguimiento sugerida**: `supabase/migrations/0010_ai_prediagnostico_roadmap.sql`
-  agrega `roadmap jsonb` a `ai_conversations` (**ya aplicada al proyecto real** — confirmado por
-  el usuario). El prompt de sistema (`apps/web/src/app/api/ai/prediagnostico/route.ts`) ahora le
+  agrega `roadmap jsonb` a `ai_conversations` (**ya aplicada al proyecto real**, confirmado por el
+  usuario el mismo 2026-09-08 justo después de terminada esta pasada). El prompt de sistema
+  (`apps/web/src/app/api/ai/prediagnostico/route.ts`) ahora le
   pide al modelo un segundo bloque `===RUTA===[...]===FIN_RUTA===` justo después del resumen: un
   JSON de 1 a 4 ítems `{title, type, dias, notes}` — siempre próximos pasos/recordatorios (agendar
   consulta, control de seguimiento), nunca tratamientos ni medicación, mismo límite legal que ya
