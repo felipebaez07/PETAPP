@@ -5,7 +5,8 @@ import { Bot, Download, Send, TriangleAlert, User } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import type { AiConversation } from '@petapp/shared';
+import { PrediagnosticoRoadmap } from '@/components/cuidador/prediagnostico-roadmap';
+import type { AiConversation, AiRoadmapItem } from '@petapp/shared';
 
 interface ChatTurn {
   role: 'user' | 'assistant';
@@ -23,6 +24,7 @@ export function PrediagnosticoChat({ petId, petName, initialConversation }: Pred
   const [draft, setDraft] = useState('');
   const [conversationId, setConversationId] = useState<string | null>(initialConversation?.id ?? null);
   const [summary, setSummary] = useState<string | null>(initialConversation?.summary ?? null);
+  const [roadmap, setRoadmap] = useState<AiRoadmapItem[] | null>(initialConversation?.roadmap ?? null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const textareaId = useId();
@@ -52,6 +54,7 @@ export function PrediagnosticoChat({ petId, petName, initialConversation }: Pred
       setConversationId(data.conversationId);
       if (data.done) {
         setSummary(data.summary);
+        setRoadmap(data.roadmap ?? null);
       } else {
         setTurns((prev) => [...prev, { role: 'assistant', content: data.reply }]);
       }
@@ -67,6 +70,7 @@ export function PrediagnosticoChat({ petId, petName, initialConversation }: Pred
     setTurns([]);
     setConversationId(null);
     setSummary(null);
+    setRoadmap(null);
     setError(null);
   };
 
@@ -106,6 +110,7 @@ export function PrediagnosticoChat({ petId, petName, initialConversation }: Pred
             Empezar una nueva consulta
           </Button>
         </div>
+        {roadmap && roadmap.length > 0 && <PrediagnosticoRoadmap petId={petId} items={roadmap} />}
       </div>
     );
   }

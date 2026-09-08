@@ -25,7 +25,7 @@ export default async function PrediagnosticoPage({ params }: { params: Promise<{
   // que reconstruir el historial de mensajes acá; el cuidador puede simplemente empezar de nuevo).
   const { data: lastConversation } = await supabase
     .from('ai_conversations')
-    .select('id, status, summary')
+    .select('id, status, summary, roadmap')
     .eq('pet_id', pet.id)
     .eq('status', 'completada')
     .order('created_at', { ascending: false })

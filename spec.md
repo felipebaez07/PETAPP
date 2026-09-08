@@ -30,13 +30,12 @@ histórico definitivo (ese sigue siendo cada sección numerada de abajo).
   resumen del panel — hoy solo puede ver eso si hay una `service_request` confirmada/completada con
   él, y no está implementado (sección 9 original, primer ítem del backlog viejo).
 
-### 🤖 Módulo de IA (pre-diagnóstico, sección 14) — nuevo, sin probar en vivo todavía
-- [ ] Probar el flujo completo del chat en navegador/dispositivo real con sesión (nada de esto se
-  verificó más allá de checks HTTP sin sesión).
+### 🤖 Módulo de IA (pre-diagnóstico + ruta de seguimiento, secciones 14-15) — sin probar en vivo todavía
+- [ ] Probar el flujo completo del chat en navegador/dispositivo real con sesión, incluyendo que
+  el modelo cierre con el bloque `===RUTA===` bien formado y que aceptar/modificar/descartar un
+  ítem de la ruta se sienta bien (nada de esto se verificó más allá de checks HTTP sin sesión).
 - [ ] Confirmar `GEMINI_API_KEY` en las variables de entorno de Vercel (Production) — sin eso el
   endpoint responde 503 en producción.
-- [ ] Aplicar `supabase/migrations/0009_ai_prediagnostico.sql` al proyecto Supabase real (SQL
-  Editor) — las tablas `ai_conversations`/`ai_messages` no existen todavía en producción.
 - [ ] Confirmar `EXPO_PUBLIC_WEB_URL` en el entorno del build real de mobile (EAS), no solo en
   `.env.local` local.
 
@@ -1010,12 +1009,12 @@ disponible.
   seguimiento razonables, que cierra con el resumen en el formato esperado, y que el resumen se
   puede descargar/compartir. Nada de esto se verificó más allá de lo que puede probarse por HTTP
   sin sesión.
+- [x] **Aplicar `0009_ai_prediagnostico.sql`** al proyecto Supabase real desde el SQL Editor
+  (hecho: 2026-09-08, confirmado por el usuario — `ai_conversations`/`ai_messages` ya existen en
+  producción).
 - [ ] **Confirmar `GEMINI_API_KEY` en Vercel** (Production) — ya está en `apps/web/.env.local`
   local, pero no se confirmó que también esté en las variables de entorno del proyecto en Vercel;
   sin eso el endpoint responde `503` en producción.
-- [ ] **Aplicar `0009_ai_prediagnostico.sql`** al proyecto Supabase real desde el SQL Editor —
-  sigue solo como archivo local, las tablas `ai_conversations`/`ai_messages` no existen todavía en
-  producción.
 - [ ] **Confirmar `EXPO_PUBLIC_WEB_URL` en el build de mobile** (EAS/`.env` que use el build real,
   no solo `.env.local` de este entorno) — sin ella, el chat en mobile falla silenciosamente
   (`missing-web-url`, mostrado hoy como un `Alert` genérico "No se pudo conectar").
@@ -1023,13 +1022,70 @@ disponible.
   share sheet nativo con el texto; ninguno genera un PDF con membrete. Si el negocio lo necesita,
   la ruta más simple en web es una vista imprimible + "imprimir a PDF" del navegador antes de
   meter una librería de generación de PDF.
-- [ ] **"Hoja de ruta de tratamientos/recordatorios" post-consulta real** (pedido explícito del
-  usuario junto con este módulo, pero no diseñado todavía): después de que el veterinario
-  evalúa al animal de verdad, enganchar eso con `preventive_events` para el seguimiento
-  preventivo — queda como feature separada a diseñar, probablemente extendiendo
-  `ai_conversations` con una referencia a los eventos que genera, no reemplazando el calendario
-  ya existente.
 - [ ] Sin límite de mensajes/costo por conversación más allá del `MAX_TURNS_BEFORE_HINT` (un
   aviso en el prompt a partir del turno 8, no un corte duro) — si esto pasa a usuarios reales
   conviene un límite duro y/o rate limiting por usuario, ver LG en `docs/legal/registro-legal.md`
   si el costo de la API se vuelve una preocupación real.
+
+## 15. Ruta sugerida de seguimiento + acceso rápido desde "Tus mascotas" (2026-09-08)
+
+Dos pedidos del usuario sobre el módulo de IA (sección 14) recién commiteado: (1) un acceso más
+chico y visible desde la lista de mascotas, no solo desde adentro de la ficha; (2) que el cierre
+de la conversación no sea solo un resumen de texto, sino también una lista corta de próximos
+pasos que el cuidador pueda aceptar (agenda un `preventive_event` real), modificar antes de
+aceptar, o dejar solo anotada sin agendar nada — cerrando así el pendiente "hoja de ruta de
+tratamientos/recordatorios" que había quedado abierto en la sección 14.
+
+- [x] **Acceso rápido en "Tus mascotas"**: ícono chico (Sparkles) en la esquina superior derecha
+  de cada tarjeta de mascota, tanto en `apps/web/src/components/cuidador/pet-card.tsx` como en
+  `apps/mobile/components/PetCard.tsx`, que lleva directo al chat sin pasar por la ficha completa.
+  En web esto obligó a reestructurar la tarjeta: antes toda la `Card` era un único `<Link>` — un
+  `<a>` anidado dentro de otro no es HTML válido. Ahora el enlace a la ficha es un overlay
+  (`absolute inset-0`, sin z-index) detrás del contenido, y el botón de IA tiene `z-10` para
+  quedar clicable por encima suyo sin necesidad de `stopPropagation` (hecho: 2026-09-08).
+- [x] **Ruta de seguimiento sugerida**: `supabase/migrations/0010_ai_prediagnostico_roadmap.sql`
+  agrega `roadmap jsonb` a `ai_conversations` (**ya aplicada al proyecto real** — confirmado por
+  el usuario). El prompt de sistema (`apps/web/src/app/api/ai/prediagnostico/route.ts`) ahora le
+  pide al modelo un segundo bloque `===RUTA===[...]===FIN_RUTA===` justo después del resumen: un
+  JSON de 1 a 4 ítems `{title, type, dias, notes}` — siempre próximos pasos/recordatorios (agendar
+  consulta, control de seguimiento), nunca tratamientos ni medicación, mismo límite legal que ya
+  regía el resumen (LG-001). `dias` es un desplazamiento desde hoy (no una fecha absoluta, para no
+  arriesgar que el modelo invente la fecha de hoy) — el backend lo valida con
+  `aiRoadmapInputSchema` (nuevo en `packages/shared/src/schemas.ts`) y calcula la fecha real sumando
+  días sobre `todayLocalDateString()` con aritmética en UTC sobre los componentes de la fecha
+  (mismo cuidado de zona horaria que el resto del código, ver comentario en `addDaysToDateString`)
+  (hecho: 2026-09-08).
+- [x] **UI de decisión por ítem** (web: `components/cuidador/prediagnostico-roadmap.tsx`; mobile:
+  `components/PrediagnosticoRoadmap.tsx`), debajo del resumen cuando la conversación cierra. Cada
+  ítem sugerido tiene tres acciones: "Aceptar y agendar" (crea el `preventive_event` tal cual —
+  en web reutilizando la Server Action `createPreventiveEvent` ya existente, en mobile con el
+  mismo insert directo a Supabase que ya usa `mascotas/[id].tsx`, ambas rutas ya protegidas por la
+  RLS existente de `preventive_events`, no una tabla nueva); "Modificar" (abre los mismos campos
+  título/tipo/fecha/notas editables antes de agendar); "Solo tenerla en cuenta" (no escribe nada
+  en la base — solo cambia el estado local a "descartada", con un botón "Deshacer" por si fue sin
+  querer) (hecho: 2026-09-08).
+- [x] No se guarda qué decidió el cuidador sobre cada ítem — la decisión es efímera (estado de
+  React en la pantalla del resumen): si acepta, la prueba de eso es el `preventive_event` real que
+  aparece en el calendario; si descarta o cierra la pantalla sin decidir, no queda rastro de esa
+  decisión particular más allá de la fila de `roadmap` (lo que el modelo sugirió, no lo que se
+  hizo con eso) — se prefirió así para no sumar otra tabla/columna de "estado por ítem" a una
+  primera versión (hecho: 2026-09-08, decisión de alcance, no un olvido).
+
+**Verificación de esta pasada:** `npm run typecheck` en verde en las 3 workspaces,
+`cd apps/web && npm run build` sin errores, `npx expo export --platform web` dentro de
+`apps/mobile` sin errores (mismas 22 rutas de antes, sin rutas nuevas — esta pasada solo agregó
+componentes, no pantallas). Repetidos los mismos checks por HTTP de la sección 14 (401 sin sesión
+en el endpoint, 307 en `/cuidador/mascotas`) después de este cambio, sin regresión. Igual que en
+la sección 14: no se pudo probar en un navegador de verdad que el modelo realmente devuelva el
+bloque `===RUTA===` con JSON válido, ni que el flujo aceptar/modificar/descartar se vea y sienta
+bien — este entorno no tiene navegador.
+
+**Pendiente honesto de esta pasada:**
+
+- [ ] **Probar de punta a punta con Gemini real** que el modelo respeta el formato exacto del
+  bloque `===RUTA===` (JSON parseable, campos correctos) — si alguna vez lo rompe, `parseRoadmap`
+  devuelve `null` silenciosamente y la conversación igual cierra con el resumen pero sin ruta
+  sugerida (degradación intencional, no un error visible) — vale la pena confirmar qué tan seguido
+  pasa esto en la práctica.
+- [ ] El botón de acceso rápido en la tarjeta de mascota no tiene texto, solo el ícono con
+  `aria-label`/`title` — no se probó con lector de pantalla real que el label alcance.

@@ -1,6 +1,6 @@
 import type { Pet } from '@petapp/shared';
 import { useRouter } from 'expo-router';
-import { Cat, CheckCircle2, ChevronRight, Dog, PawPrint, Trash2, XCircle } from 'lucide-react-native';
+import { Cat, CheckCircle2, ChevronRight, Dog, PawPrint, Sparkles, Trash2, XCircle } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 
 import { RemoteImage } from '@/components/ui/RemoteImage';
@@ -32,6 +32,16 @@ export function PetCard({ pet, onDelete }: { pet: Pet; onDelete?: (pet: Pet) => 
             {SEX_LABELS[pet.sex]}
           </Text>
         </View>
+        <Pressable
+          onPress={() => router.push(`/prediagnostico/${pet.id}` as any)}
+          accessibilityRole="button"
+          accessibilityLabel={`Pre-diagnóstico con IA para ${pet.name}`}
+          hitSlop={8}
+          style={({ pressed }) => (pressed ? { opacity: 0.7 } : undefined)}
+          className="h-9 w-9 items-center justify-center rounded-full bg-secondary/15"
+        >
+          <Sparkles size={16} color="#059669" />
+        </Pressable>
         {onDelete ? (
           <Pressable
             onPress={() => onDelete(pet)}

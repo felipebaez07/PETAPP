@@ -1,3 +1,4 @@
+import type { AiRoadmapItem } from '@petapp/shared';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Bot, PawPrint, Send, Share2, User } from 'lucide-react-native';
 import { useMemo, useRef, useState } from 'react';
@@ -16,6 +17,7 @@ import {
 
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { PrediagnosticoRoadmap } from '@/components/PrediagnosticoRoadmap';
 import { usePets } from '@/contexts/PetsContext';
 import { supabase } from '@/lib/supabase';
 
@@ -36,6 +38,7 @@ export default function PrediagnosticoScreen() {
   const [draft, setDraft] = useState('');
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
+  const [roadmap, setRoadmap] = useState<AiRoadmapItem[] | null>(null);
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
@@ -95,6 +98,7 @@ export default function PrediagnosticoScreen() {
       setConversationId(data.conversationId);
       if (data.done) {
         setSummary(data.summary);
+        setRoadmap(data.roadmap ?? null);
       } else {
         setTurns((prev) => [...prev, { role: 'assistant', content: data.reply }]);
       }
@@ -110,6 +114,7 @@ export default function PrediagnosticoScreen() {
     setTurns([]);
     setConversationId(null);
     setSummary(null);
+    setRoadmap(null);
   };
 
   const shareSummary = () => {
@@ -132,6 +137,7 @@ export default function PrediagnosticoScreen() {
           </View>
           <Button label="Compartir resumen" icon={Share2} onPress={shareSummary} />
           <Button label="Empezar una nueva consulta" variant="outline" onPress={startNew} />
+          {roadmap && roadmap.length > 0 ? <PrediagnosticoRoadmap petId={pet.id} items={roadmap} /> : null}
         </ScrollView>
       </>
     );

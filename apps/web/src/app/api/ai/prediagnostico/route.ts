@@ -3,7 +3,14 @@ import { GoogleGenAI } from '@google/genai';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabase/config';
-import { aiChatMessageSchema, type AiMessage, type PetSpecies } from '@petapp/shared';
+import {
+  aiChatMessageSchema,
+  aiRoadmapInputSchema,
+  todayLocalDateString,
+  type AiMessage,
+  type AiRoadmapItem,
+  type PetSpecies,
+} from '@petapp/shared';
 
 /**
  * Backend único del módulo de pre-diagnóstico — lo llaman TANTO la web (con la sesión por
@@ -59,14 +66,47 @@ DATOS YA REGISTRADOS DE LA MASCOTA (no los vuelvas a preguntar):
 - Especie: ${pet.species}
 - Raza: ${pet.breed ?? 'no registrada'}
 - Fecha de nacimiento: ${pet.birth_date ?? 'no registrada'}
+- Fecha de hoy: ${todayLocalDateString()}
 
 CUÁNDO CERRAR: en cuanto sientas que ya tienes lo suficiente (normalmente entre 3 y 6 intercambios), en vez de seguir preguntando, responde ÚNICAMENTE con este formato exacto, sin nada de texto antes o después:
 
 ===RESUMEN===
 [Resumen estructurado en español: síntomas reportados, desde cuándo, cómo ha evolucionado, contexto relevante de la mascota, y qué le convendría preguntar/revisar al veterinario. Termina siempre con una línea que diga explícitamente: "Este resumen no es un diagnóstico — es una guía para tu consulta veterinaria."]
 ===FIN===
+===RUTA===
+[Array JSON de 1 a 4 objetos, cada uno con esta forma exacta: {"title": "...", "type": "vacuna"|"control"|"desparasitacion"|"otro", "dias": <entero, días desde hoy>, "notes": "..."}. Son SIEMPRE próximos pasos/recordatorios (ej. "Consulta veterinaria por los síntomas reportados" con dias:0 o 1, "Control de seguimiento si no mejora" con dias:7) — NUNCA un medicamento, dosis o tratamiento. Si la situación suena urgente, el primer ítem debe ser la consulta veterinaria con dias:0. JSON válido, sin comentarios ni texto extra dentro de este bloque.]
+===FIN_RUTA===
 
-Mientras sigas conversando (no hayas llegado a ese punto), responde en texto plano normal, sin ese marcador.`;
+Mientras sigas conversando (no hayas llegado a ese punto), responde en texto plano normal, sin esos marcadores.`;
+}
+
+function parseRoadmap(rawJson: string): AiRoadmapItem[] | null {
+  try {
+    const parsed = aiRoadmapInputSchema.safeParse(JSON.parse(rawJson));
+    if (!parsed.success) return null;
+    const today = todayLocalDateString();
+    return parsed.data.map((item) => ({
+      title: item.title,
+      type: item.type,
+      due_date: addDaysToDateString(today, item.dias),
+      notes: item.notes ?? null,
+    }));
+  } catch {
+    return null;
+  }
+}
+
+// Aritmética en UTC sobre los componentes de la fecha (nunca `new Date("Y-M-D")` a secas ni
+// `toISOString()`): evita el mismo corrimiento de un día por zona horaria ya documentado en
+// `todayLocalDateString` de este mismo paquete — acá no involucra hora local en ningún momento,
+// solo suma días sobre una fecha que ya es un string.
+function addDaysToDateString(dateStr: string, days: number): string {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const result = new Date(Date.UTC(year, month - 1, day + days));
+  const y = result.getUTCFullYear();
+  const m = String(result.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(result.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 export async function POST(request: Request) {
@@ -169,11 +209,13 @@ export async function POST(request: Request) {
   const summaryMatch = replyText.match(/===RESUMEN===([\s\S]*?)===FIN===/);
   if (summaryMatch) {
     const summary = summaryMatch[1].trim();
+    const roadmapMatch = replyText.match(/===RUTA===([\s\S]*?)===FIN_RUTA===/);
+    const roadmap = roadmapMatch ? parseRoadmap(roadmapMatch[1].trim()) : null;
     await supabase
       .from('ai_conversations')
-      .update({ status: 'completada', summary })
+      .update({ status: 'completada', summary, roadmap })
       .eq('id', conversationId);
-    return NextResponse.json({ conversationId, summary, done: true });
+    return NextResponse.json({ conversationId, summary, roadmap, done: true });
   }
 
   return NextResponse.json({ conversationId, reply: replyText, done: false });

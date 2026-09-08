@@ -194,10 +194,26 @@ export type AiConversationStatus = 'activa' | 'completada';
 export type AiMessageRole = 'user' | 'assistant';
 
 /**
+ * Un ítem de la ruta de seguimiento sugerida por el modelo al cerrar la conversación
+ * (0010_ai_prediagnostico_roadmap.sql) — siempre un recordatorio/próximo paso (agendar consulta,
+ * control de seguimiento), NUNCA un tratamiento o medicación. `due_date` ya viene calculado por el
+ * backend (hoy + los días que sugirió el modelo), listo para crear un `PreventiveEvent` si el
+ * cuidador lo acepta.
+ */
+export interface AiRoadmapItem {
+  title: string;
+  type: PreventiveEventType;
+  due_date: string;
+  notes: string | null;
+}
+
+/**
  * Sesión de chat de pre-diagnóstico (0009_ai_prediagnostico.sql). `summary` es el resumen
  * estructurado final exportable a PDF — null mientras la conversación sigue activa. Esto NUNCA
  * es un diagnóstico real, es un resumen de síntomas para llevar al veterinario (ver
- * docs/legal/registro-legal.md LG-001).
+ * docs/legal/registro-legal.md LG-001). `roadmap` (0010) es la sugerencia de próximos pasos tal
+ * como la propuso el modelo — las decisiones del cuidador sobre cada ítem (aceptar/modificar) se
+ * reflejan creando filas reales en `preventive_events`, no acá.
  */
 export interface AiConversation {
   id: string;
@@ -205,6 +221,7 @@ export interface AiConversation {
   owner_id: string;
   status: AiConversationStatus;
   summary: string | null;
+  roadmap: AiRoadmapItem[] | null;
   created_at: string;
   updated_at: string;
 }

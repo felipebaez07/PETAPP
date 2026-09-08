@@ -131,3 +131,17 @@ export const aiChatMessageSchema = z.object({
   message: z.string().min(1, 'Escribe un mensaje').max(2000),
 });
 export type AiChatMessageValues = z.infer<typeof aiChatMessageSchema>;
+
+/**
+ * Valida el bloque `===RUTA===` que el modelo devuelve en texto plano (JSON dentro del
+ * delimitador) — `dias` es un desplazamiento desde hoy, no una fecha absoluta, porque pedirle al
+ * modelo una fecha real arriesga que invente el día de hoy; el backend hace la suma real.
+ */
+export const aiRoadmapItemInputSchema = z.object({
+  title: z.string().min(1).max(120),
+  type: z.enum(['vacuna', 'control', 'desparasitacion', 'otro']),
+  dias: z.number().int().min(0).max(365),
+  notes: z.string().max(300).optional().nullable(),
+});
+export const aiRoadmapInputSchema = z.array(aiRoadmapItemInputSchema).max(6);
+export type AiRoadmapItemInput = z.infer<typeof aiRoadmapItemInputSchema>;

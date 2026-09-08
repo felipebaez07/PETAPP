@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Cake, PawPrint, ShieldCheck, Syringe } from 'lucide-react';
+import { Cake, PawPrint, ShieldCheck, Sparkles, Syringe } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { RemoteImage } from '@/components/ui/remote-image';
@@ -7,7 +7,11 @@ import { SPECIES_LABELS, type Pet } from '@petapp/shared';
 
 export function PetCard({ pet, pendingCount }: { pet: Pet; pendingCount: number }) {
   return (
-    <Link href={`/cuidador/mascotas/${pet.id}`} className="block group">
+    <div className="group relative">
+      {/* Toda la tarjeta sigue siendo clicable (enlace de fondo, z-index por defecto) — el botón
+          de IA va encima con z-10 para poder capturar su propio click sin quedar anidado dentro
+          de este <a> (dos <a> anidados no es HTML válido). */}
+      <Link href={`/cuidador/mascotas/${pet.id}`} className="absolute inset-0" aria-label={`Ver ${pet.name}`} />
       <Card className="h-full group-hover:shadow-md group-hover:-translate-y-0.5">
         <CardContent className="flex flex-col gap-3 p-5">
           <div className="flex items-start justify-between gap-2">
@@ -26,11 +30,21 @@ export function PetCard({ pet, pendingCount }: { pet: Pet; pendingCount: number 
                 </p>
               </div>
             </div>
-            {pendingCount > 0 && (
-              <Badge variant="accent">
-                {pendingCount} {pendingCount === 1 ? 'pendiente' : 'pendientes'}
-              </Badge>
-            )}
+            <div className="relative z-10 flex flex-col items-end gap-2">
+              <Link
+                href={`/cuidador/mascotas/${pet.id}/prediagnostico`}
+                title="Pre-diagnóstico con IA"
+                aria-label={`Pre-diagnóstico con IA para ${pet.name}`}
+                className="flex size-8 items-center justify-center rounded-full bg-secondary/15 text-secondary transition-colors hover:bg-secondary/25"
+              >
+                <Sparkles className="size-4" aria-hidden />
+              </Link>
+              {pendingCount > 0 && (
+                <Badge variant="accent">
+                  {pendingCount} {pendingCount === 1 ? 'pendiente' : 'pendientes'}
+                </Badge>
+              )}
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             {pet.birth_date && (
@@ -54,6 +68,6 @@ export function PetCard({ pet, pendingCount }: { pet: Pet; pendingCount: number 
           </div>
         </CardContent>
       </Card>
-    </Link>
+    </div>
   );
 }
