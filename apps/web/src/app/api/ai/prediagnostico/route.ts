@@ -80,6 +80,15 @@ CUÁNDO CERRAR: en cuanto sientas que ya tienes lo suficiente (normalmente entre
 Mientras sigas conversando (no hayas llegado a ese punto), responde en texto plano normal, sin esos marcadores.`;
 }
 
+function isTransientGeminiError(err: unknown): boolean {
+  const text = err instanceof Error ? err.message : String(err);
+  return /"code":\s*503|UNAVAILABLE|"code":\s*429|RESOURCE_EXHAUSTED|overloaded|high demand/i.test(text);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function parseRoadmap(rawJson: string): AiRoadmapItem[] | null {
   try {
     const parsed = aiRoadmapInputSchema.safeParse(JSON.parse(rawJson));
@@ -187,17 +196,37 @@ export async function POST(request: Request) {
 
   let replyText: string;
   try {
-    const result = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents,
-      config: { systemInstruction: systemPrompt + turnCountHint },
-    });
-    replyText = result.text ?? '';
+    let lastError: unknown;
+    let text: string | undefined;
+    // Gemini devuelve 503 "modelo con mucha demanda" seguido: un reintento con un respiro corto
+    // suele alcanzar para que pase — sin esto, el cuidador tenía que volver a escribir su mensaje
+    // a mano por un error que normalmente se resuelve solo en un par de segundos.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const result = await ai.models.generateContent({
+          model: 'gemini-3.8-flash',
+          contents,
+          config: { systemInstruction: systemPrompt + turnCountHint },
+        });
+        text = result.text ?? '';
+        lastError = undefined;
+        break;
+      } catch (err) {
+        lastError = err;
+        if (attempt === 0 && isTransientGeminiError(err)) {
+          await sleep(1500);
+          continue;
+        }
+        break;
+      }
+    }
+    if (lastError) throw lastError;
+    replyText = text ?? '';
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'No se pudo contactar al asistente.' },
-      { status: 502 }
-    );
+    const friendly = isTransientGeminiError(err)
+      ? 'El asistente está recibiendo mucha demanda en este momento. Esperá unos segundos e intentá de nuevo.'
+      : 'No se pudo contactar al asistente. Intenta de nuevo.';
+    return NextResponse.json({ error: friendly }, { status: 502 });
   }
 
   if (!replyText) {
