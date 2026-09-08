@@ -31,13 +31,16 @@ histórico definitivo (ese sigue siendo cada sección numerada de abajo).
   él, y no está implementado (sección 9 original, primer ítem del backlog viejo).
 
 ### 🤖 Módulo de IA (pre-diagnóstico + ruta de seguimiento, secciones 14-15) — sin probar en vivo todavía
+- [x] `GEMINI_API_KEY` confirmada en las variables de entorno de Vercel (Production) por el
+  usuario (hecho: 2026-09-08).
 - [ ] Probar el flujo completo del chat en navegador/dispositivo real con sesión, incluyendo que
   el modelo cierre con el bloque `===RUTA===` bien formado y que aceptar/modificar/descartar un
   ítem de la ruta se sienta bien (nada de esto se verificó más allá de checks HTTP sin sesión).
-- [ ] Confirmar `GEMINI_API_KEY` en las variables de entorno de Vercel (Production) — sin eso el
-  endpoint responde 503 en producción.
-- [ ] Confirmar `EXPO_PUBLIC_WEB_URL` en el entorno del build real de mobile (EAS), no solo en
-  `.env.local` local.
+- [ ] `EXPO_PUBLIC_WEB_URL` en un build real de EAS — no es un pendiente urgente todavía: el repo
+  ni siquiera tiene `apps/mobile/eas.json` (no hay EAS Build configurado), y para probar local
+  (`expo start`/Expo Go) ya alcanza con que esté en `apps/mobile/.env.local` (ya está). Solo
+  importa el día que se arme un build real, porque EAS no lee `.env.local` — hay que ponerla en
+  `eas.json` o como secreto de EAS en ese momento.
 
 ### 🌐 Web (`apps/web`)
 - [ ] Subida real de logo/portada del negocio como archivo (hoy sigue siendo un campo de URL,
@@ -1012,12 +1015,13 @@ disponible.
 - [x] **Aplicar `0009_ai_prediagnostico.sql`** al proyecto Supabase real desde el SQL Editor
   (hecho: 2026-09-08, confirmado por el usuario — `ai_conversations`/`ai_messages` ya existen en
   producción).
-- [ ] **Confirmar `GEMINI_API_KEY` en Vercel** (Production) — ya está en `apps/web/.env.local`
-  local, pero no se confirmó que también esté en las variables de entorno del proyecto en Vercel;
-  sin eso el endpoint responde `503` en producción.
-- [ ] **Confirmar `EXPO_PUBLIC_WEB_URL` en el build de mobile** (EAS/`.env` que use el build real,
-  no solo `.env.local` de este entorno) — sin ella, el chat en mobile falla silenciosamente
-  (`missing-web-url`, mostrado hoy como un `Alert` genérico "No se pudo conectar").
+- [x] **Confirmar `GEMINI_API_KEY` en Vercel** (Production) — confirmado por el usuario
+  (hecho: 2026-09-08).
+- [ ] **`EXPO_PUBLIC_WEB_URL` en un build real de EAS** — no bloquea hoy: no hay
+  `apps/mobile/eas.json` todavía (sin EAS Build configurado), y para desarrollo local
+  (`expo start`/Expo Go) ya alcanza con `apps/mobile/.env.local` (ya está puesta). Sin ella en un
+  build real, el chat en mobile fallaría silenciosamente (`missing-web-url`, hoy mostrado como un
+  `Alert` genérico "No se pudo conectar") — queda anotado para cuando exista ese build.
 - [ ] **Exportar el resumen como PDF de verdad** — hoy web descarga `.txt` plano y mobile abre el
   share sheet nativo con el texto; ninguno genera un PDF con membrete. Si el negocio lo necesita,
   la ruta más simple en web es una vista imprimible + "imprimir a PDF" del navegador antes de
