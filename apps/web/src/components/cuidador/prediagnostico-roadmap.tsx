@@ -6,10 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { PREVENTIVE_EVENT_TYPE_LABELS, type AiRoadmapItem, type PreventiveEventType } from '@petapp/shared';
+import {
+  PREVENTIVE_EVENT_TYPE_LABELS,
+  type AiRoadmapItem,
+  type AiRoadmapItemStatus,
+  type PreventiveEventType,
+} from '@petapp/shared';
 import { createPreventiveEvent } from '@/app/cuidador/mascotas/[id]/actions';
+import { saveRoadmapDecision } from '@/app/cuidador/mascotas/[id]/prediagnostico/actions';
 
-type Decision = 'pending' | 'accepted' | 'dismissed';
+type Decision = AiRoadmapItemStatus;
 
 interface RoadmapRowState {
   item: AiRoadmapItem;
@@ -26,7 +32,7 @@ interface RoadmapRowState {
 function toRowState(item: AiRoadmapItem): RoadmapRowState {
   return {
     item,
-    decision: 'pending',
+    decision: item.status ?? 'pending',
     editing: false,
     title: item.title,
     type: item.type,
@@ -45,11 +51,29 @@ const TYPES = Object.entries(PREVENTIVE_EVENT_TYPE_LABELS) as [PreventiveEventTy
  * `preventive_event` real, mismo calendario que ya existe), modificarlo antes de aceptar, o
  * dejarlo solo como algo a tener en cuenta (no escribe nada en la base de datos).
  */
-export function PrediagnosticoRoadmap({ petId, items }: { petId: string; items: AiRoadmapItem[] }) {
+export function PrediagnosticoRoadmap({
+  petId,
+  conversationId,
+  items,
+}: {
+  petId: string;
+  conversationId: string;
+  items: AiRoadmapItem[];
+}) {
   const [rows, setRows] = useState<RoadmapRowState[]>(() => items.map(toRowState));
 
   const update = (index: number, patch: Partial<RoadmapRowState>) => {
     setRows((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  };
+
+  // Guarda el array completo (con el status ya actualizado) de vuelta en ai_conversations.roadmap
+  // — sin esto la decisión era efímera: "aceptar" sí agendaba, pero al volver a esta pantalla la
+  // tarjeta volvía a aparecer como pendiente, con riesgo de agendar el mismo recordatorio dos veces.
+  const persist = (nextRows: RoadmapRowState[]) => {
+    void saveRoadmapDecision(
+      conversationId,
+      nextRows.map((r) => ({ ...r.item, status: r.decision }))
+    );
   };
 
   const accept = async (index: number) => {
@@ -70,7 +94,47 @@ export function PrediagnosticoRoadmap({ petId, items }: { petId: string; items: 
       update(index, { saving: false, error: result.error ?? 'No se pudo agendar.' });
       return;
     }
-    update(index, { saving: false, decision: 'accepted', editing: false });
+    setRows((prev) => {
+      const next = prev.map((r, i) =>
+        i === index
+          ? {
+              ...r,
+              saving: false,
+              editing: false,
+              decision: 'accepted' as const,
+              item: {
+                title: row.title.trim(),
+                type: row.type,
+                due_date: row.due_date,
+                notes: row.notes.trim() || null,
+                status: 'accepted' as const,
+              },
+            }
+          : r
+      );
+      persist(next);
+      return next;
+    });
+  };
+
+  const dismiss = (index: number) => {
+    setRows((prev) => {
+      const next = prev.map((r, i) =>
+        i === index ? { ...r, decision: 'dismissed' as const, item: { ...r.item, status: 'dismissed' as const } } : r
+      );
+      persist(next);
+      return next;
+    });
+  };
+
+  const undo = (index: number) => {
+    setRows((prev) => {
+      const next = prev.map((r, i) =>
+        i === index ? { ...r, decision: 'pending' as const, item: { ...r.item, status: 'pending' as const } } : r
+      );
+      persist(next);
+      return next;
+    });
   };
 
   if (rows.length === 0) return null;
@@ -100,7 +164,7 @@ export function PrediagnosticoRoadmap({ petId, items }: { petId: string; items: 
                 <span>
                   Solo la tuviste en cuenta: <span className="italic">{row.title}</span>
                 </span>
-                <Button size="sm" variant="ghost" onClick={() => update(index, { decision: 'pending' })}>
+                <Button size="sm" variant="ghost" onClick={() => undo(index)}>
                   Deshacer
                 </Button>
               </div>
@@ -177,7 +241,7 @@ export function PrediagnosticoRoadmap({ petId, items }: { petId: string; items: 
                   <Button size="sm" variant="outline" onClick={() => update(index, { editing: true })} className="gap-1.5">
                     <Pencil className="size-4" /> Modificar
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => update(index, { decision: 'dismissed' })} className="gap-1.5">
+                  <Button size="sm" variant="ghost" onClick={() => dismiss(index)} className="gap-1.5">
                     <X className="size-4" /> Solo tenerla en cuenta
                   </Button>
                 </div>

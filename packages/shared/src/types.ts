@@ -193,18 +193,25 @@ export interface PetWithDetails extends Pet {
 export type AiConversationStatus = 'activa' | 'completada';
 export type AiMessageRole = 'user' | 'assistant';
 
+export type AiRoadmapItemStatus = 'pending' | 'accepted' | 'dismissed';
+
 /**
  * Un ítem de la ruta de seguimiento sugerida por el modelo al cerrar la conversación
  * (0010_ai_prediagnostico_roadmap.sql) — siempre un recordatorio/próximo paso (agendar consulta,
  * control de seguimiento), NUNCA un tratamiento o medicación. `due_date` ya viene calculado por el
  * backend (hoy + los días que sugirió el modelo), listo para crear un `PreventiveEvent` si el
- * cuidador lo acepta.
+ * cuidador lo acepta. `status` empieza `undefined` (equivale a "pending") cuando el modelo recién
+ * lo sugiere — la UI lo actualiza y lo vuelve a guardar en `ai_conversations.roadmap` en cuanto el
+ * cuidador decide algo, para que la decisión sobreviva un refresh/otra visita (antes era efímera:
+ * "aceptar" sí agendaba el recordatorio, pero al volver a esta pantalla la tarjeta volvía a
+ * mostrarse como pendiente — riesgo real de agendar el mismo recordatorio dos veces).
  */
 export interface AiRoadmapItem {
   title: string;
   type: PreventiveEventType;
   due_date: string;
   notes: string | null;
+  status?: AiRoadmapItemStatus;
 }
 
 /**

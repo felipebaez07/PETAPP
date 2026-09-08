@@ -137,7 +137,9 @@ export default function PrediagnosticoScreen() {
           </View>
           <Button label="Compartir resumen" icon={Share2} onPress={shareSummary} />
           <Button label="Empezar una nueva consulta" variant="outline" onPress={startNew} />
-          {roadmap && roadmap.length > 0 ? <PrediagnosticoRoadmap petId={pet.id} items={roadmap} /> : null}
+          {roadmap && roadmap.length > 0 && conversationId ? (
+            <PrediagnosticoRoadmap petId={pet.id} conversationId={conversationId} items={roadmap} />
+          ) : null}
         </ScrollView>
       </>
     );

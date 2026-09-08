@@ -110,7 +110,9 @@ export function PrediagnosticoChat({ petId, petName, initialConversation }: Pred
             Empezar una nueva consulta
           </Button>
         </div>
-        {roadmap && roadmap.length > 0 && <PrediagnosticoRoadmap petId={petId} items={roadmap} />}
+        {roadmap && roadmap.length > 0 && conversationId && (
+          <PrediagnosticoRoadmap petId={petId} conversationId={conversationId} items={roadmap} />
+        )}
       </div>
     );
   }

@@ -2,6 +2,7 @@ import {
   PREVENTIVE_EVENT_TYPE_LABELS,
   preventiveEventSchema,
   type AiRoadmapItem,
+  type AiRoadmapItemStatus,
   type PreventiveEventType,
 } from '@petapp/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -31,10 +32,16 @@ function formatDatePretty(dateStr: string): string {
   return date.toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-type Decision = 'pending' | 'accepted' | 'dismissed';
-
-function RoadmapRow({ petId, item }: { petId: string; item: AiRoadmapItem }) {
-  const [decision, setDecision] = useState<Decision>('pending');
+function RoadmapRow({
+  petId,
+  item,
+  onStatusChange,
+}: {
+  petId: string;
+  item: AiRoadmapItem;
+  onStatusChange: (status: AiRoadmapItemStatus) => void;
+}) {
+  const [decision, setDecision] = useState<AiRoadmapItemStatus>(item.status ?? 'pending');
   const [editing, setEditing] = useState(false);
   const form = useForm<EventFormValues>({
     resolver: zodResolver(eventFieldsSchema),
@@ -55,6 +62,17 @@ function RoadmapRow({ petId, item }: { petId: string; item: AiRoadmapItem }) {
     }
     setDecision('accepted');
     setEditing(false);
+    onStatusChange('accepted');
+  }
+
+  function handleDismiss() {
+    setDecision('dismissed');
+    onStatusChange('dismissed');
+  }
+
+  function handleUndo() {
+    setDecision('pending');
+    onStatusChange('pending');
   }
 
   if (decision === 'accepted') {
@@ -73,7 +91,7 @@ function RoadmapRow({ petId, item }: { petId: string; item: AiRoadmapItem }) {
         <Text className="flex-1 font-body text-sm text-mutedForeground">
           Solo la tuviste en cuenta: {item.title}
         </Text>
-        <Pressable onPress={() => setDecision('pending')} hitSlop={8}>
+        <Pressable onPress={handleUndo} hitSlop={8}>
           <Text className="font-bodySemibold text-sm text-primary">Deshacer</Text>
         </Pressable>
       </View>
@@ -119,13 +137,7 @@ function RoadmapRow({ petId, item }: { petId: string; item: AiRoadmapItem }) {
               fullWidth={false}
             />
             <Button label="Modificar" variant="outline" icon={Pencil} onPress={() => setEditing(true)} fullWidth={false} />
-            <Button
-              label="Solo tenerla en cuenta"
-              variant="ghost"
-              icon={X}
-              onPress={() => setDecision('dismissed')}
-              fullWidth={false}
-            />
+            <Button label="Solo tenerla en cuenta" variant="ghost" icon={X} onPress={handleDismiss} fullWidth={false} />
           </View>
         </>
       )}
@@ -133,8 +145,25 @@ function RoadmapRow({ petId, item }: { petId: string; item: AiRoadmapItem }) {
   );
 }
 
-export function PrediagnosticoRoadmap({ petId, items }: { petId: string; items: AiRoadmapItem[] }) {
-  if (items.length === 0) return null;
+/**
+ * Guarda de vuelta el array completo en `ai_conversations.roadmap` (con el status ya
+ * actualizado) cada vez que el cuidador decide algo sobre un ítem — sin esto la decisión era
+ * efímera: "aceptar" sí agendaba el recordatorio, pero al volver a esta pantalla la tarjeta volvía
+ * a mostrarse como pendiente, con riesgo de agendar el mismo recordatorio dos veces.
+ */
+export function PrediagnosticoRoadmap({
+  petId,
+  conversationId,
+  items,
+}: {
+  petId: string;
+  conversationId: string;
+  items: AiRoadmapItem[];
+}) {
+  const [roadmap, setRoadmap] = useState<AiRoadmapItem[]>(items);
+
+  if (roadmap.length === 0) return null;
+
   return (
     <View className="gap-3">
       <View>
@@ -145,8 +174,17 @@ export function PrediagnosticoRoadmap({ petId, items }: { petId: string; items: 
         </Text>
       </View>
       <View className="gap-2.5">
-        {items.map((item, index) => (
-          <RoadmapRow key={index} petId={petId} item={item} />
+        {roadmap.map((item, index) => (
+          <RoadmapRow
+            key={index}
+            petId={petId}
+            item={item}
+            onStatusChange={(status) => {
+              const next = roadmap.map((it, i) => (i === index ? { ...it, status } : it));
+              setRoadmap(next);
+              void supabase.from('ai_conversations').update({ roadmap: next }).eq('id', conversationId);
+            }}
+          />
         ))}
       </View>
     </View>
