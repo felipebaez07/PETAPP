@@ -9,7 +9,17 @@ import {
 } from '@petapp/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Camera, Cat, CheckCircle2, ClipboardPlus, Dog, FilePlus2, PawPrint, XCircle } from 'lucide-react-native';
+import {
+  Camera,
+  Cat,
+  CheckCircle2,
+  ClipboardPlus,
+  Dog,
+  FilePlus2,
+  PawPrint,
+  Sparkles,
+  XCircle,
+} from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
@@ -445,6 +455,24 @@ export default function PetDetailScreen() {
             <Text className="font-body text-sm text-mutedForeground">{pet.notes}</Text>
           </View>
         ) : null}
+
+        <Pressable
+          onPress={() => router.push(`/prediagnostico/${pet.id}` as any)}
+          accessibilityRole="button"
+          accessibilityLabel="Pre-diagnóstico con IA"
+          style={({ pressed }) => (pressed ? { opacity: 0.85 } : undefined)}
+          className="flex-row items-center gap-3 rounded-xl border border-secondary bg-secondary/10 p-4"
+        >
+          <View className="h-10 w-10 items-center justify-center rounded-full bg-secondary/20">
+            <Sparkles size={20} color="#059669" />
+          </View>
+          <View className="flex-1 gap-0.5">
+            <Text className="font-bodySemibold text-sm text-foreground">Pre-diagnóstico con IA</Text>
+            <Text className="font-body text-xs text-mutedForeground">
+              Cuéntale al asistente qué le pasa a {pet.name} y arma un resumen para tu veterinario.
+            </Text>
+          </View>
+        </Pressable>
 
         {/* Calendario preventivo */}
         <View className="gap-3">

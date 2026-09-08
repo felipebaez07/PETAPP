@@ -189,3 +189,30 @@ export interface PetWithDetails extends Pet {
   preventive_events: PreventiveEvent[];
   documents: PetDocument[];
 }
+
+export type AiConversationStatus = 'activa' | 'completada';
+export type AiMessageRole = 'user' | 'assistant';
+
+/**
+ * Sesión de chat de pre-diagnóstico (0009_ai_prediagnostico.sql). `summary` es el resumen
+ * estructurado final exportable a PDF — null mientras la conversación sigue activa. Esto NUNCA
+ * es un diagnóstico real, es un resumen de síntomas para llevar al veterinario (ver
+ * docs/legal/registro-legal.md LG-001).
+ */
+export interface AiConversation {
+  id: string;
+  pet_id: string;
+  owner_id: string;
+  status: AiConversationStatus;
+  summary: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AiMessage {
+  id: string;
+  conversation_id: string;
+  role: AiMessageRole;
+  content: string;
+  created_at: string;
+}

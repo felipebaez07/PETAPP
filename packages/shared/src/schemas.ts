@@ -119,3 +119,15 @@ export const providerPlanSchema = z.object({
   notes: z.string().max(500).optional().or(z.literal('')),
 });
 export type ProviderPlanFormValues = z.infer<typeof providerPlanSchema>;
+
+/**
+ * Un turno del chat de pre-diagnóstico (POST a `/api/ai/prediagnostico`, ver
+ * 0009_ai_prediagnostico.sql). `conversationId` ausente = arranca una conversación nueva para
+ * `petId`; presente = continúa una ya activa.
+ */
+export const aiChatMessageSchema = z.object({
+  petId: z.string().uuid(),
+  conversationId: z.string().uuid().optional(),
+  message: z.string().min(1, 'Escribe un mensaje').max(2000),
+});
+export type AiChatMessageValues = z.infer<typeof aiChatMessageSchema>;

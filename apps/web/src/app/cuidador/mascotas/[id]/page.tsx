@@ -1,9 +1,11 @@
 import { notFound } from 'next/navigation';
-import { CalendarHeart, FileStack, PawPrint, ShieldCheck, Syringe } from 'lucide-react';
+import Link from 'next/link';
+import { CalendarHeart, FileStack, PawPrint, ShieldCheck, Sparkles, Syringe } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { RemoteImage } from '@/components/ui/remote-image';
 import { RevealItem } from '@/components/motion/reveal-item';
 import { AddPreventiveEventPanel } from '@/components/cuidador/add-preventive-event-panel';
@@ -70,6 +72,25 @@ export default async function PetDetailPage({ params }: { params: Promise<{ id: 
           <CardContent className="p-4 text-sm text-foreground/90">{pet.notes}</CardContent>
         </Card>
       )}
+
+      <Card className="mb-6 border-secondary/30 bg-secondary/5">
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-full bg-secondary/15">
+              <Sparkles className="size-5 text-secondary" aria-hidden />
+            </div>
+            <div>
+              <p className="font-heading text-sm font-semibold text-foreground">Pre-diagnóstico con IA</p>
+              <p className="text-sm text-muted-foreground">
+                Cuéntale a nuestro asistente qué le pasa a {pet.name} y arma un resumen para tu veterinario.
+              </p>
+            </div>
+          </div>
+          <Button asChild size="sm" variant="secondary">
+            <Link href={`/cuidador/mascotas/${pet.id}/prediagnostico`}>Empezar</Link>
+          </Button>
+        </CardContent>
+      </Card>
 
       <Card className="mb-6">
         <CardHeader>

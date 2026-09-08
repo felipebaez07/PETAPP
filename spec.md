@@ -6,7 +6,7 @@
 > tareas completadas — quedan como historial de qué se decidió y cuándo. Si una tarea se descarta,
 > se dice explícitamente por qué (`descartado: ...`) en vez de borrarla.
 >
-> Última actualización: 2026-09-02.
+> Última actualización: 2026-09-08.
 
 ## 🔧 Tareas abiertas para el equipo (empezar por acá)
 
@@ -29,6 +29,16 @@ histórico definitivo (ese sigue siendo cada sección numerada de abajo).
 - [ ] Migración de RLS para que el prestador vea "próximos vencimientos" de sus pacientes en su
   resumen del panel — hoy solo puede ver eso si hay una `service_request` confirmada/completada con
   él, y no está implementado (sección 9 original, primer ítem del backlog viejo).
+
+### 🤖 Módulo de IA (pre-diagnóstico, sección 14) — nuevo, sin probar en vivo todavía
+- [ ] Probar el flujo completo del chat en navegador/dispositivo real con sesión (nada de esto se
+  verificó más allá de checks HTTP sin sesión).
+- [ ] Confirmar `GEMINI_API_KEY` en las variables de entorno de Vercel (Production) — sin eso el
+  endpoint responde 503 en producción.
+- [ ] Aplicar `supabase/migrations/0009_ai_prediagnostico.sql` al proyecto Supabase real (SQL
+  Editor) — las tablas `ai_conversations`/`ai_messages` no existen todavía en producción.
+- [ ] Confirmar `EXPO_PUBLIC_WEB_URL` en el entorno del build real de mobile (EAS), no solo en
+  `.env.local` local.
 
 ### 🌐 Web (`apps/web`)
 - [ ] Subida real de logo/portada del negocio como archivo (hoy sigue siendo un campo de URL,
@@ -929,3 +939,97 @@ regenera solo la próxima vez que cualquiera corra `expo start`).
   basta para que el dashboard de negocio recargue con el negocio recién creado. No se verificó en
   un dispositivo real que la navegación por defecto de Expo Router realmente desmonte/remonte la
   tab de inicio en todos los casos (ej. si el usuario ya tenía esa tab activa en memoria).
+
+## 14. Módulo de pre-diagnóstico con IA (2026-09-08)
+
+Primer módulo nuevo desde el pivot (secciones 1-13 fueron todas migración/rediseño de lo
+existente). El cuidador le cuenta a un chatbot qué le pasa a su mascota; el asistente hace
+preguntas de seguimiento y, cuando tiene suficiente información, cierra con un resumen
+estructurado — **nunca un diagnóstico real** — para que el cuidador se lo lleve a su veterinario.
+Motor elegido: Google Gemini (`gemini-3.8-flash` vía `@google/genai`), decisión explícita del
+negocio después de comparar con Anthropic por costo/capa gratuita — ver conversación del
+2026-09-08. Consideraciones legales anotadas antes de construir, no bloquean el prototipo pero sí
+el lanzamiento a usuarios reales: `docs/legal/registro-legal.md` (LG-001 a LG-004).
+
+- [x] **Esquema de datos**: `supabase/migrations/0009_ai_prediagnostico.sql` — tablas
+  `ai_conversations` (una por sesión, guarda `summary` cuando el modelo cierra la conversación) y
+  `ai_messages` (cada turno). RLS con el mismo patrón que `preventive_events`/`pet_documents`
+  (dueño o admin), con `owner_id` desnormalizado en `ai_conversations` a propósito — comparar
+  directo contra `auth.uid()` evita repetir el ciclo de recursión de RLS ya corregido en
+  `0008_fix_service_requests_pet_ownership_recursion.sql` (hecho: 2026-09-08, archivo creado,
+  **todavía no aplicada al proyecto Supabase real** — pendiente pegarla en el SQL Editor).
+  Tipos espejo en `packages/shared/src/types.ts` (`AiConversation`, `AiMessage`) y el schema Zod
+  del request de chat en `packages/shared/src/schemas.ts` (`aiChatMessageSchema`).
+- [x] **Backend único, compartido por web y mobile**: `apps/web/src/app/api/ai/prediagnostico/route.ts`
+  (Route Handler, no Server Action — mobile necesita poder llamarlo por HTTP). Auth dual: cookie
+  de sesión para web (`createSupabaseServerClient()` de siempre), header `Authorization: Bearer
+  <access_token>` para mobile (valida el token con `supabase.auth.getUser(token)` y reusa un
+  cliente Supabase con ese header para que las consultas queden scoped por RLS igual que con la
+  sesión de cookie — nunca se usa una service-role key acá). La API key de Gemini vive solo en el
+  servidor (`GEMINI_API_KEY`), nunca se manda al cliente. El prompt de sistema (armado en
+  `buildSystemPrompt`, con el contexto de la mascota ya inyectado: especie/raza/fecha de
+  nacimiento) tiene reglas duras: nunca diagnostica, nunca receta, redirige a urgencias reales si
+  detecta señales de emergencia, y cuando decide que ya tiene suficiente información cierra
+  respondiendo únicamente con el bloque delimitado `===RESUMEN===...===FIN===`, que el backend
+  detecta con una regex para marcar la conversación `completada` y guardar el `summary`
+  (hecho: 2026-09-08, no streaming en esta v1 — request/respuesta simple, más fácil de depurar;
+  se puede migrar a streaming después si la latencia molesta).
+- [x] **UI web**: tarjeta "Pre-diagnóstico con IA" en la ficha de mascota
+  (`apps/web/src/app/cuidador/mascotas/[id]/page.tsx`) que lleva a
+  `/cuidador/mascotas/[id]/prediagnostico` — página server component que, si ya existe una
+  conversación `completada` para esa mascota, muestra directo el resumen (no reconstruye el
+  historial de una conversación activa sin terminar, se prefirió simple: el cuidador puede
+  simplemente volver a empezar). El chat en sí (`components/cuidador/prediagnostico-chat.tsx`) es
+  un client component con `fetch` same-origin (cookie de sesión automática, sin manejo de token a
+  mano) — burbujas de mensaje, envío con Enter, y al terminar muestra el resumen con un botón
+  "Descargar como texto" (`Blob` + link temporal, sin PDF real todavía — ver pendientes)
+  (hecho: 2026-09-08).
+- [x] **UI mobile**: mismo flujo en `apps/mobile/app/prediagnostico/[id].tsx`, enlazado desde una
+  tarjeta en `app/mascotas/[id].tsx`. Como mobile no comparte cookies con la web, llama al mismo
+  Route Handler con `fetch(`${EXPO_PUBLIC_WEB_URL}/api/ai/prediagnostico`, ...)` mandando el
+  `access_token` de la sesión de Supabase (`supabase.auth.getSession()`) como Bearer — nueva
+  variable de entorno `EXPO_PUBLIC_WEB_URL` (agregada a `.env.example` y `.env.local`, apuntando
+  a `https://petapp-web-topaz.vercel.app`). Para "exportar" el resumen se usa el `Share` nativo de
+  React Native (sin `expo-sharing`/`expo-print`, no hacía falta agregar dependencias nuevas)
+  (hecho: 2026-09-08).
+
+**Verificación de esta pasada:** `npm run typecheck` en verde en las 3 workspaces,
+`cd apps/web && npm run build` (build real de Next.js, no solo `tsc`) sin errores con las dos
+rutas nuevas (`/api/ai/prediagnostico`, `/cuidador/mascotas/[id]/prediagnostico`) listadas, y
+`npx expo export --platform web` dentro de `apps/mobile` sin errores con `/prediagnostico/[id]`
+listada entre las 22 rutas estáticas. Se levantó el server de desarrollo de web localmente y se
+confirmó por HTTP que el Route Handler exige auth (`POST` sin sesión → `401`) y que la página del
+chat redirige a login si no hay sesión (`307`) — no se pudo probar la conversación de punta a
+punta ni la respuesta real de Gemini porque este entorno no tiene una herramienta de navegador
+disponible.
+
+**Pendiente honesto de esta pasada:**
+
+- [ ] **Probar el flujo completo en un navegador de verdad** (web) y en un dispositivo/simulador
+  (mobile), con sesión real: mandar un síntoma, ver que el asistente hace preguntas de
+  seguimiento razonables, que cierra con el resumen en el formato esperado, y que el resumen se
+  puede descargar/compartir. Nada de esto se verificó más allá de lo que puede probarse por HTTP
+  sin sesión.
+- [ ] **Confirmar `GEMINI_API_KEY` en Vercel** (Production) — ya está en `apps/web/.env.local`
+  local, pero no se confirmó que también esté en las variables de entorno del proyecto en Vercel;
+  sin eso el endpoint responde `503` en producción.
+- [ ] **Aplicar `0009_ai_prediagnostico.sql`** al proyecto Supabase real desde el SQL Editor —
+  sigue solo como archivo local, las tablas `ai_conversations`/`ai_messages` no existen todavía en
+  producción.
+- [ ] **Confirmar `EXPO_PUBLIC_WEB_URL` en el build de mobile** (EAS/`.env` que use el build real,
+  no solo `.env.local` de este entorno) — sin ella, el chat en mobile falla silenciosamente
+  (`missing-web-url`, mostrado hoy como un `Alert` genérico "No se pudo conectar").
+- [ ] **Exportar el resumen como PDF de verdad** — hoy web descarga `.txt` plano y mobile abre el
+  share sheet nativo con el texto; ninguno genera un PDF con membrete. Si el negocio lo necesita,
+  la ruta más simple en web es una vista imprimible + "imprimir a PDF" del navegador antes de
+  meter una librería de generación de PDF.
+- [ ] **"Hoja de ruta de tratamientos/recordatorios" post-consulta real** (pedido explícito del
+  usuario junto con este módulo, pero no diseñado todavía): después de que el veterinario
+  evalúa al animal de verdad, enganchar eso con `preventive_events` para el seguimiento
+  preventivo — queda como feature separada a diseñar, probablemente extendiendo
+  `ai_conversations` con una referencia a los eventos que genera, no reemplazando el calendario
+  ya existente.
+- [ ] Sin límite de mensajes/costo por conversación más allá del `MAX_TURNS_BEFORE_HINT` (un
+  aviso en el prompt a partir del turno 8, no un corte duro) — si esto pasa a usuarios reales
+  conviene un límite duro y/o rate limiting por usuario, ver LG en `docs/legal/registro-legal.md`
+  si el costo de la API se vuelve una preocupación real.
