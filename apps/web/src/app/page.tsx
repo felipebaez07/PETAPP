@@ -94,7 +94,7 @@ export default async function HomePage() {
             width={1172}
             height={695}
             unoptimized
-            className="mx-auto mb-2 h-24 w-auto sm:h-28"
+            className="mx-auto mb-2 h-36 w-auto sm:h-44"
             priority
           />
           <p className="font-heading text-2xl font-bold sm:text-3xl">
