@@ -123,13 +123,22 @@ export type ProviderPlanFormValues = z.infer<typeof providerPlanSchema>;
 /**
  * Un turno del chat de pre-diagnóstico (POST a `/api/ai/prediagnostico`, ver
  * 0009_ai_prediagnostico.sql). `conversationId` ausente = arranca una conversación nueva para
- * `petId`; presente = continúa una ya activa.
+ * `petId`; presente = continúa una ya activa. `imagePath` (0011_ai_chat_images.sql, idea 1.1 del
+ * banco de ideas) es opcional: la ruta ya subida al bucket privado `ai-chat-images` de una foto
+ * de síntoma — `message` puede venir vacío si el turno es solo la foto, pero al menos uno de los
+ * dos tiene que estar presente (ver el `.refine` de abajo).
  */
-export const aiChatMessageSchema = z.object({
-  petId: z.string().uuid(),
-  conversationId: z.string().uuid().optional(),
-  message: z.string().min(1, 'Escribe un mensaje').max(2000),
-});
+export const aiChatMessageSchema = z
+  .object({
+    petId: z.string().uuid(),
+    conversationId: z.string().uuid().optional(),
+    message: z.string().max(2000),
+    imagePath: z.string().min(1).max(300).optional(),
+  })
+  .refine((data) => data.message.trim().length > 0 || Boolean(data.imagePath), {
+    message: 'Escribe un mensaje o adjunta una foto',
+    path: ['message'],
+  });
 export type AiChatMessageValues = z.infer<typeof aiChatMessageSchema>;
 
 /**

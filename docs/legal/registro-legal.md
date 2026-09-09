@@ -79,3 +79,29 @@ corresponda antes de resolverlo. Se agrega, nunca se sobrescribe.
   cuidador se lleve su propio PDF (ej. si PETAPP quisiera reusar ese contenido para otro fin).
 - **Checklist de qué averiguar**: términos de uso de Google Gemini API sobre contenido generado.
 - **Estado**: abierto.
+
+## LG-005
+
+- **Detectado**: 2026-09-09, al cambiar el motor de IA del módulo de pre-diagnóstico de Google
+  Gemini a Groq (ver `spec.md`, sección 16) y agregar la foto de síntoma en el chat.
+- **Área**: Transferencia internacional de datos (continuación de LG-003) + categoría de dato
+  nueva.
+- **Riesgo**: 🟡 medio.
+- **Por qué aplica**: LG-003 evaluaba el envío de la conversación de texto a Google Gemini. Ese
+  procesador cambió a Groq (empresa con sede en EE. UU., igual que Google) — el análisis de
+  transferencia internacional de LG-003 hay que rehacerlo contra el proveedor correcto, no asumir
+  que lo ya escrito para Gemini aplica igual a Groq. Además, ahora también se puede enviar una
+  **foto** de la mascota (posible dato de salud animal, más sensible que el texto libre que ya
+  cubría LG-002) al mismo tercero para su análisis.
+- **¿Bloquea?**: No bloquea construir — el módulo de foto ya está implementado —, pero sí condiciona
+  el lanzamiento a usuarios reales del piloto, igual que LG-001/002/003.
+- **Antes de qué hay que resolverlo**: antes de lanzar el módulo (foto incluida) a usuarios reales.
+- **Checklist de qué averiguar**:
+  - Si Groq cumple los requisitos de transferencia internacional de la Ley 1581 para el tipo de
+    dato que se le manda (texto conversacional + ahora también imágenes).
+  - Si la política de privacidad (ya pendiente de actualizar por LG-002) debe nombrar
+    explícitamente "fotos enviadas al asistente de IA" como categoría de dato, no solo "texto de
+    la conversación".
+  - Política de retención/uso de datos de Groq sobre las imágenes que procesa (si las guarda para
+    entrenar modelos, por cuánto tiempo, etc.) — no asumir que es igual a la de Google.
+- **Estado**: abierto.

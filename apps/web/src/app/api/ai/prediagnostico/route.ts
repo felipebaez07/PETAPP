@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
+import Groq from 'groq-sdk';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabase/config';
@@ -15,13 +15,23 @@ import {
 /**
  * Backend único del módulo de pre-diagnóstico — lo llaman TANTO la web (con la sesión por
  * cookie de siempre) COMO la app móvil (que no tiene cookies de Next.js, así que manda su token
- * de sesión de Supabase por header `Authorization: Bearer <token>`). Nunca se llama a Gemini
- * desde el cliente directo — la API key vive solo acá, en el servidor.
+ * de sesión de Supabase por header `Authorization: Bearer <token>`). Nunca se llama al motor de
+ * IA desde el cliente directo — la API key vive solo acá, en el servidor.
+ *
+ * Motor: Groq (`llama-3.3-70b-versatile` para texto; `qwen/qwen3.6-27b` cuando el turno trae una
+ * foto — hoy es el único modelo de visión del tier gratuito de Groq). Se cambió de Gemini a
+ * Groq el 2026-09-09: el tier gratuito de Gemini se agotaba rápido en uso real (429/503
+ * seguidos), mientras que Groq tiene un tier gratuito estable (30 RPM / 1.000 RPD, sin tarjeta ni
+ * créditos que expiren) y es compatible con el formato estándar de "chat completions" — el SDK
+ * además reintenta automáticamente 429/5xx/timeouts, así que ya no hace falta el retry manual que
+ * tenía la integración con Gemini.
  *
  * Ver docs/legal/registro-legal.md (LG-001 a LG-004): esto NUNCA genera un diagnóstico real, el
  * prompt de sistema lo deja explícito y el formato de respuesta lo refuerza.
  */
 
+const TEXT_MODEL = 'llama-3.3-70b-versatile';
+const VISION_MODEL = 'qwen/qwen3.6-27b';
 const MAX_TURNS_BEFORE_HINT = 8; // evita conversaciones eternas sin llegar a un resumen
 
 async function getAuthenticatedClient(request: Request): Promise<{
@@ -56,6 +66,7 @@ REGLAS ABSOLUTAS (nunca las rompas):
 - NUNCA das un diagnóstico. NUNCA dices qué enfermedad podría tener el animal. NUNCA recomiendas medicamentos, dosis, ni tratamientos de ningún tipo.
 - Si algo en la descripción suena a EMERGENCIA (dificultad para respirar, sangrado abundante, convulsiones, no poder pararse, hinchazón repentina del abdomen, posible intoxicación, golpe de calor, trauma severo), tu ÚNICA respuesta es decirle que busque atención veterinaria de urgencia AHORA MISMO — no sigas haciendo preguntas de rutina.
 - Si el cuidador pide directamente un diagnóstico o tratamiento, recuérdale amablemente que no puedes darlo y que es justo para eso que existe este resumen para el veterinario.
+- Si el cuidador adjunta una foto, describí brevemente lo que ves relevante al síntoma (por ejemplo "veo enrojecimiento en la zona que mencionás") y usalo para hacer mejores preguntas de seguimiento — pero la foto tampoco es una base para diagnosticar, así que seguí aplicando las mismas reglas de arriba.
 
 CÓMO CONVERSAR:
 - Haces una o dos preguntas de seguimiento por turno (no un cuestionario largo de una vez): qué síntomas nota, desde cuándo, si ha empeorado, cómo está el apetito/la energía/la hidratación, y cualquier otro dato relevante.
@@ -83,13 +94,11 @@ CUÁNDO CERRAR (dos pasos, nunca cierres directo):
 Mientras sigas conversando (no hayas llegado a ese punto), responde en texto plano normal, sin esos marcadores.`;
 }
 
-function isTransientGeminiError(err: unknown): boolean {
-  const text = err instanceof Error ? err.message : String(err);
-  return /"code":\s*503|UNAVAILABLE|"code":\s*429|RESOURCE_EXHAUSTED|overloaded|high demand/i.test(text);
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function isTransientGroqError(err: unknown): boolean {
+  if (err instanceof Groq.APIError) {
+    return err.status === 429 || err.status === undefined || err.status >= 500;
+  }
+  return false;
 }
 
 function parseRoadmap(rawJson: string): AiRoadmapItem[] | null {
@@ -121,9 +130,32 @@ function addDaysToDateString(dateStr: string, days: number): string {
   return `${y}-${m}-${d}`;
 }
 
+/**
+ * Convierte una foto ya subida al bucket privado `ai-chat-images` (0011) en un data URI
+ * `data:<mime>;base64,...` para mandarla al modelo de visión. Usa el cliente ya autenticado
+ * como el propio cuidador (nunca service role) para generar la URL firmada — la RLS de
+ * `storage.objects` de 0011 es la que de verdad decide si puede leerla. Devuelve null ante
+ * cualquier fallo (path inválido, archivo borrado, etc.) en vez de tirar la conversación entera.
+ */
+async function loadImageAsDataUri(supabase: SupabaseClient, imagePath: string): Promise<string | null> {
+  try {
+    const { data: signed, error: signError } = await supabase.storage
+      .from('ai-chat-images')
+      .createSignedUrl(imagePath, 60);
+    if (signError || !signed?.signedUrl) return null;
+    const imageResponse = await fetch(signed.signedUrl);
+    if (!imageResponse.ok) return null;
+    const contentType = imageResponse.headers.get('content-type') ?? 'image/jpeg';
+    const buffer = Buffer.from(await imageResponse.arrayBuffer());
+    return `data:${contentType};base64,${buffer.toString('base64')}`;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(request: Request) {
-  const geminiApiKey = process.env.GEMINI_API_KEY;
-  if (!geminiApiKey) {
+  const groqApiKey = process.env.GROQ_API_KEY;
+  if (!groqApiKey) {
     return NextResponse.json({ error: 'El módulo de IA todavía no está configurado.' }, { status: 503 });
   }
 
@@ -134,9 +166,9 @@ export async function POST(request: Request) {
   const rawBody = await request.json().catch(() => null);
   const parsed = aiChatMessageSchema.safeParse(rawBody);
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Faltan datos.' }, { status: 400 });
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Faltan datos.' }, { status: 400 });
   }
-  const { petId, message } = parsed.data;
+  const { petId, message, imagePath } = parsed.data;
   let conversationId = parsed.data.conversationId ?? null;
 
   // La RLS de `pets` ya solo deja ver mascotas propias — este select además confirma que la
@@ -181,52 +213,54 @@ export async function POST(request: Request) {
     conversationId = created.id;
   }
 
-  // Guarda el mensaje del usuario antes de llamar a Gemini — si la llamada falla, el turno del
-  // usuario no se pierde (puede reintentar sin repetir lo que ya escribió).
-  await supabase.from('ai_messages').insert({ conversation_id: conversationId, role: 'user', content: message });
+  // Guarda el mensaje del usuario (y la referencia a la foto, si vino) antes de llamar al
+  // modelo — si la llamada falla, el turno del usuario no se pierde (puede reintentar sin
+  // repetir lo que ya escribió ni volver a subir la foto).
+  await supabase
+    .from('ai_messages')
+    .insert({ conversation_id: conversationId, role: 'user', content: message, image_path: imagePath ?? null });
 
-  const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+  const imageDataUri = imagePath ? await loadImageAsDataUri(supabase, imagePath) : null;
+  const model = imageDataUri ? VISION_MODEL : TEXT_MODEL;
+
+  const groq = new Groq({ apiKey: groqApiKey });
   const systemPrompt = buildSystemPrompt(pet);
   const turnCountHint =
     history.length >= MAX_TURNS_BEFORE_HINT
       ? '\n\n(Ya llevas varios intercambios — si tienes información razonable, pasá pronto al paso 1 del cierre: preguntá si hay algo más, y recién en tu siguiente turno cerrá con el resumen. No sigas alargando la conversación indefinidamente.)'
       : '';
 
-  const contents = [
-    ...history.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
-    { role: 'user', parts: [{ text: message }] },
-  ];
+  const historyMessages: Groq.Chat.ChatCompletionMessageParam[] = history.map((m) => ({
+    role: m.role === 'assistant' ? 'assistant' : 'user',
+    content: m.content,
+  }));
+
+  const currentUserMessage: Groq.Chat.ChatCompletionUserMessageParam = imageDataUri
+    ? {
+        role: 'user',
+        content: [
+          { type: 'text', text: message || 'Te mando una foto relacionada con lo que le pasa a mi mascota.' },
+          { type: 'image_url', image_url: { url: imageDataUri } },
+        ],
+      }
+    : { role: 'user', content: message };
 
   let replyText: string;
   try {
-    let lastError: unknown;
-    let text: string | undefined;
-    // Gemini devuelve 503 "modelo con mucha demanda" seguido: un reintento con un respiro corto
-    // suele alcanzar para que pase — sin esto, el cuidador tenía que volver a escribir su mensaje
-    // a mano por un error que normalmente se resuelve solo en un par de segundos.
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const result = await ai.models.generateContent({
-          model: 'gemini-3.8-flash',
-          contents,
-          config: { systemInstruction: systemPrompt + turnCountHint },
-        });
-        text = result.text ?? '';
-        lastError = undefined;
-        break;
-      } catch (err) {
-        lastError = err;
-        if (attempt === 0 && isTransientGeminiError(err)) {
-          await sleep(1500);
-          continue;
-        }
-        break;
-      }
-    }
-    if (lastError) throw lastError;
-    replyText = text ?? '';
+    const completion = await groq.chat.completions.create({
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt + turnCountHint },
+        ...historyMessages,
+        currentUserMessage,
+      ],
+    });
+    replyText = completion.choices[0]?.message?.content ?? '';
   } catch (err) {
-    const friendly = isTransientGeminiError(err)
+    // El SDK de Groq ya reintenta 429/5xx/timeouts automáticamente (2 veces por defecto) antes de
+    // tirar el error acá — a diferencia de la integración anterior con Gemini, no hace falta un
+    // retry manual en esta capa.
+    const friendly = isTransientGroqError(err)
       ? 'El asistente está recibiendo mucha demanda en este momento. Esperá unos segundos e intentá de nuevo.'
       : 'No se pudo contactar al asistente. Intenta de nuevo.';
     return NextResponse.json({ error: friendly }, { status: 502 });

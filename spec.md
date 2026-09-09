@@ -6,7 +6,7 @@
 > tareas completadas — quedan como historial de qué se decidió y cuándo. Si una tarea se descarta,
 > se dice explícitamente por qué (`descartado: ...`) en vez de borrarla.
 >
-> Última actualización: 2026-09-08.
+> Última actualización: 2026-09-09.
 
 ## 🔧 Tareas abiertas para el equipo (empezar por acá)
 
@@ -29,13 +29,22 @@ histórico definitivo (ese sigue siendo cada sección numerada de abajo).
 - [ ] Migración de RLS para que el prestador vea "próximos vencimientos" de sus pacientes en su
   resumen del panel — hoy solo puede ver eso si hay una `service_request` confirmada/completada con
   él, y no está implementado (sección 9 original, primer ítem del backlog viejo).
+- [ ] 3 vulnerabilidades de `npm audit` (`next`→`sharp` alta, `eslint`→`js-yaml` alta, `next`
+  crítica) detectadas al instalar `groq-sdk` (2026-09-09) — son de dependencias transitivas
+  preexistentes, no de `groq-sdk` en sí, pero no se investigaron a fondo (ver sección 17).
 
-### 🤖 Módulo de IA (pre-diagnóstico + ruta de seguimiento, secciones 14-15) — sin probar en vivo todavía
-- [x] `GEMINI_API_KEY` confirmada en las variables de entorno de Vercel (Production) por el
-  usuario (hecho: 2026-09-08).
+### 🤖 Módulo de IA (pre-diagnóstico + ruta de seguimiento + foto, secciones 14-15 y 17) — sin probar en vivo todavía
+- [x] Motor cambiado de Gemini a Groq (`llama-3.3-70b-versatile` texto / `qwen/qwen3.6-27b`
+  visión) — ver sección 17 (hecho: 2026-09-09).
+- [ ] **Poner `GROQ_API_KEY` en Vercel** (Production) — todavía tiene la `GEMINI_API_KEY` de la
+  integración vieja, hay que agregar la nueva.
+- [ ] **Aplicar `0011_ai_chat_images.sql`** al proyecto Supabase real desde el SQL Editor.
 - [ ] Probar el flujo completo del chat en navegador/dispositivo real con sesión, incluyendo que
-  el modelo cierre con el bloque `===RUTA===` bien formado y que aceptar/modificar/descartar un
-  ítem de la ruta se sienta bien (nada de esto se verificó más allá de checks HTTP sin sesión).
+  el modelo cierre con el bloque `===RUTA===` bien formado, que la foto de síntoma funcione contra
+  `qwen/qwen3.6-27b` (modelo "preview" de Groq), y que aceptar/modificar/descartar un ítem de la
+  ruta se sienta bien (nada de esto se verificó más allá de checks HTTP sin sesión).
+- [ ] Foto de síntoma solo está implementada en web — mobile queda pendiente si se quiere ahí
+  también (sección 17).
 - [ ] `EXPO_PUBLIC_WEB_URL` en un build real de EAS — no es un pendiente urgente todavía: el repo
   ni siquiera tiene `apps/mobile/eas.json` (no hay EAS Build configurado), y para probar local
   (`expo start`/Expo Go) ya alcanza con que esté en `apps/mobile/.env.local` (ya está). Solo
@@ -1086,11 +1095,13 @@ bien — este entorno no tiene navegador.
 
 **Pendiente honesto de esta pasada:**
 
-- [ ] **Probar de punta a punta con Gemini real** que el modelo respeta el formato exacto del
+- [x] **Probar de punta a punta con Gemini real** que el modelo respeta el formato exacto del
   bloque `===RUTA===` (JSON parseable, campos correctos) — si alguna vez lo rompe, `parseRoadmap`
   devuelve `null` silenciosamente y la conversación igual cierra con el resumen pero sin ruta
   sugerida (degradación intencional, no un error visible) — vale la pena confirmar qué tan seguido
-  pasa esto en la práctica.
+  pasa esto en la práctica. (descartado: 2026-09-09, se cambió el motor de Gemini a Groq antes de
+  llegar a probar esto en vivo — ver sección 16. La misma verificación queda pendiente, ahora
+  contra Groq.)
 - [ ] El botón de acceso rápido en la tarjeta de mascota no tiene texto, solo el ícono con
   `aria-label`/`title` — no se probó con lector de pantalla real que el label alcance.
 
@@ -1203,9 +1214,10 @@ orden, con el motivo:
    mascota, documentos) para copiar; es la pieza de "subida real de archivos" que más visiblemente
    se nota rota (un campo de URL en medio de una app que ya sube archivos de verdad en todo lo
    demás).
-4. **Probar en vivo el módulo de IA completo** (chat + ruta sugerida) con Gemini real — ya
-   configurado en Vercel, solo falta la sesión de prueba real que no se pudo hacer desde este
-   entorno sin navegador.
+4. **Probar en vivo el módulo de IA completo** (chat + ruta sugerida) — *actualizado 2026-09-09:
+   el motor cambió de Gemini a Groq, ver sección 17; `GROQ_API_KEY` todavía NO está en Vercel
+   (sigue la `GEMINI_API_KEY` vieja) — falta agregarla ahí antes de poder hacer esta prueba, además
+   de la sesión de prueba real que no se pudo hacer desde este entorno sin navegador.*
 5. **Piezas de diseño reales del logo** (favicon/ícono cuadrado, y decidir si la paleta del logo
    se vuelve la paleta de marca) — desbloquea terminar el rebranding de esta pasada.
 6. **Las 4 validaciones de negocio** (entrevistas a cuidadores, entrevistas B2B, prueba de
@@ -1216,3 +1228,65 @@ Lo que NO se recomienda hacer todavía: la feature grande de "franjas reales por
 chequeo de choques" (ítem de decisión de producto, confirmar primero) y cualquier limpieza de
 `0006_drop_deprecated.sql` (fase "contract" de la migración 0005) — ambas son cambios con más
 riesgo que valen una conversación aparte antes de tocarlas.
+
+## 17. Cambio de motor de IA: Gemini → Groq + foto de síntoma en el chat (2026-09-09)
+
+Motivo del cambio: en uso real, el tier gratuito de Gemini se agotaba rápido (429/503 seguidos,
+ver el retry manual que tenía `route.ts` para el error "modelo con mucha demanda" — commit
+`139b016`). Se evaluaron alternativas gratuitas (Groq, OpenRouter, DeepSeek, Kimi/Moonshot,
+Cerebras) y se eligió **Groq**: es el único con un tier gratuito estable y permanente (no un
+trial de créditos que se agota) — 30 requests/minuto, 1.000/día, sin tarjeta — con modelos
+abiertos capaces (`llama-3.3-70b-versatile` para texto) y API compatible con el formato estándar
+de "chat completions", lo que hizo el cambio quirúrgico en vez de una reescritura.
+
+- [x] **Backend migrado de `@google/genai` a `groq-sdk`** en `apps/web/src/app/api/ai/prediagnostico/route.ts`
+  — mismo prompt de sistema, mismo parseo de `===RESUMEN===`/`===RUTA===`, solo cambió el cliente
+  del SDK. El retry manual ante 503 que tenía la integración con Gemini se eliminó: el SDK de
+  Groq ya reintenta automáticamente 429/5xx/timeouts (2 veces por defecto), así que esa lógica
+  quedó redundante.
+- [x] **Foto de síntoma en el chat** (idea 1.1 del banco de ideas de funcionalidades, construida
+  junto con el cambio de motor porque tocaba el mismo archivo): el cuidador puede adjuntar una
+  foto (herida, sarpullido, ojo irritado) a un mensaje — se sube al bucket privado nuevo
+  `ai-chat-images` (`0011_ai_chat_images.sql`, mismo patrón de RLS que `pet-documents`) y el
+  backend genera una URL firmada, la convierte a `data:` URI y se la manda al modelo. Como el
+  tier gratuito de Groq **no tiene ningún modelo de texto con visión** hoy — solo
+  `qwen/qwen3.6-27b` y `qwen/qwen3.8-27b`, ambos en estado "preview" —, el backend usa
+  `qwen/qwen3.6-27b` específicamente para el turno que trae una foto, y vuelve a
+  `llama-3.3-70b-versatile` para el resto. Implementado solo en **web** por ahora — mobile
+  sigue mandando solo texto, queda como pendiente de esta misma sección si se quiere ahí también.
+- [x] **Esquema**: `aiChatMessageSchema` (`packages/shared/src/schemas.ts`) ahora acepta
+  `imagePath` opcional y ya no exige `message` no vacío (un turno puede ser solo la foto) — un
+  `.refine` exige que venga al menos uno de los dos. `AiMessage` (`types.ts`) suma `image_path`.
+- [x] **UI web**: botón de adjuntar foto junto al textarea en `prediagnostico-chat.tsx`, con
+  vista previa local (blob URL, se muestra en la burbuja del propio turno) y validación de
+  tipo/tamaño reusando `validatePhotoFile` de `lib/uploads.ts` (mismo límite de 5MB que la foto de
+  mascota). La subida a Storage ocurre antes de armar el turno en pantalla — si falla, no se
+  muestra un mensaje "fantasma" sin foto real detrás.
+- [x] `GROQ_API_KEY` reemplaza a `GEMINI_API_KEY` como variable de entorno del backend — nunca se
+  usa en el cliente, igual que antes.
+- [x] Se quitó la dependencia `@google/genai` de `apps/web/package.json` (ya no se usa en ningún
+  otro archivo del repo).
+
+**Verificado en este entorno:** typecheck de los tres paquetes (`web`, `mobile`, `shared`) y
+`npm run lint` en `web`, todos limpios después del cambio. `npm audit` muestra 3 vulnerabilidades
+(`next`→`sharp` alta, `eslint`→`js-yaml` alta, `next` crítica) — son de dependencias transitivas
+preexistentes, no relacionadas con `groq-sdk` (que no tiene dependencias propias); no se
+investigaron a fondo en esta pasada, quedan anotadas en tareas abiertas.
+
+**Pendiente honesto de esta pasada** (este entorno no tiene navegador ni las credenciales reales
+de Supabase/Groq, así que nada de esto se probó en vivo):
+
+- [ ] **Poner `GROQ_API_KEY` en Vercel** (Production) — hoy sigue configurada `GEMINI_API_KEY` de
+  la integración anterior, hay que agregar la nueva y en algún momento borrar la vieja.
+- [ ] **Aplicar `0011_ai_chat_images.sql`** al proyecto Supabase real desde el SQL Editor (mismo
+  paso manual que ya hizo falta para `0009`/`0010`).
+- [ ] **Probar el chat completo con Groq real**: que seleccione el modelo de texto correcto y
+  que el flujo con foto (subida real a `qwen/qwen3.6-27b`) funcione — es un modelo "preview" de
+  Groq, no hay garantía de que siga disponible con el mismo nombre indefinidamente; vale la pena
+  confirmar antes de anunciar la función a usuarios reales.
+- [ ] **Mobile no tiene foto de síntoma todavía** — si se quiere ahí también, es replicar el
+  mismo patrón de subida que ya usa `apps/mobile` para fotos de mascota, más el picker de imagen
+  nativo (`expo-image-picker`, ya es dependencia del proyecto).
+- [ ] Revisar las 3 vulnerabilidades de `npm audit` (`next`/`sharp`/`js-yaml`, transitivas) — no
+  parecen introducidas por este cambio, pero no se confirmó si afectan a este proyecto en
+  particular.
