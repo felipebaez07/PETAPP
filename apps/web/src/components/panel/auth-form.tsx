@@ -14,12 +14,12 @@ const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
   { value: 'establecimiento', label: 'Soy prestador veterinario o profesional independiente' },
 ];
 
-export function AuthForm({ mode }: { mode: 'login' | 'registro' }) {
+export function AuthForm({ mode, initialRole }: { mode: 'login' | 'registro'; initialRole?: UserRole }) {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState<UserRole>('propietario');
+  const [role, setRole] = useState<UserRole>(initialRole ?? 'propietario');
   const [status, setStatus] = useState<'idle' | 'submitting' | 'error' | 'check-email'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);

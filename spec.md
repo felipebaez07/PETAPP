@@ -46,9 +46,10 @@ histórico definitivo (ese sigue siendo cada sección numerada de abajo).
 - [ ] Subida real de logo/portada del negocio como archivo (hoy sigue siendo un campo de URL,
   a diferencia de la foto de mascota y los documentos que ya suben archivo de verdad).
 - [ ] Permitir cambiar la foto de una mascota ya existente (hoy `PetForm` solo la pide al crearla).
-- [ ] `/panel/registro` no distingue el CTA "Soy cuidador" vs. "Soy prestador" del home — ambos
-  abren el mismo formulario con "cuidador/a" preseleccionado. Si se quiere, agregar un `?rol=` en
-  la URL que preseleccione la opción correcta.
+- [x] `/panel/registro` ya soporta `?rol=establecimiento` para preseleccionar esa opción del
+  formulario (hecho: 2026-09-09, ver sección 16). Ningún CTA actual del sitio enlaza todavía con
+  ese parámetro (el "Soy prestador" del home sigue yendo a `/unete`, un funnel distinto e
+  intencional) — queda listo para cuando se quiera un enlace directo con el rol ya elegido.
 - [ ] Pantalla de calendario preventivo completo — hoy el Inicio del cuidador (si se agrega, o el
   widget de la ficha de mascota) no pagina más allá de los primeros vencimientos.
 
@@ -74,10 +75,11 @@ histórico definitivo (ese sigue siendo cada sección numerada de abajo).
   (widget "Próxima cita"/"Próximos vencimientos"). Si se quiere push (gratis, pide guardar token de
   dispositivo + un disparador programado) o email (pide cuenta en un proveedor tipo Resend), es una
   decisión de alcance — avisar antes de que alguien empiece a construirlo.
-- [ ] **Franjas de disponibilidad tipo Calendly**: hoy la cita es "fecha/hora libre redondeada a 30
-  min". Si se quiere que el prestador defina franjas reales disponibles y el cuidador elija solo
-  entre esas (con chequeo de choques), es una feature bastante más grande — confirmar antes de
-  empezar.
+- [x]/[ ] **Franjas de disponibilidad**: la parte de UI ya se hizo (2026-09-09, ver sección 16) — el
+  cuidador ahora elige día + franja de una hora (7 a. m.–8 p. m.) en vez de un reloj libre. Lo que
+  sigue pendiente y SÍ es la decisión de producto más grande: que el prestador defina sus franjas
+  reales disponibles (no un rango fijo genérico) y que se chequeen choques contra citas ya
+  confirmadas — eso todavía no existe, confirmar antes de construirlo.
 
 ### 📋 Validación de negocio (no es código, ver sección 8 completa)
 - [ ] 12 entrevistas a cuidadores (≥8 relatan una dificultad reciente y concreta con varios canales)
@@ -560,11 +562,8 @@ Se corrió la skill `code-review` (nivel alto) sobre todo el diff del pivot (`83
   ruta `` `/mascotas/${string}` `` no coincide con las rutas tipadas que genera Expo Router. Parece un
   WIP a medio terminar del pivot mobile (ya existe `app/(tabs)/directorio.tsx` sin commitear). Revisar
   cuando se retome el rediseño de mobile (spec.md sección 6).
-- [ ] (2026-09-01) `AuthForm` (`components/panel/auth-form.tsx`) sigue creando cuentas con
-  correo/contraseña o Google sin distinguir el flujo de "Soy cuidador" vs. "Soy prestador" desde el CTA
-  del home (`/panel/registro` siempre abre el mismo formulario con el radio ya en "cuidador/a" por
-  defecto). Si se quiere una landing de registro específica por rol, falta un `?rol=` en la URL que
-  preseleccione la opción — no se hizo por alcance/tiempo de esta tarea.
+- [x] (2026-09-01, resuelto 2026-09-09) `AuthForm` ya acepta `initialRole` y `/panel/registro` lee
+  `?rol=establecimiento` de la URL para preseleccionarlo — ver sección 16.
 
 - [ ] (2026-09-01) **Bug de tooling, no de producto**: `.expo/types/router.d.ts` (typed routes de expo-router en `apps/mobile`) no reconoce `app/mascotas/[id].tsx` como ruta dinámica después de `npx expo export` — la queda como string literal en vez de plantilla `${string}`, mientras que `establecimiento/[id]` sí se reconoce bien. El archivo generado también lista rutas de `apps/web` (Next.js) mezcladas, lo que sugiere que el escaneo de typed routes está cruzando directorios del monorepo más allá de `apps/mobile/app`. Se dejó un cast puntual (`as any`) en las dos llamadas a `router.push(`/mascotas/${id}`)` (`components/PetCard.tsx`, `app/(tabs)/index.tsx`) para no bloquear el typecheck. Pendiente: investigar la configuración de `watchFolders`/rootDir de Metro en el monorepo y quitar el cast cuando se resuelva.
 - [ ] (2026-09-01) La ficha de mascota (`app/mascotas/[id].tsx`) y el resumen de Inicio distinguen demo vs. real por el flag `isDemo` de `PetsContext` (no por `isSupabaseConfigured`), porque las mascotas de ejemplo (`demo-pet-1`/`demo-pet-2`) no son UUIDs válidos y romperían cualquier consulta real. Si en el futuro se agrega un modo "invitado con Supabase conectado pero sin sesión todavía", revisar que esta distinción se mantenga correcta.
@@ -1094,3 +1093,114 @@ bien — este entorno no tiene navegador.
   pasa esto en la práctica.
 - [ ] El botón de acceso rápido en la tarjeta de mascota no tiene texto, solo el ícono con
   `aria-label`/`title` — no se probó con lector de pantalla real que el label alcance.
+
+## 16. Rebranding a Almanimapp + selector de citas por franjas + `?rol=` en registro (2026-09-09)
+
+Pedido del usuario, en un solo mensaje: renombrar la app, reemplazar el picker de hora libre de
+citas por franjas fijas, seguir puliendo el diseño con criterios Apple, mejorar mobile "en todo
+sentido", y barrer `spec.md` para hacer pendientes concretos y recomendar el resto. Se investigó
+primero (un agente Explore) dónde vive cada cosa antes de tocar código, para no adivinar alcance.
+
+- [x] **Rebranding**: `APP_NAME` (`packages/shared/src/constants.ts`) pasa de `'PETAPP'` a
+  `'Almanimapp'` — es la única fuente de verdad, así que este solo cambio ya actualiza navbar,
+  footer, metadata del `<head>`, landing, términos, política de privacidad y las pantallas de
+  mobile que lo usan. Además 3 strings que no pasaban por esa constante: `apps/mobile/app.json`
+  (`name` y `photosPermission`) y el mensaje prellenado de WhatsApp en `packages/shared/src/whatsapp.ts`.
+  Se quitó también el "(nombre provisional)" de la política de privacidad, ya no aplica con el
+  nombre definido. **Deliberadamente NO se tocaron**: los nombres de paquete `@petapp/shared` /
+  `@petapp/web` / `@petapp/mobile` (identificadores internos, renombrarlos toca cada import del
+  monorepo sin ningún beneficio visible), el `slug`/`scheme` de Expo (`petapp`/`petapp://` — el
+  scheme ya está registrado como redirect URI de OAuth en el dashboard de Supabase, cambiarlo
+  rompería el login con Google en mobile hasta actualizar esa config a mano), ni el nombre del
+  repositorio de GitHub o del proyecto de Vercel (acciones externas, se avisó que no se tocan sin
+  pedirlo explícitamente) (hecho: 2026-09-09).
+- [x] **Logo nuevo**: la imagen que pegó el usuario (fondo negro, ave + mariposa con glow de
+  colores, texto "Almanim" + "App") se guardó como asset en ambas apps
+  (`apps/web/public/brand/almanimapp-logo.png`, `apps/mobile/assets/images/almanimapp-logo.png`) y
+  se usa como una tarjeta redondeada de fondo negro arriba del hero de la landing web
+  (`app/page.tsx`) y arriba de la pantalla de bienvenida de mobile (`(tabs)/perfil.tsx`, paso
+  `entryStep === 'choice'`). **No se usó** como ícono chico del navbar ni como favicon/ícono de
+  app: es una ilustración landscape con fondo negro pensada para verse grande, no una marca
+  cuadrada con fondo transparente — reducirla a 24-32px la dejaría ilegible. El navbar sigue con
+  el ícono `PawPrint` + texto por ahora. **Recomendación** (no se hizo, necesita una pieza de
+  diseño aparte): pedir/generar una versión cuadrada, solo el glifo (sin el texto ni tanto fondo
+  negro), para usar como favicon/ícono de app — con la imagen actual no es posible recortarla bien
+  sin herramientas de edición de imagen, que este entorno no tiene (hecho: 2026-09-09).
+- [x] **Selector de citas por franjas** (reemplaza el "reloj completo"): nuevos helpers
+  compartidos en `packages/shared/src/utils.ts` (`appointmentSlotHours`, `formatAppointmentSlotLabel`,
+  rango fijo 7 a.m.–8 p.m.) y un componente nuevo por plataforma —
+  `apps/web/src/components/directorio/appointment-slot-picker.tsx` (día con `<input type="date">`
+  + grid de botones de franja, con transición de entrada tipo `SPRING_SHEET`) y
+  `apps/mobile/components/ui/AppointmentSlotPicker.tsx` (mismo patrón, con el picker nativo de
+  fecha ya usado en `DatePickerField` pero sin el paso de hora libre). Ambos siguen escribiendo el
+  mismo campo `preferred_datetime` de siempre — es un cambio de widget, no de esquema ni de
+  Server Action. Reemplazó al `<input type="datetime-local">` en
+  `components/directorio/service-request-form.tsx` (web) y al `DatePickerField mode="datetime"` en
+  `app/establecimiento/[id].tsx` (mobile) — `DatePickerField` en sí no se tocó, sigue usándose tal
+  cual para fechas sin hora (vacunas, controles). **Ojo con el alcance**: esto NO respeta el
+  horario real de cada prestador (rango fijo genérico para todos) ni chequea choques con otras
+  citas — eso es la "franjas tipo Calendly" que ya estaba anotada como decisión de producto más
+  grande a confirmar antes de construir (ver índice de tareas abiertas) (hecho: 2026-09-09).
+- [x] **`?rol=` en `/panel/registro`**: pendiente ya anotado dos veces en el archivo (índice +
+  sección 9) — `AuthForm` acepta `initialRole` y la página lee `searchParams.rol` para
+  preseleccionar "prestador" en vez de que la persona tenga que tocar el radio a mano. Ningún CTA
+  del sitio enlaza todavía con `?rol=establecimiento` (el "Soy prestador" del home sigue yendo a
+  `/unete`, un funnel distinto e intencional, no un bug) — queda listo como capacidad para cuando
+  se quiera un enlace directo (hecho: 2026-09-09).
+
+**Verificación de esta pasada:** `npm run typecheck` en verde en las 3 workspaces,
+`cd apps/web && npm run build` sin errores (mismas 22 rutas de siempre, sin rutas nuevas),
+`npx expo export --platform web` dentro de `apps/mobile` sin errores (confirma además que el
+`require('@/assets/images/almanimapp-logo.png')` con el alias `@/` resuelve bien vía Metro).
+
+**Pendiente honesto de esta pasada:**
+
+- [ ] **No se probó visualmente en un navegador/dispositivo real** — ni el logo en el hero/welcome,
+  ni el selector de franjas, ni el `?rol=`. Este entorno no tiene navegador; todo lo de arriba pasó
+  build/typecheck pero no una mirada humana todavía.
+- [ ] **"Seguir mejorando todas las interfaces con Apple design"** es un pedido abierto y muy
+  grande — en esta pasada se aplicó a las piezas nuevas (transición del grid de franjas, entrada
+  del logo), pero NO se hizo una auditoría/rediseño de cada pantalla existente de las dos apps.
+  Eso es una iniciativa aparte, más grande que una sola pasada — recomendación: abordarla
+  pantalla por pantalla, con la skill `apple-design`/`impeccable` como referencia, empezando por
+  las pantallas de mayor tráfico (directorio, ficha de mascota, panel del prestador).
+- [ ] **Favicon/ícono de app reales con el logo nuevo** — sigue pendiente conseguir/generar una
+  versión cuadrada solo-glifo del logo (ver nota arriba). Hoy favicon/ícono siguen siendo los
+  genéricos previos al rebranding.
+- [ ] La paleta de colores del logo (teal/azul/coral/dorado/morado) no se reflejó en los tokens de
+  diseño (`globals.css`/`COLORS` de mobile) — se usó el logo como imagen, pero el sistema de color
+  de la app sigue siendo el de antes del rebranding. Si se quiere que la paleta del logo informe
+  los colores de marca de verdad, es un cambio de diseño aparte (afecta `COLORS`/tokens Tailwind
+  usados en todas partes) que vale la pena confirmar antes de tocar, no algo para decidir solo.
+
+### Recomendaciones priorizadas (no implementadas esta pasada)
+
+Pedido explícito del usuario: barrer `spec.md` y recomendar qué seguir. De todo lo que ya estaba
+anotado como pendiente (ver índice al inicio del archivo), esto es lo que más vale la pena en este
+orden, con el motivo:
+
+1. **Activar "Confirm email" en Supabase Auth** (🔴 seguridad) — hoy cualquiera puede registrarse
+   con un correo que no le pertenece y usarlo de inmediato. Es un toggle en el dashboard de
+   Supabase, no código — el más barato de resolver de toda la lista y el de mayor riesgo real si
+   el piloto ya tiene usuarios reales.
+2. **Migración RLS para "próximos vencimientos" en el panel del prestador** — mencionado tres
+   veces en el archivo (secciones 5, 9 y el índice), sigue bloqueado. Vale la pena resolverlo con
+   la skill `db-guardian` antes de seguir agregando features sobre el panel del prestador, para no
+   acumular más deuda sobre el mismo bloqueo.
+3. **Subida real de logo/portada del negocio como archivo** — ya existe el patrón (foto de
+   mascota, documentos) para copiar; es la pieza de "subida real de archivos" que más visiblemente
+   se nota rota (un campo de URL en medio de una app que ya sube archivos de verdad en todo lo
+   demás).
+4. **Probar en vivo el módulo de IA completo** (chat + ruta sugerida) con Gemini real — ya
+   configurado en Vercel, solo falta la sesión de prueba real que no se pudo hacer desde este
+   entorno sin navegador.
+5. **Piezas de diseño reales del logo** (favicon/ícono cuadrado, y decidir si la paleta del logo
+   se vuelve la paleta de marca) — desbloquea terminar el rebranding de esta pasada.
+6. **Las 4 validaciones de negocio** (entrevistas a cuidadores, entrevistas B2B, prueba de
+   usabilidad, piloto operativo) — no son código, pero son la única forma de saber si todo lo
+   demás de esta lista importa de verdad antes de seguir invirtiendo tiempo de desarrollo.
+
+Lo que NO se recomienda hacer todavía: la feature grande de "franjas reales por prestador con
+chequeo de choques" (ítem de decisión de producto, confirmar primero) y cualquier limpieza de
+`0006_drop_deprecated.sql` (fase "contract" de la migración 0005) — ambas son cambios con más
+riesgo que valen una conversación aparte antes de tocarlas.
