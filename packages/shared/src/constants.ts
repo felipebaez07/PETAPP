@@ -9,7 +9,7 @@ import type {
   ProviderPlanStatus,
 } from './types';
 
-export const APP_NAME = 'PETAPP';
+export const APP_NAME = 'Almanimapp';
 export const APP_TAGLINE = 'Seguimiento preventivo, documentos y prestadores verificados en un solo lugar';
 export const PILOT_CITY = 'Ibagué';
 

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "PetApp (piloto)",
+    "name": "Almanimapp",
     "slug": "petapp-mobile",
     "version": "0.1.0",
     "orientation": "portrait",
@@ -38,7 +38,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "PETAPP necesita acceder a tus fotos para elegir la foto de tu mascota o subir un documento."
+          "photosPermission": "Almanimapp necesita acceder a tus fotos para elegir la foto de tu mascota o subir un documento."
         }
       ]
     ],

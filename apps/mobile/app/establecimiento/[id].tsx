@@ -16,7 +16,7 @@ import { useForm } from 'react-hook-form';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
-import { DatePickerField } from '@/components/ui/DatePickerField';
+import { AppointmentSlotPicker } from '@/components/ui/AppointmentSlotPicker';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { RemoteImage } from '@/components/ui/RemoteImage';
@@ -325,11 +325,10 @@ export default function EstablishmentDetailScreen() {
                     </View>
                   </View>
                 ) : null}
-                <DatePickerField
+                <AppointmentSlotPicker
                   control={dateControl}
                   name="preferred_datetime"
                   label="Fecha y hora preferida (opcional)"
-                  mode="datetime"
                   helperText="Si no eliges una, coordinamos por WhatsApp."
                 />
                 <View className="gap-1.5">

@@ -85,6 +85,30 @@ export function roundToNearestHalfHour(date: Date): Date {
   return new Date(Math.round(date.getTime() / halfHourMs) * halfHourMs);
 }
 
+// Rango del selector de franjas horarias de citas (reemplaza el "reloj completo" del
+// datetime picker libre): el cuidador elige un día y después un bloque de una hora dentro de
+// este rango, nunca un minuto suelto. 7 a. m.–8 p. m. cubre el horario habitual de atención sin
+// depender todavía de los horarios reales de cada prestador (esa versión más completa — franjas
+// según la disponibilidad real del prestador, con chequeo de choques — sigue pendiente y anotada
+// en spec.md como decisión de producto más grande).
+export const APPOINTMENT_SLOT_START_HOUR = 7;
+export const APPOINTMENT_SLOT_END_HOUR = 20;
+
+/** Horas de inicio de cada franja disponible, ej. [7, 8, 9, ..., 19] para las 7 a. m.–8 p. m. */
+export function appointmentSlotHours(): number[] {
+  const hours: number[] = [];
+  for (let h = APPOINTMENT_SLOT_START_HOUR; h < APPOINTMENT_SLOT_END_HOUR; h++) hours.push(h);
+  return hours;
+}
+
+/** "1:00 p. m. – 2:00 p. m." para la hora de inicio dada (0-23). */
+export function formatAppointmentSlotLabel(startHour: number): string {
+  const start = new Date(2000, 0, 1, startHour, 0);
+  const end = new Date(2000, 0, 1, startHour + 1, 0);
+  const fmt = (d: Date) => d.toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' });
+  return `${fmt(start)} – ${fmt(end)}`;
+}
+
 export function formatPhoneForDisplay(phone: string | null | undefined): string {
   if (!phone) return '';
   const digits = phone.replace(/\D/g, '');

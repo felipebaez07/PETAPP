@@ -2,7 +2,7 @@
   "name": "petapp",
   "private": true,
   "version": "0.1.0",
-  "description": "Plataforma Integral de Bienestar Animal — Fase 1 · Piloto Ibagué (nombre provisional: PetApp)",
+  "description": "Almanimapp — Plataforma Integral de Bienestar Animal, Fase 1 · Piloto Ibagué",
   "workspaces": [
     "apps/*",
     "packages/*"

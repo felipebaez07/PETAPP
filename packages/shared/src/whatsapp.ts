@@ -1,3 +1,5 @@
+import { APP_NAME } from './constants';
+
 /**
  * En el piloto, la confirmación final de una solicitud de cita puede reforzarse
  * por mensajería directa. En vez de un motor de reservas con pago en línea,
@@ -11,7 +13,7 @@ export function buildWhatsAppLink(params: {
   petName?: string;
 }): string {
   const { whatsappNumber, establishmentName, serviceName, petName } = params;
-  const lines = [`Hola, vengo de PETAPP y quisiera solicitar una cita en ${establishmentName}.`];
+  const lines = [`Hola, vengo de ${APP_NAME} y quisiera solicitar una cita en ${establishmentName}.`];
   if (serviceName) lines.push(`Servicio de interés: ${serviceName}.`);
   if (petName) lines.push(`Mascota: ${petName}.`);
   const text = encodeURIComponent(lines.join(' '));

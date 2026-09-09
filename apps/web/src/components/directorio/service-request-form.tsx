@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { roundToNearestHalfHour, type Service, type Pet } from '@petapp/shared';
 import { SPRING_DEFAULT, REDUCED_MOTION_TRANSITION } from '@/lib/motion';
 import { createServiceRequest } from '@/app/directorio/[slug]/actions';
+import { AppointmentSlotPicker } from '@/components/directorio/appointment-slot-picker';
 
 export function ServiceRequestForm({
   establishmentId,
@@ -106,17 +107,7 @@ export function ServiceRequestForm({
           </select>
         </div>
       )}
-      <div className="space-y-1.5">
-        <Label htmlFor="preferred_datetime_local">Fecha y hora preferida (opcional)</Label>
-        <input
-          id="preferred_datetime_local"
-          name="preferred_datetime_local"
-          type="datetime-local"
-          step={1800}
-          className="w-full rounded-sm border border-input bg-card px-3 py-2 text-sm text-foreground"
-        />
-        <p className="text-xs text-muted-foreground">Si no eliges una, coordinamos por WhatsApp.</p>
-      </div>
+      <AppointmentSlotPicker />
       <div className="space-y-1.5">
         <Label htmlFor="notes">Notas (opcional)</Label>
         <Textarea id="notes" name="notes" placeholder="Ej. horario preferido, motivo de la visita" rows={2} />

@@ -21,8 +21,8 @@ export default function PrivacyPolicyPage() {
         <section>
           <h2 className="font-heading text-lg font-semibold text-foreground">1. Responsable del tratamiento</h2>
           <p className="mt-2">
-            [Razón social / nombre legal pendiente de definir], operando la plataforma {APP_NAME} (nombre
-            provisional) como piloto local en {PILOT_CITY}, es responsable del tratamiento de los datos
+            [Razón social / nombre legal pendiente de definir], operando la plataforma {APP_NAME} como
+            piloto local en {PILOT_CITY}, es responsable del tratamiento de los datos
             personales recolectados a través de la aplicación web y móvil, de conformidad con la Ley 1581
             de 2012, el Decreto 1377 de 2013 y demás normas que las modifiquen o complementen.
           </p>

@@ -14,7 +14,7 @@ import {
   UserRound,
 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Image, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 
@@ -277,6 +277,15 @@ export default function ProfileScreen() {
           title={`Bienvenido a ${APP_NAME}`}
           subtitle="Seguimiento preventivo, documentos y prestadores verificados en un solo lugar"
         />
+        <View className="items-center pt-5">
+          <View className="overflow-hidden rounded-2xl bg-black shadow-sm">
+            <Image
+              source={require('@/assets/images/almanimapp-logo.png')}
+              style={{ width: 160, height: 100 }}
+              resizeMode="cover"
+            />
+          </View>
+        </View>
         <View className="gap-3 p-5">
           {WELCOME_OPTIONS.map((option, index) => (
             <Animated.View
