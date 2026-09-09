@@ -82,17 +82,20 @@ export default async function HomePage() {
       {/* Hero — único lugar del sitio con gradiente decorativo, por regla del design system */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-secondary/80 text-primary-foreground">
         <div className="mx-auto max-w-5xl px-4 py-16 text-center sm:px-6 sm:py-24">
-          <div className="mx-auto mb-6 w-fit overflow-hidden rounded-2xl bg-black shadow-lg shadow-black/30 ring-1 ring-white/10">
-            <Image
-              src="/brand/almanimapp-logo.png"
-              alt={APP_NAME}
-              width={180}
-              height={120}
-              className="h-24 w-auto object-cover sm:h-28"
-              priority
-            />
-          </div>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium">
+          <Image
+            src="/brand/almanimapp-icon.png"
+            alt=""
+            aria-hidden
+            width={293}
+            height={174}
+            className="mx-auto mb-2 h-20 w-auto sm:h-24"
+            priority
+          />
+          <p className="font-heading text-2xl font-bold sm:text-3xl">
+            <span className="text-white">Almanim</span>
+            <span className="text-accent">App</span>
+          </p>
+          <span className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium">
             <MapPinned className="size-3.5" /> Piloto en {PILOT_CITY}
           </span>
           <h1 className="mx-auto mt-5 max-w-3xl font-heading text-4xl font-bold sm:text-5xl">

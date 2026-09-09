@@ -1116,16 +1116,26 @@ primero (un agente Explore) dónde vive cada cosa antes de tocar código, para n
   pedirlo explícitamente) (hecho: 2026-09-09).
 - [x] **Logo nuevo**: la imagen que pegó el usuario (fondo negro, ave + mariposa con glow de
   colores, texto "Almanim" + "App") se guardó como asset en ambas apps
-  (`apps/web/public/brand/almanimapp-logo.png`, `apps/mobile/assets/images/almanimapp-logo.png`) y
-  se usa como una tarjeta redondeada de fondo negro arriba del hero de la landing web
-  (`app/page.tsx`) y arriba de la pantalla de bienvenida de mobile (`(tabs)/perfil.tsx`, paso
-  `entryStep === 'choice'`). **No se usó** como ícono chico del navbar ni como favicon/ícono de
-  app: es una ilustración landscape con fondo negro pensada para verse grande, no una marca
-  cuadrada con fondo transparente — reducirla a 24-32px la dejaría ilegible. El navbar sigue con
-  el ícono `PawPrint` + texto por ahora. **Recomendación** (no se hizo, necesita una pieza de
-  diseño aparte): pedir/generar una versión cuadrada, solo el glifo (sin el texto ni tanto fondo
-  negro), para usar como favicon/ícono de app — con la imagen actual no es posible recortarla bien
-  sin herramientas de edición de imagen, que este entorno no tiene (hecho: 2026-09-09).
+  (`apps/web/public/brand/almanimapp-logo.png`, `apps/mobile/assets/images/almanimapp-logo.png`)
+  (hecho: 2026-09-08).
+- [x] **Fondo transparente del glifo** (2026-09-09, feedback del usuario tras ver el logo con caja
+  negra sobre el hero azul): se generó `almanimapp-icon.png` (ambas apps) con un script de Python
+  (Pillow, instalado en este entorno con `pip install`) usando la técnica de "premultiplied alpha"
+  — alpha = canal máximo (brillo) de cada píxel, color des-multiplicado a partir de ahí. Esto
+  reproduce el efecto de glow aditivo sobre cualquier fondo oscuro/saturado (se probó compositando
+  el resultado sobre el azul real del hero antes de usarlo) sin la caja negra. Se recortó además
+  solo el glifo (ave + mariposa), sin el texto "Almanim App" del render original — ese texto tenía
+  muy poco brillo en la imagen fuente (pensado para leerse solo sobre negro puro) y con esta
+  técnica queda casi ilegible sobre cualquier otro fondo. El wordmark "AlmanimApp" ahora se
+  renderiza aparte como texto real (tipografía de la app, "Almanim" en blanco/foreground + "App"
+  en `accent`/`#D97706`), no como parte de la imagen — más nítido, accesible y no depende del color
+  de fondo. **Probado**: se compositó el PNG resultante sobre azul (bien) y sobre blanco (mal — el
+  glow se lava y pierde el efecto, confirmado visualmente) — por eso el ícono transparente solo se
+  usa sobre fondos oscuros/saturados (`bg-primary` en mobile, el gradiente del hero en web), nunca
+  sobre el navbar claro. **Recomendación** (sigue en pie): para el navbar/favicon/ícono de app
+  hace falta una pieza de diseño real — una versión pensada desde el origen con fondo transparente
+  de verdad (no derivada de un glow-sobre-negro), o al menos una variante de un solo color sólido
+  que sí funcione sobre fondos claros.
 - [x] **Selector de citas por franjas** (reemplaza el "reloj completo"): nuevos helpers
   compartidos en `packages/shared/src/utils.ts` (`appointmentSlotHours`, `formatAppointmentSlotLabel`,
   rango fijo 7 a.m.–8 p.m.) y un componente nuevo por plataforma —
@@ -1164,9 +1174,11 @@ primero (un agente Explore) dónde vive cada cosa antes de tocar código, para n
   Eso es una iniciativa aparte, más grande que una sola pasada — recomendación: abordarla
   pantalla por pantalla, con la skill `apple-design`/`impeccable` como referencia, empezando por
   las pantallas de mayor tráfico (directorio, ficha de mascota, panel del prestador).
-- [ ] **Favicon/ícono de app reales con el logo nuevo** — sigue pendiente conseguir/generar una
-  versión cuadrada solo-glifo del logo (ver nota arriba). Hoy favicon/ícono siguen siendo los
-  genéricos previos al rebranding.
+- [ ] **Favicon/ícono de app reales con el logo nuevo** — ya existe `almanimapp-icon.png`
+  transparente (ver arriba), pero es landscape (1172×695) y solo se probó bien sobre fondos
+  oscuros/saturados, no sirve tal cual para un favicon/ícono de app (que necesita una versión
+  cuadrada y funcionar sobre cualquier fondo, incluido claro). Hoy favicon/ícono de la app siguen
+  siendo los genéricos previos al rebranding.
 - [ ] La paleta de colores del logo (teal/azul/coral/dorado/morado) no se reflejó en los tokens de
   diseño (`globals.css`/`COLORS` de mobile) — se usó el logo como imagen, pero el sistema de color
   de la app sigue siendo el de antes del rebranding. Si se quiere que la paleta del logo informe
