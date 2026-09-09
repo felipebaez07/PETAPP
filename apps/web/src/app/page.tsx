@@ -82,13 +82,19 @@ export default async function HomePage() {
       {/* Hero — único lugar del sitio con gradiente decorativo, por regla del design system */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-secondary/80 text-primary-foreground">
         <div className="mx-auto max-w-5xl px-4 py-16 text-center sm:px-6 sm:py-24">
+          {/* `unoptimized`: el pipeline de optimización de Next.js (Sharp) reduce este PNG a una
+              paleta de 256 colores para ahorrar peso — para una foto normal no se nota, pero acá
+              arruina el degradado suave del glow (se ve borroso/con bandas de color). El archivo
+              original pesa ~950KB, aceptable para un logo decorativo que carga una sola vez en el
+              hero de la landing. */}
           <Image
             src="/brand/almanimapp-icon.png"
             alt=""
             aria-hidden
-            width={293}
-            height={174}
-            className="mx-auto mb-2 h-20 w-auto sm:h-24"
+            width={1172}
+            height={695}
+            unoptimized
+            className="mx-auto mb-2 h-24 w-auto sm:h-28"
             priority
           />
           <p className="font-heading text-2xl font-bold sm:text-3xl">
