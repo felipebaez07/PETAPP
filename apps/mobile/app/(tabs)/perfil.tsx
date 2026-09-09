@@ -277,18 +277,12 @@ export default function ProfileScreen() {
           title={`Bienvenido a ${APP_NAME}`}
           subtitle="Seguimiento preventivo, documentos y prestadores verificados en un solo lugar"
         />
-        <View className="items-center gap-2 pt-6">
-          <View className="items-center justify-center rounded-2xl bg-primary px-6 py-4 shadow-sm">
-            <Image
-              source={require('@/assets/images/almanimapp-icon.png')}
-              style={{ width: 140, height: 83 }}
-              resizeMode="contain"
-            />
-          </View>
-          <Text className="font-headingBold text-lg">
-            <Text className="text-foreground">Almanim</Text>
-            <Text className="text-accent">App</Text>
-          </Text>
+        <View className="items-center pt-6">
+          <Image
+            source={require('@/assets/images/almanimapp-lockup.png')}
+            style={{ width: 200, height: 142 }}
+            resizeMode="contain"
+          />
         </View>
         <View className="gap-3 p-5">
           {WELCOME_OPTIONS.map((option, index) => (

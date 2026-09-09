@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { APP_NAME, PILOT_CITY } from '@petapp/shared';
 
 export function Footer() {
@@ -6,7 +7,10 @@ export function Footer() {
     <footer className="border-t border-border bg-card">
       <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div>
-          <p className="font-heading font-semibold text-foreground">{APP_NAME}</p>
+          <p className="flex items-center gap-2 font-heading font-semibold text-foreground">
+            <Image src="/brand/almanimapp-icon-small.png" alt="" aria-hidden width={240} height={167} unoptimized className="h-5 w-auto opacity-80" />
+            {APP_NAME}
+          </p>
           <p className="text-sm text-muted-foreground">
             Piloto local en {PILOT_CITY} · Fase 1. Seguimiento preventivo y directorio veterinario verificado.
           </p>

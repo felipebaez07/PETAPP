@@ -1132,10 +1132,41 @@ primero (un agente Explore) dónde vive cada cosa antes de tocar código, para n
   de fondo. **Probado**: se compositó el PNG resultante sobre azul (bien) y sobre blanco (mal — el
   glow se lava y pierde el efecto, confirmado visualmente) — por eso el ícono transparente solo se
   usa sobre fondos oscuros/saturados (`bg-primary` en mobile, el gradiente del hero en web), nunca
-  sobre el navbar claro. **Recomendación** (sigue en pie): para el navbar/favicon/ícono de app
-  hace falta una pieza de diseño real — una versión pensada desde el origen con fondo transparente
-  de verdad (no derivada de un glow-sobre-negro), o al menos una variante de un solo color sólido
-  que sí funcione sobre fondos claros.
+  sobre el navbar claro.
+- [x] **Logo definitivo con transparencia real** (2026-09-09, mismo día — el usuario pasó una
+  versión nueva del logo, estilo flat/vectorial en vez de glow: ave + pez + mariposa + venado,
+  con el wordmark "Almanim"/"App" incluido). Sorpresa al procesarla: el PNG que compartió tenía
+  **fondo de cuadros pintado en los píxeles, no transparencia real** (`img.mode == 'RGB'`, sin
+  canal alfa — problema conocido de los generadores de imagen cuando se les pide "fondo
+  transparente", dibujan el checkerboard como textura en vez de exportar alfa de verdad). Se
+  recuperó con un segundo script de Python: máscara por saturación (canal máximo - canal mínimo
+  de cada píxel) en vez de por color de referencia — el fondo es siempre casi neutro/gris pase lo
+  que pase de brillo, mientras que todo el arte real (teal, azul, rojo, dorado, navy, morado) es
+  bien saturado; una primera versión que comparaba contra 2 colores de referencia dejaba un
+  "ruido"/textura de cuadros residual visible, la de saturación salió limpia sobre azul, blanco y
+  fondo oscuro (probado los tres). A diferencia del logo con glow, **este sí funciona bien sobre
+  cualquier fondo**, incluido blanco — desbloqueó reemplazar el favicon (`apps/web/src/app/icon.png`,
+  reemplaza el `icon.svg` genérico anterior) y agregar el ícono al navbar/footer de web (antes
+  solo se podía en el hero/fondos oscuros). Assets nuevos en ambas apps:
+  `almanimapp-lockup.png` (ícono + texto completo, para heroes/pantallas de bienvenida),
+  `almanimapp-icon.png` (solo el glifo, transparente, alta resolución), `almanimapp-icon-small.png`
+  (mismo glifo pre-redimensionado a 240px de ancho con Pillow/LANCZOS — para navbar/footer, que
+  cargan en cada página; evita mandar el archivo de ~900KB completo solo para mostrarlo a 20-28px).
+  Los archivos viejos derivados del glow (`almanimapp-logo.png`, la versión "glow" de
+  `almanimapp-icon.png`) se borraron por quedar sin uso. **No se tocó** el ícono nativo de la app
+  mobile (`assets/images/icon.png` y las capas de adaptive icon de Android) ni el splash screen —
+  eso sí se actualizó fue el favicon del build web de Expo (`assets/images/favicon.png`). El ícono
+  nativo real es una decisión de mayor riesgo (afecta el ícono instalado en el teléfono, con
+  máscaras de Android que no se pueden previsualizar sin un dispositivo/emulador real) — queda
+  como recomendación, no como algo para decidir solo.
+- [x] **Integrado en zonas distintas, con sutileza** (pedido explícito del usuario): hero de la
+  landing (`app/page.tsx`, ahora usa el lockup completo en una sola imagen en vez de ícono+texto
+  manual separados), navbar (`components/site/navbar.tsx`, ícono chico junto al nombre, ya
+  funciona sobre el fondo claro del header gracias al fondo transparente real), footer
+  (`components/site/footer.tsx`, ícono chico con `opacity-80` junto al nombre, bien discreto),
+  pantalla de bienvenida de mobile (`(tabs)/perfil.tsx`, lockup completo, ya no necesita el
+  contenedor oscuro de antes). Deliberadamente NO se puso en cada pantalla/header de mobile
+  (`ScreenHeader` se usa en todas partes — ponerlo ahí se sentiría repetitivo, no sutil).
 - [x] **Selector de citas por franjas** (reemplaza el "reloj completo"): nuevos helpers
   compartidos en `packages/shared/src/utils.ts` (`appointmentSlotHours`, `formatAppointmentSlotLabel`,
   rango fijo 7 a.m.–8 p.m.) y un componente nuevo por plataforma —
@@ -1174,11 +1205,15 @@ primero (un agente Explore) dónde vive cada cosa antes de tocar código, para n
   Eso es una iniciativa aparte, más grande que una sola pasada — recomendación: abordarla
   pantalla por pantalla, con la skill `apple-design`/`impeccable` como referencia, empezando por
   las pantallas de mayor tráfico (directorio, ficha de mascota, panel del prestador).
-- [ ] **Favicon/ícono de app reales con el logo nuevo** — ya existe `almanimapp-icon.png`
-  transparente (ver arriba), pero es landscape (1172×695) y solo se probó bien sobre fondos
-  oscuros/saturados, no sirve tal cual para un favicon/ícono de app (que necesita una versión
-  cuadrada y funcionar sobre cualquier fondo, incluido claro). Hoy favicon/ícono de la app siguen
-  siendo los genéricos previos al rebranding.
+- [x] **Favicon web resuelto** con el logo definitivo (`apps/web/src/app/icon.png`) — ya no es el
+  genérico anterior. Probado a 16/32/64px: a 16-32px se lee como una mancha de color reconocible
+  y distintiva, no como los animales individuales (esperable para un logo con este nivel de
+  detalle a ese tamaño, no un defecto de esta pasada).
+- [ ] **Ícono nativo real de la app mobile** (`assets/images/icon.png` + capas de adaptive icon de
+  Android) sigue sin tocarse — es una decisión de mayor riesgo que el favicon web: afecta el
+  ícono instalado en el teléfono, con máscaras de forma de Android (círculo, squircle, etc.) que
+  no se pueden previsualizar sin un dispositivo/emulador real. Si se quiere actualizar, probarlo
+  en un build real antes de confiar en cómo se ve.
 - [ ] La paleta de colores del logo (teal/azul/coral/dorado/morado) no se reflejó en los tokens de
   diseño (`globals.css`/`COLORS` de mobile) — se usó el logo como imagen, pero el sistema de color
   de la app sigue siendo el de antes del rebranding. Si se quiere que la paleta del logo informe
@@ -1206,8 +1241,10 @@ orden, con el motivo:
 4. **Probar en vivo el módulo de IA completo** (chat + ruta sugerida) con Gemini real — ya
    configurado en Vercel, solo falta la sesión de prueba real que no se pudo hacer desde este
    entorno sin navegador.
-5. **Piezas de diseño reales del logo** (favicon/ícono cuadrado, y decidir si la paleta del logo
-   se vuelve la paleta de marca) — desbloquea terminar el rebranding de esta pasada.
+5. **Ícono nativo real de la app mobile** con el logo definitivo (favicon web ya resuelto esta
+   pasada) — necesita probarse en un dispositivo/emulador real por las máscaras de Android. Y
+   decidir si la paleta del logo (teal/azul/rojo/dorado/morado) se vuelve la paleta de marca de
+   verdad en vez de solo usarse como imagen — cambio de diseño aparte, confirmar antes de tocar.
 6. **Las 4 validaciones de negocio** (entrevistas a cuidadores, entrevistas B2B, prueba de
    usabilidad, piloto operativo) — no son código, pero son la única forma de saber si todo lo
    demás de esta lista importa de verdad antes de seguir invirtiendo tiempo de desarrollo.
