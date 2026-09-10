@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { PawPrint, LogOut } from 'lucide-react';
+import Image from 'next/image';
+import { LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { APP_NAME } from '@petapp/shared';
 import { getCurrentUser } from '@/lib/auth';
@@ -21,7 +22,7 @@ export async function Navbar() {
     <header className="sticky top-0 z-40 border-b border-border bg-card/70 backdrop-blur-[20px] backdrop-saturate-[1.8] dark:bg-card/75">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <Link href="/" className="flex items-center gap-2 font-heading text-lg font-bold text-primary">
-          <PawPrint className="size-6" />
+          <Image src="/brand/almanimapp-icon-small.png" alt="" aria-hidden width={240} height={167} unoptimized className="h-7 w-auto" />
           {APP_NAME}
         </Link>
         <nav className="hidden items-center gap-6 sm:flex">

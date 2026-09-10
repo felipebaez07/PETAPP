@@ -83,25 +83,19 @@ export default async function HomePage() {
       <section className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-secondary/80 text-primary-foreground">
         <div className="mx-auto max-w-5xl px-4 py-16 text-center sm:px-6 sm:py-24">
           {/* `unoptimized`: el pipeline de optimización de Next.js (Sharp) reduce este PNG a una
-              paleta de 256 colores para ahorrar peso — para una foto normal no se nota, pero acá
-              arruina el degradado suave del glow (se ve borroso/con bandas de color). El archivo
-              original pesa ~950KB, aceptable para un logo decorativo que carga una sola vez en el
-              hero de la landing. */}
+              paleta de 256 colores para ahorrar peso, lo que arruina los degradados suaves del
+              logo (se ve borroso/con bandas de color). El archivo pesa ~1.7MB, aceptable para un
+              logo decorativo que carga una sola vez en el hero de la landing. */}
           <Image
-            src="/brand/almanimapp-icon.png"
-            alt=""
-            aria-hidden
-            width={1172}
-            height={695}
+            src="/brand/almanimapp-lockup.png"
+            alt={APP_NAME}
+            width={1328}
+            height={944}
             unoptimized
-            className="mx-auto mb-2 h-36 w-auto sm:h-44"
+            className="mx-auto mb-4 h-32 w-auto sm:h-40"
             priority
           />
-          <p className="font-heading text-2xl font-bold sm:text-3xl">
-            <span className="text-white">Almanim</span>
-            <span className="text-accent">App</span>
-          </p>
-          <span className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium">
             <MapPinned className="size-3.5" /> Piloto en {PILOT_CITY}
           </span>
           <h1 className="mx-auto mt-5 max-w-3xl font-heading text-4xl font-bold sm:text-5xl">
