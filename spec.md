@@ -41,7 +41,8 @@ histórico definitivo (ese sigue siendo cada sección numerada de abajo).
   API real. Ver sección 18 (hecho: 2026-09-10).
 - [ ] **Rotar la `GROQ_API_KEY`** — quedó expuesta en el chat de la sesión al depurar el 502 (ver
   sección 18). Revocarla en console.groq.com/keys y poner una nueva en Vercel.
-- [ ] **Aplicar `0011_ai_chat_images.sql`** al proyecto Supabase real desde el SQL Editor.
+- [x] **Aplicar `0011_ai_chat_images.sql`** al proyecto Supabase real (hecho: 2026-09-10, el
+  usuario lo confirmó — resolvió el "No se pudo subir la foto" que vio al probar el chat).
 - [ ] Probar el flujo completo del chat en navegador/dispositivo real con sesión, incluyendo que
   el modelo cierre con el bloque `===RUTA===` bien formado, que la foto de síntoma funcione contra
   `qwen/qwen3.6-27b` (modelo "preview" de Groq, razonador — su `<think>` ya se filtra, ver sección
@@ -1326,8 +1327,9 @@ compartió su `GROQ_API_KEY` de producción en el chat para depurar (ver pendien
 abajo), lo que permitió golpear la API de Groq real desde este entorno.
 
 - [x] **`GROQ_API_KEY` en Vercel** — el usuario la agregó (hecho: 2026-09-10).
-- [ ] **Aplicar `0011_ai_chat_images.sql`** al proyecto Supabase real desde el SQL Editor (mismo
-  paso manual que ya hizo falta para `0009`/`0010`).
+- [x] **Aplicar `0011_ai_chat_images.sql`** al proyecto Supabase real (mismo paso manual que ya
+  hizo falta para `0009`/`0010`) — hecho: 2026-09-10, el usuario lo confirmó (resolvió el "No se
+  pudo subir la foto").
 - [x] **Probar el chat completo con Groq real** — se probó y `llama-3.3-70b-versatile` (el
   modelo de texto elegido en la sección 17) **ya no existe en el catálogo de Groq**: la API real
   devolvía `model_not_found` (404), lo que producía el 502 genérico "No se pudo contactar al
