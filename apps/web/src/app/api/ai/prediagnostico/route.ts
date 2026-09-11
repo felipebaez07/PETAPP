@@ -260,6 +260,10 @@ export async function POST(request: Request) {
     // El SDK de Groq ya reintenta 429/5xx/timeouts automáticamente (2 veces por defecto) antes de
     // tirar el error acá — a diferencia de la integración anterior con Gemini, no hace falta un
     // retry manual en esta capa.
+    // eslint-disable-next-line no-console -- sin esto el error real nunca aparece en los logs de
+    // Vercel (el catch lo convierte en un mensaje genérico para el usuario) y depurar un fallo de
+    // la API de Groq en producción se vuelve imposible sin esta línea.
+    console.error('[prediagnostico] Groq error:', err);
     const friendly = isTransientGroqError(err)
       ? 'El asistente está recibiendo mucha demanda en este momento. Esperá unos segundos e intentá de nuevo.'
       : 'No se pudo contactar al asistente. Intenta de nuevo.';
