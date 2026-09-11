@@ -238,5 +238,7 @@ export interface AiMessage {
   conversation_id: string;
   role: AiMessageRole;
   content: string;
+  /** Ruta en el bucket privado `ai-chat-images` de una foto adjunta a este turno (0011), o null. */
+  image_path: string | null;
   created_at: string;
 }

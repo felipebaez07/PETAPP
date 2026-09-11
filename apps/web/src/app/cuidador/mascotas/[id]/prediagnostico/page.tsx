@@ -48,6 +48,7 @@ export default async function PrediagnosticoPage({ params }: { params: Promise<{
       <PrediagnosticoChat
         petId={pet.id}
         petName={pet.name}
+        ownerId={user.profile.id}
         initialConversation={lastConversation as AiConversation | null}
       />
     </div>

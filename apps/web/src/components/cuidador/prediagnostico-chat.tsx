@@ -1,27 +1,36 @@
 'use client';
 
-import { useId, useRef, useState } from 'react';
-import { Bot, Download, Send, TriangleAlert, User } from 'lucide-react';
+import { useId, useRef, useState, type ChangeEvent } from 'react';
+import { Bot, Download, ImagePlus, Send, TriangleAlert, User, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { PrediagnosticoRoadmap } from '@/components/cuidador/prediagnostico-roadmap';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { validatePhotoFile, fileExtension } from '@/lib/uploads';
 import type { AiConversation, AiRoadmapItem } from '@petapp/shared';
 
 interface ChatTurn {
   role: 'user' | 'assistant';
   content: string;
+  /** Vista previa local (blob URL) de una foto adjunta a este turno — solo dura la sesión. */
+  imagePreviewUrl?: string;
 }
 
 interface PrediagnosticoChatProps {
   petId: string;
   petName: string;
+  /** Dueño de la mascota (auth.uid()) — primer segmento de la ruta en el bucket ai-chat-images. */
+  ownerId: string;
   initialConversation: AiConversation | null;
 }
 
-export function PrediagnosticoChat({ petId, petName, initialConversation }: PrediagnosticoChatProps) {
+export function PrediagnosticoChat({ petId, petName, ownerId, initialConversation }: PrediagnosticoChatProps) {
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [draft, setDraft] = useState('');
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(initialConversation?.id ?? null);
   const [summary, setSummary] = useState<string | null>(initialConversation?.summary ?? null);
   const [roadmap, setRoadmap] = useState<AiRoadmapItem[] | null>(initialConversation?.roadmap ?? null);
@@ -29,22 +38,73 @@ export function PrediagnosticoChat({ petId, petName, initialConversation }: Pred
   const [error, setError] = useState<string | null>(null);
   const textareaId = useId();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const done = Boolean(summary);
 
+  const onPhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0] ?? null;
+    setPhotoError(null);
+    if (!selected) return;
+    const validationError = validatePhotoFile(selected);
+    if (validationError) {
+      setPhotoError(validationError);
+      e.target.value = '';
+      return;
+    }
+    if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+    setPhoto(selected);
+    setPhotoPreviewUrl(URL.createObjectURL(selected));
+  };
+
+  const removePhoto = () => {
+    if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+    setPhoto(null);
+    setPhotoPreviewUrl(null);
+    setPhotoError(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const send = async () => {
     const message = draft.trim();
-    if (!message || sending || done) return;
+    const pendingPhoto = photo;
+    const pendingPreviewUrl = photoPreviewUrl;
+    if ((!message && !pendingPhoto) || sending || done) return;
     setSending(true);
     setError(null);
-    setTurns((prev) => [...prev, { role: 'user', content: message }]);
+
+    // Si hay foto, se sube ANTES de armar el turno — si la subida falla, no queremos un mensaje
+    // "fantasma" en el chat sin foto real detrás.
+    let imagePath: string | undefined;
+    if (pendingPhoto) {
+      // Bucket privado (0011_ai_chat_images.sql): la subida usa el cliente con la sesión del
+      // cuidador (nunca service role) — la policy de Storage exige que el primer segmento de la
+      // ruta sea su propio auth.uid().
+      const supabase = createSupabaseBrowserClient();
+      const ext = fileExtension(pendingPhoto, 'jpg');
+      const path = `${ownerId}/${crypto.randomUUID()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('ai-chat-images')
+        .upload(path, pendingPhoto, { contentType: pendingPhoto.type });
+      if (uploadError) {
+        setError('No se pudo subir la foto. Intenta de nuevo.');
+        setSending(false);
+        return;
+      }
+      imagePath = path;
+    }
+
+    setTurns((prev) => [...prev, { role: 'user', content: message, imagePreviewUrl: pendingPreviewUrl ?? undefined }]);
     setDraft('');
+    setPhoto(null);
+    setPhotoPreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
 
     try {
       const res = await fetch('/api/ai/prediagnostico', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ petId, conversationId: conversationId ?? undefined, message }),
+        body: JSON.stringify({ petId, conversationId: conversationId ?? undefined, message, imagePath }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -72,6 +132,7 @@ export function PrediagnosticoChat({ petId, petName, initialConversation }: Pred
     setSummary(null);
     setRoadmap(null);
     setError(null);
+    removePhoto();
   };
 
   const downloadSummary = () => {
@@ -124,7 +185,7 @@ export function PrediagnosticoChat({ petId, petName, initialConversation }: Pred
           {turns.length === 0 && (
             <p className="text-sm text-muted-foreground">
               Empieza contando qué notaste en {petName}: qué síntoma, desde cuándo, y cualquier otro detalle que
-              te parezca importante.
+              te parezca importante. También puedes adjuntar una foto.
             </p>
           )}
           {turns.map((turn, index) => (
@@ -139,7 +200,15 @@ export function PrediagnosticoChat({ petId, petName, initialConversation }: Pred
                   turn.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'
                 }`}
               >
-                {turn.content}
+                {turn.imagePreviewUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element -- blob URL local, no aplica next/image
+                  <img
+                    src={turn.imagePreviewUrl}
+                    alt="Foto adjunta"
+                    className="mb-1.5 max-h-40 w-auto rounded-md object-cover"
+                  />
+                )}
+                {turn.content && <span>{turn.content}</span>}
               </div>
               {turn.role === 'user' && (
                 <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/15">
@@ -154,6 +223,18 @@ export function PrediagnosticoChat({ petId, petName, initialConversation }: Pred
       </Card>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
+      {photoError && <p className="text-sm text-destructive">{photoError}</p>}
+
+      {photoPreviewUrl && (
+        <div className="flex items-center gap-2 rounded-md border border-border bg-card p-2">
+          {/* eslint-disable-next-line @next/next/no-img-element -- blob URL local, no aplica next/image */}
+          <img src={photoPreviewUrl} alt="Foto a adjuntar" className="size-12 rounded-md object-cover" />
+          <p className="flex-1 truncate text-xs text-muted-foreground">{photo?.name}</p>
+          <Button type="button" variant="ghost" size="icon" aria-label="Quitar foto" onClick={removePhoto}>
+            <X className="size-4" />
+          </Button>
+        </div>
+      )}
 
       <form
         onSubmit={(e) => {
@@ -165,6 +246,24 @@ export function PrediagnosticoChat({ petId, petName, initialConversation }: Pred
         <label htmlFor={textareaId} className="sr-only">
           Mensaje
         </label>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          onChange={onPhotoChange}
+          disabled={sending}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          aria-label="Adjuntar foto"
+          disabled={sending}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <ImagePlus className="size-4" />
+        </Button>
         <Textarea
           id={textareaId}
           value={draft}
@@ -179,7 +278,7 @@ export function PrediagnosticoChat({ petId, petName, initialConversation }: Pred
           rows={2}
           disabled={sending}
         />
-        <Button type="submit" size="icon" disabled={sending || !draft.trim()} aria-label="Enviar">
+        <Button type="submit" size="icon" disabled={sending || (!draft.trim() && !photo)} aria-label="Enviar">
           <Send className="size-4" />
         </Button>
       </form>
