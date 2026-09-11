@@ -33,16 +33,19 @@ histórico definitivo (ese sigue siendo cada sección numerada de abajo).
   crítica) detectadas al instalar `groq-sdk` (2026-09-09) — son de dependencias transitivas
   preexistentes, no de `groq-sdk` en sí, pero no se investigaron a fondo (ver sección 17).
 
-### 🤖 Módulo de IA (pre-diagnóstico + ruta de seguimiento + foto, secciones 14-15 y 17) — sin probar en vivo todavía
-- [x] Motor cambiado de Gemini a Groq (`llama-3.3-70b-versatile` texto / `qwen/qwen3.6-27b`
-  visión) — ver sección 17 (hecho: 2026-09-09).
-- [ ] **Poner `GROQ_API_KEY` en Vercel** (Production) — todavía tiene la `GEMINI_API_KEY` de la
-  integración vieja, hay que agregar la nueva.
+### 🤖 Módulo de IA (pre-diagnóstico + ruta de seguimiento + foto, secciones 14-15, 17-18) — sin probar en vivo todavía
+- [x] Motor cambiado de Gemini a Groq — ver sección 17 (hecho: 2026-09-09).
+- [x] `GROQ_API_KEY` en Vercel (hecho: 2026-09-10, el usuario la agregó).
+- [x] **`llama-3.3-70b-versatile` ya no existía en Groq** (`model_not_found`, causaba el 502 que
+  vio el usuario en producción) — reemplazado por `openai/gpt-oss-120b`, confirmado golpeando la
+  API real. Ver sección 18 (hecho: 2026-09-10).
+- [ ] **Rotar la `GROQ_API_KEY`** — quedó expuesta en el chat de la sesión al depurar el 502 (ver
+  sección 18). Revocarla en console.groq.com/keys y poner una nueva en Vercel.
 - [ ] **Aplicar `0011_ai_chat_images.sql`** al proyecto Supabase real desde el SQL Editor.
 - [ ] Probar el flujo completo del chat en navegador/dispositivo real con sesión, incluyendo que
   el modelo cierre con el bloque `===RUTA===` bien formado, que la foto de síntoma funcione contra
-  `qwen/qwen3.6-27b` (modelo "preview" de Groq), y que aceptar/modificar/descartar un ítem de la
-  ruta se sienta bien (nada de esto se verificó más allá de checks HTTP sin sesión).
+  `qwen/qwen3.6-27b` (modelo "preview" de Groq, razonador — su `<think>` ya se filtra, ver sección
+  18), y que aceptar/modificar/descartar un ítem de la ruta se sienta bien.
 - [ ] Foto de síntoma solo está implementada en web — mobile queda pendiente si se quiere ahí
   también (sección 17).
 - [ ] `EXPO_PUBLIC_WEB_URL` en un build real de EAS — no es un pendiente urgente todavía: el repo
@@ -1313,17 +1316,37 @@ investigaron a fondo en esta pasada, quedan anotadas en tareas abiertas.
 **Pendiente honesto de esta pasada** (este entorno no tiene navegador ni las credenciales reales
 de Supabase/Groq, así que nada de esto se probó en vivo):
 
-- [ ] **Poner `GROQ_API_KEY` en Vercel** (Production) — hoy sigue configurada `GEMINI_API_KEY` de
-  la integración anterior, hay que agregar la nueva y en algún momento borrar la vieja.
+## 18. Fix: `llama-3.3-70b-versatile` dado de baja de Groq + `<think>` sin filtrar (2026-09-10)
+
+El usuario puso `GROQ_API_KEY` en Vercel (reemplazando la `GEMINI_API_KEY` vieja) y probó el chat
+en producción — falló con `502` ("No se pudo contactar al asistente"). El `catch` alrededor de la
+llamada a Groq nunca logueaba el error real, así que se agregó `console.error` primero para poder
+verlo en los logs de Vercel — pero terminó siendo más rápido reproducirlo directo: el usuario
+compartió su `GROQ_API_KEY` de producción en el chat para depurar (ver pendiente de rotarla,
+abajo), lo que permitió golpear la API de Groq real desde este entorno.
+
+- [x] **`GROQ_API_KEY` en Vercel** — el usuario la agregó (hecho: 2026-09-10).
 - [ ] **Aplicar `0011_ai_chat_images.sql`** al proyecto Supabase real desde el SQL Editor (mismo
   paso manual que ya hizo falta para `0009`/`0010`).
-- [ ] **Probar el chat completo con Groq real**: que seleccione el modelo de texto correcto y
-  que el flujo con foto (subida real a `qwen/qwen3.6-27b`) funcione — es un modelo "preview" de
-  Groq, no hay garantía de que siga disponible con el mismo nombre indefinidamente; vale la pena
-  confirmar antes de anunciar la función a usuarios reales.
+- [x] **Probar el chat completo con Groq real** — se probó y `llama-3.3-70b-versatile` (el
+  modelo de texto elegido en la sección 17) **ya no existe en el catálogo de Groq**: la API real
+  devolvía `model_not_found` (404), lo que producía el 502 genérico "No se pudo contactar al
+  asistente" que vio el usuario en producción. Diagnosticado golpeando la API de Groq directo
+  con la key real (`GET /openai/v1/models` para ver el catálogo vigente, y una llamada de prueba
+  a cada candidato) — reemplazado por `openai/gpt-oss-120b`, confirmado funcionando. De paso se
+  encontró que `qwen/qwen3.6-27b` (el modelo de visión, para turnos con foto) es un modelo
+  "razonador" que antepone su cadena de pensamiento envuelta en `<think>...</think>` antes de la
+  respuesta real — sin filtrarla, se le mostraría completa al cuidador en el chat; se agregó
+  `stripThinkingBlock()` para recortarla. Lección: los modelos de Groq se retiran/renombran sin
+  garantía de aviso — si esto vuelve a romperse, repetir el mismo diagnóstico (golpear
+  `/openai/v1/models` con la key real) en vez de adivinar un nombre de modelo (hecho: 2026-09-10).
 - [ ] **Mobile no tiene foto de síntoma todavía** — si se quiere ahí también, es replicar el
   mismo patrón de subida que ya usa `apps/mobile` para fotos de mascota, más el picker de imagen
   nativo (`expo-image-picker`, ya es dependencia del proyecto).
 - [ ] Revisar las 3 vulnerabilidades de `npm audit` (`next`/`sharp`/`js-yaml`, transitivas) — no
   parecen introducidas por este cambio, pero no se confirmó si afectan a este proyecto en
   particular.
+- [ ] **La API key de Groq de producción quedó expuesta en el chat de esta sesión** (el usuario la
+  pegó en un mensaje para depurar el 502) — recomendación fuerte: rotarla en
+  console.groq.com/keys (revocar esa, crear una nueva) y actualizar Vercel con la nueva antes de
+  confiar en que el piloto siga usando la que quedó expuesta.

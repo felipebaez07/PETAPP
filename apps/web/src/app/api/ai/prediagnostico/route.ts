@@ -30,7 +30,13 @@ import {
  * prompt de sistema lo deja explícito y el formato de respuesta lo refuerza.
  */
 
-const TEXT_MODEL = 'llama-3.3-70b-versatile';
+// `llama-3.3-70b-versatile` (elegido en el cambio de motor original, commit `09e6522`) ya no
+// existe en el catálogo de Groq — confirmado el 2026-09-10 golpeando la API real con la key de
+// producción: "model_not_found". `openai/gpt-oss-120b` es el reemplazo verificado (mismo golpe
+// directo a la API, respuesta limpia). Los modelos de Groq se retiran/renombran sin garantía de
+// aviso previo — si esto vuelve a pasar, `GET https://api.groq.com/openai/v1/models` con la key
+// real lista los vigentes.
+const TEXT_MODEL = 'openai/gpt-oss-120b';
 const VISION_MODEL = 'qwen/qwen3.6-27b';
 const MAX_TURNS_BEFORE_HINT = 8; // evita conversaciones eternas sin llegar a un resumen
 
@@ -92,6 +98,14 @@ CUÁNDO CERRAR (dos pasos, nunca cierres directo):
 ===FIN_RUTA===
 
 Mientras sigas conversando (no hayas llegado a ese punto), responde en texto plano normal, sin esos marcadores.`;
+}
+
+// `qwen/qwen3.6-27b` (el modelo de visión, usado cuando el turno trae foto) es un modelo
+// "razonador": antepone su cadena de pensamiento envuelta en <think>...</think> antes de la
+// respuesta real — confirmado el 2026-09-10 golpeando la API directamente. Sin esto, esa cadena
+// de pensamiento completa se le mostraría tal cual al cuidador en el chat.
+function stripThinkingBlock(text: string): string {
+  return text.replace(/<think>[\s\S]*?<\/think>/i, '').trim();
 }
 
 function isTransientGroqError(err: unknown): boolean {
@@ -255,7 +269,7 @@ export async function POST(request: Request) {
         currentUserMessage,
       ],
     });
-    replyText = completion.choices[0]?.message?.content ?? '';
+    replyText = stripThinkingBlock(completion.choices[0]?.message?.content ?? '');
   } catch (err) {
     // El SDK de Groq ya reintenta 429/5xx/timeouts automáticamente (2 veces por defecto) antes de
     // tirar el error acá — a diferencia de la integración anterior con Gemini, no hace falta un
