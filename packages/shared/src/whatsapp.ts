@@ -20,3 +20,14 @@ export function buildWhatsAppLink(params: {
   const digits = whatsappNumber.replace(/\D/g, '');
   return `https://wa.me/${digits}?text=${text}`;
 }
+
+/**
+ * Enlace de WhatsApp "para compartir" — sin número de destino. WhatsApp abre su propio
+ * selector de contacto/chat, así el cuidador elige a quién mandárselo (su veterinaria de
+ * confianza, que no siempre es un aliado verificado del directorio con `whatsapp_number`
+ * cargado). Se usa para el resumen del chat de pre-diagnóstico (idea 1.2 del banco de ideas):
+ * a diferencia de `buildWhatsAppLink`, acá no hace falta un establecimiento ya vinculado.
+ */
+export function buildWhatsAppShareLink(text: string): string {
+  return `https://wa.me/?text=${encodeURIComponent(text)}`;
+}

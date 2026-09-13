@@ -1,14 +1,14 @@
 'use client';
 
 import { useId, useRef, useState, type ChangeEvent } from 'react';
-import { Bot, Download, ImagePlus, Send, TriangleAlert, User, X } from 'lucide-react';
+import { Bot, Download, ImagePlus, MessageCircle, Send, TriangleAlert, User, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { PrediagnosticoRoadmap } from '@/components/cuidador/prediagnostico-roadmap';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { validatePhotoFile, fileExtension } from '@/lib/uploads';
-import type { AiConversation, AiRoadmapItem } from '@petapp/shared';
+import { APP_NAME, buildWhatsAppShareLink, type AiConversation, type AiRoadmapItem } from '@petapp/shared';
 
 interface ChatTurn {
   role: 'user' | 'assistant';
@@ -138,7 +138,7 @@ export function PrediagnosticoChat({ petId, petName, ownerId, initialConversatio
   const downloadSummary = () => {
     if (!summary) return;
     const blob = new Blob(
-      [`Pre-diagnóstico para ${petName}\nGenerado por el asistente de IA de PETAPP — no es un diagnóstico real.\n\n${summary}`],
+      [`Pre-diagnóstico para ${petName}\nGenerado por el asistente de IA de ${APP_NAME} — no es un diagnóstico real.\n\n${summary}`],
       { type: 'text/plain;charset=utf-8' }
     );
     const url = URL.createObjectURL(blob);
@@ -147,6 +147,17 @@ export function PrediagnosticoChat({ petId, petName, ownerId, initialConversatio
     a.download = `prediagnostico-${petName.toLowerCase().replace(/\s+/g, '-')}.txt`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  // Idea 1.2 del banco de ideas: cerrar el círculo del pre-diagnóstico conectándolo con el mundo
+  // real (la cita veterinaria). Sin número fijo de destino — `buildWhatsAppShareLink` deja que
+  // WhatsApp muestre su propio selector, porque acá no hay un establecimiento del directorio ya
+  // vinculado (el cuidador puede querer mandárselo a su veterinaria de siempre, esté o no en el
+  // directorio de aliados).
+  const shareViaWhatsApp = () => {
+    if (!summary) return;
+    const text = `Hola, te comparto un resumen de pre-diagnóstico de ${petName} hecho con el asistente de ${APP_NAME} (no es un diagnóstico real, es una guía para la consulta):\n\n${summary}`;
+    window.open(buildWhatsAppShareLink(text), '_blank', 'noopener,noreferrer');
   };
 
   if (done && summary) {
@@ -166,6 +177,9 @@ export function PrediagnosticoChat({ petId, petName, ownerId, initialConversatio
         <div className="flex flex-wrap gap-2">
           <Button size="sm" onClick={downloadSummary} className="gap-1.5">
             <Download className="size-4" /> Descargar como texto
+          </Button>
+          <Button size="sm" variant="secondary" onClick={shareViaWhatsApp} className="gap-1.5">
+            <MessageCircle className="size-4" /> Enviar por WhatsApp
           </Button>
           <Button size="sm" variant="outline" onClick={startNew}>
             Empezar una nueva consulta
