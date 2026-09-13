@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { serviceRequestSchema } from '@petapp/shared';
+import { establishmentReviewSchema, serviceRequestSchema } from '@petapp/shared';
 
 export interface ServiceRequestActionResult {
   ok: boolean;
@@ -57,5 +57,56 @@ export async function createServiceRequest(formData: FormData): Promise<ServiceR
   if (error) return { ok: false, error: error.message };
 
   revalidatePath('/panel/solicitudes');
+  return { ok: true };
+}
+
+export interface EstablishmentReviewActionResult {
+  ok: boolean;
+  error?: string;
+}
+
+/**
+ * Crea o actualiza la reseña del cuidador sobre un establecimiento (idea 3.1 del banco de ideas,
+ * 0012_establishment_reviews.sql). El `upsert` cubre los dos casos con una sola llamada: primera
+ * reseña (insert, la policy de INSERT exige una cita `completada` real) o editar la que ya tenía
+ * (update, sin volver a chequear elegibilidad — mismo criterio que la policy de UPDATE en SQL).
+ * `onConflict` usa la unique de la tabla (establishment_id, pet_owner_id), así nunca se duplica.
+ */
+export async function upsertEstablishmentReview(formData: FormData): Promise<EstablishmentReviewActionResult> {
+  const user = await getCurrentUser();
+  if (!user || user.profile.role !== 'propietario') {
+    return { ok: false, error: 'Inicia sesión como cuidador/a para dejar una reseña.' };
+  }
+
+  const ratingRaw = String(formData.get('rating') ?? '').trim();
+  const slug = String(formData.get('establishment_slug') ?? '').trim();
+  const parsed = establishmentReviewSchema.safeParse({
+    establishment_id: String(formData.get('establishment_id') ?? '').trim(),
+    rating: Number(ratingRaw),
+    comment: String(formData.get('comment') ?? '').trim(),
+  });
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos.' };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from('establishment_reviews').upsert(
+    {
+      establishment_id: parsed.data.establishment_id,
+      pet_owner_id: user.profile.id,
+      rating: parsed.data.rating,
+      comment: parsed.data.comment || null,
+    },
+    { onConflict: 'establishment_id,pet_owner_id' }
+  );
+  if (error) {
+    // El mensaje real de Postgres para la violación de la policy de INSERT (RLS) es genérico
+    // ("new row violates row-level security policy") — se traduce a algo que el cuidador entienda,
+    // en vez de mostrarle jerga de base de datos.
+    if (error.message.includes('row-level security')) {
+      return { ok: false, error: 'Solo puedes reseñar establecimientos donde ya tuviste una cita completada.' };
+    }
+    return { ok: false, error: error.message };
+  }
+
+  if (slug) revalidatePath(`/directorio/${slug}`);
   return { ok: true };
 }

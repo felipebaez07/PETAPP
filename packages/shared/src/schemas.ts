@@ -114,6 +114,18 @@ export const petDocumentSchema = z.object({
 });
 export type PetDocumentFormValues = z.infer<typeof petDocumentSchema>;
 
+/**
+ * Reseña de un cuidador sobre un establecimiento (idea 3.1 del banco de ideas de
+ * funcionalidades, 0012_establishment_reviews.sql). `comment` es opcional — un cuidador puede
+ * calificar sin escribir nada, igual que en la mayoría de apps de reseñas.
+ */
+export const establishmentReviewSchema = z.object({
+  establishment_id: z.string().uuid(),
+  rating: z.number().int().min(1, 'Elige entre 1 y 5 estrellas').max(5),
+  comment: z.string().max(500).optional().or(z.literal('')),
+});
+export type EstablishmentReviewFormValues = z.infer<typeof establishmentReviewSchema>;
+
 export const providerPlanSchema = z.object({
   plan_code: z.enum(['basico', 'pro']),
   notes: z.string().max(500).optional().or(z.literal('')),

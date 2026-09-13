@@ -1,6 +1,7 @@
 import 'server-only';
 import {
   DEMO_ESTABLISHMENTS,
+  type EstablishmentReview,
   type EstablishmentWithDetails,
   type ProviderCategory,
 } from '@petapp/shared';
@@ -68,4 +69,40 @@ export async function getEstablishmentBySlug(slug: string): Promise<Establishmen
     .maybeSingle();
   if (error) throw error;
   return (data as unknown as EstablishmentWithDetails) ?? null;
+}
+
+/**
+ * Reseñas de un establecimiento (0012_establishment_reviews.sql, idea 3.1) — lectura pública
+ * (`establishment_reviews_public_read`), la ficha del directorio las muestra sin sesión.
+ */
+export async function getEstablishmentReviews(establishmentId: string): Promise<EstablishmentReview[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('establishment_reviews')
+    .select('*')
+    .eq('establishment_id', establishmentId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as unknown as EstablishmentReview[];
+}
+
+/**
+ * Si el cuidador puede reseñar este establecimiento: tuvo al menos una `service_request` en
+ * estado `completada` con él. Solo importa para decidir si mostrarle el formulario — la regla
+ * real que impide reseñas falsas vive en la policy de INSERT (`has_completed_service_request`,
+ * mismo nombre en SQL), esto es nada más para la UI.
+ */
+export async function ownerCanReviewEstablishment(ownerId: string, establishmentId: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from('service_requests')
+    .select('id')
+    .eq('pet_owner_id', ownerId)
+    .eq('establishment_id', establishmentId)
+    .eq('status', 'completada')
+    .limit(1)
+    .maybeSingle();
+  return Boolean(data);
 }

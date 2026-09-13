@@ -179,6 +179,25 @@ export interface PartnerApplication {
   created_at: string;
 }
 
+/**
+ * Reseña de un cuidador sobre un establecimiento (0012_establishment_reviews.sql, idea 3.1 del
+ * banco de ideas). Solo existe si ese cuidador tuvo una `service_request` en estado `completada`
+ * con ese establecimiento — lo hace cumplir la policy de INSERT, no este tipo. Una por
+ * (establecimiento, cuidador): si vuelve a tener otra cita, actualiza esta misma fila.
+ */
+export interface EstablishmentReview {
+  id: string;
+  establishment_id: string;
+  pet_owner_id: string;
+  service_request_id: string | null;
+  rating: number;
+  comment: string | null;
+  /** Nombre del cuidador al momento de crear la reseña — copiado por un trigger, no un join en vivo. */
+  reviewer_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Vistas compuestas usadas en UI (join de establecimiento + horarios + servicios)
 export interface EstablishmentWithDetails extends Establishment {
   hours: EstablishmentHours[];
