@@ -6,7 +6,7 @@
 > tareas completadas — quedan como historial de qué se decidió y cuándo. Si una tarea se descarta,
 > se dice explícitamente por qué (`descartado: ...`) en vez de borrarla.
 >
-> Última actualización: 2026-09-09.
+> Última actualización: 2026-09-13.
 
 ## 🔧 Tareas abiertas para el equipo (empezar por acá)
 
@@ -33,22 +33,22 @@ histórico definitivo (ese sigue siendo cada sección numerada de abajo).
   crítica) detectadas al instalar `groq-sdk` (2026-09-09) — son de dependencias transitivas
   preexistentes, no de `groq-sdk` en sí, pero no se investigaron a fondo (ver sección 17).
 
-### 🤖 Módulo de IA (pre-diagnóstico + ruta de seguimiento + foto, secciones 14-15, 17-18) — sin probar en vivo todavía
+### 🤖 Módulo de IA (pre-diagnóstico + ruta de seguimiento + foto + WhatsApp, secciones 14-15, 17-19) — probado en vivo por el usuario 2026-09-13
 - [x] Motor cambiado de Gemini a Groq — ver sección 17 (hecho: 2026-09-09).
 - [x] `GROQ_API_KEY` en Vercel (hecho: 2026-09-10, el usuario la agregó).
 - [x] **`llama-3.3-70b-versatile` ya no existía en Groq** (`model_not_found`, causaba el 502 que
   vio el usuario en producción) — reemplazado por `openai/gpt-oss-120b`, confirmado golpeando la
   API real. Ver sección 18 (hecho: 2026-09-10).
 - [ ] **Rotar la `GROQ_API_KEY`** — quedó expuesta en el chat de la sesión al depurar el 502 (ver
-  sección 18). Revocarla en console.groq.com/keys y poner una nueva en Vercel.
+  sección 18). Sigue pendiente: revocarla en console.groq.com/keys y poner una nueva en Vercel.
 - [x] **Aplicar `0011_ai_chat_images.sql`** al proyecto Supabase real (hecho: 2026-09-10, el
   usuario lo confirmó — resolvió el "No se pudo subir la foto" que vio al probar el chat).
-- [ ] Probar el flujo completo del chat en navegador/dispositivo real con sesión, incluyendo que
-  el modelo cierre con el bloque `===RUTA===` bien formado, que la foto de síntoma funcione contra
-  `qwen/qwen3.6-27b` (modelo "preview" de Groq, razonador — su `<think>` ya se filtra, ver sección
-  18), y que aceptar/modificar/descartar un ítem de la ruta se sienta bien.
+- [x] Probar el flujo completo del chat en navegador con sesión real, incluyendo la foto de
+  síntoma contra `qwen/qwen3.6-27b` — el usuario confirmó que ya funciona (hecho: 2026-09-13).
 - [ ] Foto de síntoma solo está implementada en web — mobile queda pendiente si se quiere ahí
   también (sección 17).
+- [x] **Enviar el resumen por WhatsApp (idea 1.2 del banco de ideas)** — ver sección 19
+  (hecho: 2026-09-13, falta que el usuario lo pruebe en producción tras el próximo deploy).
 - [ ] `EXPO_PUBLIC_WEB_URL` en un build real de EAS — no es un pendiente urgente todavía: el repo
   ni siquiera tiene `apps/mobile/eas.json` (no hay EAS Build configurado), y para probar local
   (`expo start`/Expo Go) ya alcanza con que esté en `apps/mobile/.env.local` (ya está). Solo
@@ -1352,3 +1352,42 @@ abajo), lo que permitió golpear la API de Groq real desde este entorno.
   pegó en un mensaje para depurar el 502) — recomendación fuerte: rotarla en
   console.groq.com/keys (revocar esa, crear una nueva) y actualizar Vercel con la nueva antes de
   confiar en que el piloto siga usando la que quedó expuesta.
+
+## 19. Enviar el resumen del pre-diagnóstico por WhatsApp (2026-09-13)
+
+Idea 1.2 del banco de ideas de funcionalidades (`IDEAS_NUEVAS_FUNCIONALIDADES.md`, sección 1):
+"cerrar el círculo" del módulo de IA (secciones 14, 17, 18) conectándolo con el mundo real — que
+el resumen del pre-diagnóstico no se quede solo dentro de la app, sino que sea fácil mandárselo a
+la veterinaria antes de la cita presencial. Esfuerzo bajo por diseño: reutiliza el patrón de
+WhatsApp que ya existía para el directorio de aliados (`buildWhatsAppLink`, sección 5), en vez de
+inventar un mecanismo nuevo.
+
+**Decisión de diseño:** a diferencia del botón "Escribir por WhatsApp" de la ficha de un
+establecimiento (que ya tiene un `whatsapp_number` cargado), acá no hay ningún establecimiento
+vinculado — el pre-diagnóstico es por mascota, no por aliado, y el cuidador puede querer
+mandárselo a su veterinaria de siempre aunque no esté todavía en el directorio. Por eso se agregó
+`buildWhatsAppShareLink(text)` en `packages/shared/src/whatsapp.ts`: genera un enlace
+`https://wa.me/?text=...` **sin número de destino**, así WhatsApp abre su propio selector de
+chat/contacto y el cuidador elige a quién mandárselo. Es la opción de menor esfuerzo que cumple el
+"por qué encaja" original de la idea (bajo esfuerzo, cierra el círculo) sin agregarle a esta
+pasada un flujo nuevo de "elegir a qué aliado del directorio se lo mando".
+
+**Qué se tocó:**
+- `packages/shared/src/whatsapp.ts` — nueva función `buildWhatsAppShareLink`.
+- `apps/web/src/components/cuidador/prediagnostico-chat.tsx` — nuevo botón "Enviar por WhatsApp"
+  junto a "Descargar como texto" en la pantalla de resumen final; arma el mismo texto que el
+  archivo descargable (aclarando que no es un diagnóstico real) y abre el enlace en pestaña nueva.
+  De paso se cambió el texto fijo "PETAPP" de `downloadSummary` por `APP_NAME` (ya venía
+  desactualizado desde el rebranding de la sección 16).
+
+**Legal/privacidad:** no aplica una entrada nueva en `docs/legal/registro-legal.md` — a
+diferencia del cambio de proveedor de IA (LG-005), acá no hay un tercero nuevo recibiendo datos:
+el mensaje sale del navegador del propio cuidador hacia el destinatario que él mismo elige en
+WhatsApp, igual que el botón que ya existía para el directorio.
+
+**Pendiente:**
+- [ ] Probar en producción (después del próximo deploy) que el enlace `wa.me/?text=...` abre bien
+  tanto en el navegador de escritorio como en el celular (ahí WhatsApp Web vs. la app instalada se
+  comportan distinto — confirmar que ninguno de los dos casos falla silenciosamente).
+- [ ] Mobile no tiene este botón todavía — mismo patrón pendiente que la foto de síntoma
+  (sección 17): replicarlo ahí es directo si se decide que vale la pena.
