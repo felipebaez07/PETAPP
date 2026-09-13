@@ -1386,8 +1386,9 @@ el mensaje sale del navegador del propio cuidador hacia el destinatario que él 
 WhatsApp, igual que el botón que ya existía para el directorio.
 
 **Pendiente:**
-- [ ] Probar en producción (después del próximo deploy) que el enlace `wa.me/?text=...` abre bien
-  tanto en el navegador de escritorio como en el celular (ahí WhatsApp Web vs. la app instalada se
-  comportan distinto — confirmar que ninguno de los dos casos falla silenciosamente).
+- [x] Probar en producción que el enlace `wa.me/?text=...` abre bien — el usuario lo probó en
+  `https://petapp-web-topaz.vercel.app` (navegador de escritorio) y confirmó que funciona
+  (hecho: 2026-09-13). Falta confirmar el caso celular si se quiere estar 100% seguro, pero no es
+  urgente.
 - [ ] Mobile no tiene este botón todavía — mismo patrón pendiente que la foto de síntoma
   (sección 17): replicarlo ahí es directo si se decide que vale la pena.
