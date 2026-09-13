@@ -1,12 +1,14 @@
 import { notFound } from 'next/navigation';
 import { MapPin, Phone, MessageCircle } from 'lucide-react';
-import { getEstablishmentBySlug } from '@/lib/data';
+import { getEstablishmentBySlug, getEstablishmentReviews, ownerCanReviewEstablishment } from '@/lib/data';
 import { getCurrentUser } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { VerifiedBadge } from '@/components/directorio/verified-badge';
 import { OpenStatus } from '@/components/directorio/open-status';
 import { HoursTable } from '@/components/directorio/hours-table';
 import { ServiceRequestForm } from '@/components/directorio/service-request-form';
+import { EstablishmentReviews } from '@/components/directorio/establishment-reviews';
+import { EstablishmentReviewForm } from '@/components/directorio/establishment-review-form';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,6 +32,12 @@ export default async function EstablishmentDetailPage({ params }: { params: Prom
     const { data } = await supabase.from('pets').select('*').eq('owner_id', viewer.profile.id).order('name');
     pets = (data ?? []) as Pet[];
   }
+
+  const reviews = await getEstablishmentReviews(establishment.id);
+  const myReview = viewer ? (reviews.find((r) => r.pet_owner_id === viewer.profile.id) ?? null) : null;
+  const canReview =
+    viewer?.profile.role === 'propietario' &&
+    (myReview !== null || (await ownerCanReviewEstablishment(viewer.profile.id, establishment.id)));
 
   const whatsappLink = establishment.whatsapp_number
     ? buildWhatsAppLink({
@@ -133,6 +141,27 @@ export default async function EstablishmentDetailPage({ params }: { params: Prom
       {establishment.phone && (
         <p className="mt-6 text-sm text-muted-foreground">Teléfono: {formatPhoneForDisplay(establishment.phone)}</p>
       )}
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Reseñas de cuidadores</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <EstablishmentReviews reviews={reviews} />
+          {canReview && (
+            <div className="border-t border-border pt-4">
+              <h3 className="mb-3 text-sm font-medium text-foreground">
+                {myReview ? 'Tu reseña' : '¿Ya tuviste una cita acá? Cuéntale a otros cuidadores'}
+              </h3>
+              <EstablishmentReviewForm
+                establishmentId={establishment.id}
+                establishmentSlug={slug}
+                existingReview={myReview}
+              />
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

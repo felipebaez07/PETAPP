@@ -6,7 +6,7 @@
 > tareas completadas — quedan como historial de qué se decidió y cuándo. Si una tarea se descarta,
 > se dice explícitamente por qué (`descartado: ...`) en vez de borrarla.
 >
-> Última actualización: 2026-09-13.
+> Última actualización: 2026-09-13 (2).
 
 ## 🔧 Tareas abiertas para el equipo (empezar por acá)
 
@@ -56,6 +56,9 @@ histórico definitivo (ese sigue siendo cada sección numerada de abajo).
   `eas.json` o como secreto de EAS en ese momento.
 
 ### 🌐 Web (`apps/web`)
+- [x] **Reseñas y calificaciones de establecimientos** (idea 3.1 del banco de ideas) — ver
+  sección 20 (hecho: 2026-09-13, falta aplicar `0012_establishment_reviews.sql` en el Supabase
+  real y probarlo en vivo).
 - [ ] Subida real de logo/portada del negocio como archivo (hoy sigue siendo un campo de URL,
   a diferencia de la foto de mascota y los documentos que ya suben archivo de verdad).
 - [ ] Permitir cambiar la foto de una mascota ya existente (hoy `PetForm` solo la pide al crearla).
@@ -1386,8 +1389,59 @@ el mensaje sale del navegador del propio cuidador hacia el destinatario que él 
 WhatsApp, igual que el botón que ya existía para el directorio.
 
 **Pendiente:**
-- [ ] Probar en producción (después del próximo deploy) que el enlace `wa.me/?text=...` abre bien
-  tanto en el navegador de escritorio como en el celular (ahí WhatsApp Web vs. la app instalada se
-  comportan distinto — confirmar que ninguno de los dos casos falla silenciosamente).
+- [x] Probar en producción que el enlace `wa.me/?text=...` abre bien — el usuario lo probó en
+  `https://petapp-web-topaz.vercel.app` (navegador de escritorio) y confirmó que funciona
+  (hecho: 2026-09-13). Falta confirmar el caso celular si se quiere estar 100% seguro, pero no es
+  urgente.
 - [ ] Mobile no tiene este botón todavía — mismo patrón pendiente que la foto de síntoma
   (sección 17): replicarlo ahí es directo si se decide que vale la pena.
+
+## 20. Reseñas y calificaciones de establecimientos (2026-09-13)
+
+Idea 3.1 del banco de ideas de funcionalidades (`IDEAS_NUEVAS_FUNCIONALIDADES.md`, sección 3):
+con 27 aliados cargados y solo 2 verificados, la única señal de calidad que tenía el directorio
+era el badge "Verificado" — una reseña de otro cuidador real que sí tuvo una cita pesa más que ese
+badge para decidir a quién llamar. Se descartó la opción 2.1 (recordatorios fuera de la app) por
+ahora: necesita contratar una API de WhatsApp Business (con costo) o un proveedor de correo, y el
+usuario prefirió no meterse en eso todavía — queda anotado en la sección "Decisión de producto
+pendiente" de arriba para cuando se quiera retomar.
+
+**Qué se construyó:**
+- `supabase/migrations/0012_establishment_reviews.sql` — tabla `establishment_reviews`
+  (`establishment_id`, `pet_owner_id`, `service_request_id`, `rating` 1-5, `comment` opcional
+  ≤500 caracteres, `reviewer_name`). Una reseña por (establecimiento, cuidador) — `unique` en esas
+  dos columnas — si vuelve a tener otra cita, actualiza la misma fila en vez de acumular varias.
+- **Elegibilidad real, no solo de UI:** la policy de INSERT exige que el cuidador tenga una
+  `service_request` en estado `completada` con ese establecimiento, chequeado con una función
+  `security definer` (`has_completed_service_request`) — mismo patrón que `pet_belongs_to_user`
+  (sección 0008), para no repetir el ciclo de recursión de RLS que ya rompió esa migración una vez.
+- **`reviewer_name` es una copia, no un join en vivo:** `profiles_select_own_or_admin`
+  (0001_init.sql) no deja leer el perfil de otro cuidador, así que un join público a `profiles`
+  devolvería `null` para el nombre de cualquiera más que uno mismo. Se agregó un trigger
+  `security definer` que copia `full_name` a `reviewer_name` en el momento de crear la reseña, en
+  vez de abrirle lectura pública a `profiles` (que también expondría el teléfono) solo para
+  mostrar un nombre.
+- Lectura pública (`establishment_reviews_public_read`, `using (true)`) — las reseñas tienen que
+  verse en la ficha del directorio sin sesión, igual que las horas o los servicios.
+- `packages/shared`: tipo `EstablishmentReview` (types.ts) y `establishmentReviewSchema`
+  (schemas.ts, valida `rating` 1-5 y `comment` ≤500).
+- `apps/web/src/lib/data.ts`: `getEstablishmentReviews` (lista pública) y
+  `ownerCanReviewEstablishment` (para decidir si mostrarle el formulario al cuidador — la regla
+  real vive en la policy SQL, esto es solo UI).
+- `apps/web/src/app/directorio/[slug]/actions.ts`: `upsertEstablishmentReview` — un `upsert` con
+  `onConflict: 'establishment_id,pet_owner_id'` cubre crear y editar con una sola función; traduce
+  el error genérico de RLS a un mensaje que el cuidador entienda.
+- UI nueva en la ficha del establecimiento (`apps/web/src/app/directorio/[slug]/page.tsx`):
+  `EstablishmentReviews` (promedio + lista, server component, sin JS de cliente) y
+  `EstablishmentReviewForm` (selector de estrellas + comentario, solo visible si el cuidador ya
+  puede reseñar o ya tiene una reseña para editar).
+
+**Pendiente:**
+- [ ] Aplicar `0012_establishment_reviews.sql` en el proyecto Supabase real (mismo paso manual de
+  siempre — SQL Editor).
+- [ ] Probar en producción: que aparezca el formulario solo con una cita `completada` real, que
+  el promedio y la lista se vean bien con 0/1/varias reseñas, y que editar una reseña existente
+  actualice la misma tarjeta en vez de crear una nueva.
+- [ ] Mobile no tiene esta función todavía.
+- [ ] No hay forma de "reportar" una reseña abusiva desde la UI todavía — por ahora solo un admin
+  con acceso directo a Supabase podría borrarla (la policy de DELETE ya lo permite).
