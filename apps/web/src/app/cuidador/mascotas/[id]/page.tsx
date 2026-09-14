@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { CalendarHeart, FileStack, PawPrint, ShieldCheck, Sparkles, Syringe } from 'lucide-react';
+import { CalendarHeart, FileStack, PawPrint, ShieldCheck, Sparkles, Stethoscope, Syringe } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import { AddPreventiveEventPanel } from '@/components/cuidador/add-preventive-ev
 import { PreventiveEventRow } from '@/components/cuidador/preventive-event-row';
 import { AddDocumentPanel } from '@/components/cuidador/add-document-panel';
 import { DocumentRow } from '@/components/cuidador/document-row';
-import { SPECIES_LABELS, type PetWithDetails } from '@petapp/shared';
+import { SPECIES_LABELS, type PetWithDetails, type VetVisitNote } from '@petapp/shared';
 
 export default async function PetDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -34,6 +34,16 @@ export default async function PetDetailPage({ params }: { params: Promise<{ id: 
     if (Boolean(a.completed_at) !== Boolean(b.completed_at)) return a.completed_at ? 1 : -1;
     return a.due_date.localeCompare(b.due_date);
   });
+
+  // Cierra el círculo del pre-diagnóstico (idea explícita del usuario): lo que el cuidador contó
+  // que dijo/hizo el veterinario después de la cita real, para tener un historial además de que
+  // el backend de IA (route.ts) ya lo use como contexto en la próxima consulta.
+  const { data: vetVisitNotesData } = await supabase
+    .from('vet_visit_notes')
+    .select('*')
+    .eq('pet_id', pet.id)
+    .order('created_at', { ascending: false });
+  const vetVisitNotes = (vetVisitNotesData as VetVisitNote[] | null) ?? [];
 
   return (
     <div>
@@ -116,6 +126,39 @@ export default async function PetDetailPage({ params }: { params: Promise<{ id: 
           )}
         </CardContent>
       </Card>
+
+      {vetVisitNotes.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Historial veterinario</CardTitle>
+            <CardDescription>
+              Lo que fuiste contando después de cada cita real — el asistente de IA ya lo tiene en cuenta en
+              las próximas consultas.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-3 divide-y divide-border">
+              {vetVisitNotes.map((visitNote, index) => (
+                <RevealItem key={visitNote.id} index={index} as="li">
+                  <div className="flex items-start gap-2.5 pt-3 first:pt-0">
+                    <Stethoscope className="mt-0.5 size-4 shrink-0 text-secondary" aria-hidden />
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(visitNote.created_at).toLocaleDateString('es-CO', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })}
+                      </p>
+                      <p className="text-sm text-foreground/90">{visitNote.note}</p>
+                    </div>
+                  </div>
+                </RevealItem>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

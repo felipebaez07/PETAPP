@@ -6,6 +6,7 @@ import {
   SPECIES_LABELS,
   type PetDocument,
   type PreventiveEvent,
+  type VetVisitNote,
 } from '@petapp/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -18,6 +19,7 @@ import {
   FilePlus2,
   PawPrint,
   Sparkles,
+  Stethoscope,
   XCircle,
 } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
@@ -36,7 +38,7 @@ import { RemoteImage } from '@/components/ui/RemoteImage';
 import { PetDocumentRow } from '@/components/PetDocumentRow';
 import { PreventiveEventRow } from '@/components/PreventiveEventRow';
 import { usePets } from '@/contexts/PetsContext';
-import { fetchPetDocumentsByPet, fetchPreventiveEventsByPet } from '@/lib/data';
+import { fetchPetDocumentsByPet, fetchPreventiveEventsByPet, fetchVetVisitNotesByPet } from '@/lib/data';
 import { formatPetAge, SEX_LABELS } from '@/lib/labels';
 import { supabase } from '@/lib/supabase';
 import {
@@ -105,6 +107,7 @@ export default function PetDetailScreen() {
 
   const [events, setEvents] = useState<PreventiveEvent[]>([]);
   const [documents, setDocuments] = useState<PetDocument[]>([]);
+  const [vetVisitNotes, setVetVisitNotes] = useState<VetVisitNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [documentMode, setDocumentMode] = useState<'file' | 'link'>(isDemo ? 'link' : 'file');
@@ -128,15 +131,17 @@ export default function PetDetailScreen() {
       // `pets`, así que nunca se consulta el backend con su id.
       setEvents(sortByDueDate(DEMO_PREVENTIVE_EVENTS.filter((e) => e.pet_id === pet.id)));
       setDocuments(DEMO_PET_DOCUMENTS.filter((d) => d.pet_id === pet.id));
+      setVetVisitNotes([]);
       setLoading(false);
       return;
     }
     setLoading(true);
-    Promise.all([fetchPreventiveEventsByPet(pet.id), fetchPetDocumentsByPet(pet.id)])
-      .then(([ev, docs]) => {
+    Promise.all([fetchPreventiveEventsByPet(pet.id), fetchPetDocumentsByPet(pet.id), fetchVetVisitNotesByPet(pet.id)])
+      .then(([ev, docs, notes]) => {
         if (!active) return;
         setEvents(sortByDueDate(ev));
         setDocuments(docs);
+        setVetVisitNotes(notes);
       })
       .catch(() => {
         // Sin este catch, un error de red dejaba las listas vacías y mostraba los empty
@@ -587,6 +592,35 @@ export default function PetDetailScreen() {
             </>
           )}
         </View>
+
+        {/* Historial veterinario — cierra el círculo del pre-diagnóstico: lo que el cuidador fue
+            contando después de cada cita real (ver components/VetVisitNoteForm.tsx), que el
+            backend de IA ya usa como contexto en la próxima consulta. */}
+        {vetVisitNotes.length > 0 ? (
+          <View className="gap-3">
+            <Text className="font-heading text-lg text-foreground">Historial veterinario</Text>
+            <View className="gap-2.5 rounded-xl bg-card p-4 shadow-sm">
+              {vetVisitNotes.map((visitNote, index) => (
+                <View
+                  key={visitNote.id}
+                  className={index > 0 ? 'flex-row gap-2.5 border-t border-border pt-2.5' : 'flex-row gap-2.5'}
+                >
+                  <Stethoscope size={16} color="#059669" style={{ marginTop: 2 }} />
+                  <View className="flex-1">
+                    <Text className="font-body text-xs text-mutedForeground">
+                      {new Date(visitNote.created_at).toLocaleDateString('es-CO', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      })}
+                    </Text>
+                    <Text className="font-body text-sm text-foreground">{visitNote.note}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
 
         {/* Documentos */}
         <View className="gap-3">

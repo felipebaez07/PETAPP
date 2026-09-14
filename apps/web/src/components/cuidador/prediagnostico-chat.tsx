@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { PrediagnosticoRoadmap } from '@/components/cuidador/prediagnostico-roadmap';
+import { VetVisitNoteForm } from '@/components/cuidador/vet-visit-note-form';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { validatePhotoFile, fileExtension } from '@/lib/uploads';
 import { APP_NAME, buildWhatsAppShareLink, type AiConversation, type AiRoadmapItem } from '@petapp/shared';
@@ -188,6 +189,7 @@ export function PrediagnosticoChat({ petId, petName, ownerId, initialConversatio
         {roadmap && roadmap.length > 0 && conversationId && (
           <PrediagnosticoRoadmap petId={petId} conversationId={conversationId} items={roadmap} />
         )}
+        {conversationId && <VetVisitNoteForm petId={petId} conversationId={conversationId} />}
       </div>
     );
   }

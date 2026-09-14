@@ -65,7 +65,10 @@ async function getAuthenticatedClient(request: Request): Promise<{
   return { supabase, userId: data.user.id };
 }
 
-function buildSystemPrompt(pet: { name: string; species: PetSpecies; breed: string | null; birth_date: string | null }): string {
+function buildSystemPrompt(
+  pet: { name: string; species: PetSpecies; breed: string | null; birth_date: string | null },
+  visitHistory: string
+): string {
   return `Eres el asistente de pre-diagnóstico de PETAPP, una app de seguimiento preventivo veterinario. Tu único trabajo es ayudar a un cuidador a describir con claridad la situación de su mascota, para armar un resumen que él lleve a un veterinario de verdad.
 
 REGLAS ABSOLUTAS (nunca las rompas):
@@ -85,6 +88,7 @@ DATOS YA REGISTRADOS DE LA MASCOTA (no los vuelvas a preguntar):
 - Raza: ${pet.breed ?? 'no registrada'}
 - Fecha de nacimiento: ${pet.birth_date ?? 'no registrada'}
 - Fecha de hoy: ${todayLocalDateString()}
+${visitHistory}
 
 CUÁNDO CERRAR (dos pasos, nunca cierres directo):
 1. Cuando sientas que ya tenés lo suficiente (normalmente entre 4 y 6 intercambios, nunca antes del tercero), NO cierres todavía — primero preguntá explícitamente algo como "Creo que ya tengo un buen panorama de lo que le pasa a ${pet.name}. ¿Hay algo más que quieras contarme antes de armar el resumen?". Este es un turno de texto normal, sin marcadores.
@@ -151,6 +155,56 @@ function addDaysToDateString(dateStr: string, days: number): string {
  * `storage.objects` de 0011 es la que de verdad decide si puede leerla. Devuelve null ante
  * cualquier fallo (path inválido, archivo borrado, etc.) en vez de tirar la conversación entera.
  */
+interface PastVisit {
+  date: string;
+  kind: 'resumen' | 'veterinario';
+  text: string;
+}
+
+/**
+ * Junta los resúmenes de pre-diagnósticos anteriores (completados) y las notas de seguimiento
+ * veterinario (0014_vet_visit_notes.sql) de esta mascota, para que una conversación NUEVA no
+ * arranque de cero cada vez — pedido explícito del usuario (2026-09-13): "llevar un contexto de
+ * todas las citas y un seguimiento de las citas". Se limita a los últimos 6 eventos combinados
+ * (ordenados cronológicamente) para no inflar el prompt sin límite a medida que pasan los meses.
+ */
+async function fetchVisitHistory(supabase: SupabaseClient, petId: string): Promise<PastVisit[]> {
+  const [{ data: pastConversations }, { data: pastNotes }] = await Promise.all([
+    supabase
+      .from('ai_conversations')
+      .select('summary, created_at')
+      .eq('pet_id', petId)
+      .eq('status', 'completada')
+      .not('summary', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(6),
+    supabase
+      .from('vet_visit_notes')
+      .select('note, created_at')
+      .eq('pet_id', petId)
+      .order('created_at', { ascending: false })
+      .limit(6),
+  ]);
+
+  const visits: PastVisit[] = [
+    ...(pastConversations ?? []).map((c) => ({ date: c.created_at as string, kind: 'resumen' as const, text: c.summary as string })),
+    ...(pastNotes ?? []).map((n) => ({ date: n.created_at as string, kind: 'veterinario' as const, text: n.note as string })),
+  ];
+  visits.sort((a, b) => a.date.localeCompare(b.date));
+  return visits.slice(-6);
+}
+
+function formatVisitHistory(visits: PastVisit[]): string {
+  if (visits.length === 0) return '';
+  const lines = visits.map((v) => {
+    const date = v.date.slice(0, 10);
+    const label =
+      v.kind === 'resumen' ? 'Resumen de una consulta de pre-diagnóstico anterior' : 'Lo que contó el cuidador que dijo/hizo el veterinario en una cita real';
+    return `- [${date}] ${label}: ${v.text}`;
+  });
+  return `\nHISTORIAL PREVIO DE ESTA MASCOTA (para que tengas contexto de consultas/citas anteriores — no le vuelvas a preguntar algo que ya está acá, y si algo de esto es relevante para lo que cuenta ahora, tenelo en cuenta al hacer preguntas o armar el resumen):\n${lines.join('\n')}\n`;
+}
+
 async function loadImageAsDataUri(supabase: SupabaseClient, imagePath: string): Promise<string | null> {
   try {
     const { data: signed, error: signError } = await supabase.storage
@@ -237,8 +291,10 @@ export async function POST(request: Request) {
   const imageDataUri = imagePath ? await loadImageAsDataUri(supabase, imagePath) : null;
   const model = imageDataUri ? VISION_MODEL : TEXT_MODEL;
 
+  const visitHistory = formatVisitHistory(await fetchVisitHistory(supabase, petId));
+
   const groq = new Groq({ apiKey: groqApiKey });
-  const systemPrompt = buildSystemPrompt(pet);
+  const systemPrompt = buildSystemPrompt(pet, visitHistory);
   const turnCountHint =
     history.length >= MAX_TURNS_BEFORE_HINT
       ? '\n\n(Ya llevas varios intercambios — si tienes información razonable, pasá pronto al paso 1 del cierre: preguntá si hay algo más, y recién en tu siguiente turno cerrá con el resumen. No sigas alargando la conversación indefinidamente.)'

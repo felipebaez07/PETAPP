@@ -2,7 +2,7 @@
 
 import { getCurrentUser } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import type { AiRoadmapItem } from '@petapp/shared';
+import { vetVisitNoteSchema, type AiRoadmapItem } from '@petapp/shared';
 
 export interface ActionResult {
   ok: boolean;
@@ -33,6 +33,37 @@ export async function saveRoadmapDecision(conversationId: string, roadmap: AiRoa
   }
 
   const { error } = await supabase.from('ai_conversations').update({ roadmap }).eq('id', conversationId);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+/**
+ * Cierra el círculo del pre-diagnóstico (pedido explícito del usuario, 2026-09-13): después de la
+ * cita real, el cuidador cuenta acá qué le dijo/hizo el veterinario. Queda ligada a la mascota (y
+ * opcionalmente a la conversación que la originó) — el backend del chat (`route.ts`) usa el
+ * historial de estas notas como contexto para la próxima conversación de esa misma mascota.
+ */
+export async function createVetVisitNote(
+  petId: string,
+  note: string,
+  conversationId?: string
+): Promise<ActionResult> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: 'No autorizado.' };
+
+  const parsed = vetVisitNoteSchema.safeParse({ pet_id: petId, ai_conversation_id: conversationId, note });
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos.' };
+
+  const supabase = await createSupabaseServerClient();
+  const { data: pet } = await supabase.from('pets').select('id').eq('id', petId).eq('owner_id', user.profile.id).maybeSingle();
+  if (!pet) return { ok: false, error: 'Esta mascota no te pertenece.' };
+
+  const { error } = await supabase.from('vet_visit_notes').insert({
+    pet_id: parsed.data.pet_id,
+    owner_id: user.profile.id,
+    ai_conversation_id: parsed.data.ai_conversation_id ?? null,
+    note: parsed.data.note,
+  });
   if (error) return { ok: false, error: error.message };
   return { ok: true };
 }

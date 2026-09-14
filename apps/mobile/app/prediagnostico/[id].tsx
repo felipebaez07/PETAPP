@@ -20,6 +20,7 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PrediagnosticoRoadmap } from '@/components/PrediagnosticoRoadmap';
+import { VetVisitNoteForm } from '@/components/VetVisitNoteForm';
 import { usePets } from '@/contexts/PetsContext';
 import { supabase } from '@/lib/supabase';
 import {
@@ -191,6 +192,9 @@ export default function PrediagnosticoScreen() {
           <Button label="Empezar una nueva consulta" variant="outline" onPress={startNew} />
           {roadmap && roadmap.length > 0 && conversationId ? (
             <PrediagnosticoRoadmap petId={pet.id} conversationId={conversationId} items={roadmap} />
+          ) : null}
+          {conversationId ? (
+            <VetVisitNoteForm petId={pet.id} ownerId={pet.owner_id} conversationId={conversationId} />
           ) : null}
         </ScrollView>
       </>

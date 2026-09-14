@@ -6,6 +6,7 @@ import {
   type EstablishmentWithDetails,
   type PetDocument,
   type PreventiveEvent,
+  type VetVisitNote,
 } from '@petapp/shared';
 import { isSupabaseConfigured, supabase } from './supabase';
 
@@ -161,4 +162,17 @@ export async function ownerCanReviewEstablishment(ownerId: string, establishment
     .limit(1)
     .maybeSingle();
   return Boolean(data);
+}
+
+/** Notas de seguimiento veterinario de una mascota (0014_vet_visit_notes.sql) — lo que el
+ * cuidador contó que dijo/hizo el veterinario después de cada cita real. */
+export async function fetchVetVisitNotesByPet(petId: string): Promise<VetVisitNote[]> {
+  if (!isSupabaseConfigured) return [];
+  const { data, error } = await supabase
+    .from('vet_visit_notes')
+    .select('*')
+    .eq('pet_id', petId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as unknown as VetVisitNote[];
 }

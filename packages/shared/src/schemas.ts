@@ -133,6 +133,17 @@ export const providerPlanSchema = z.object({
 export type ProviderPlanFormValues = z.infer<typeof providerPlanSchema>;
 
 /**
+ * Nota de seguimiento veterinario (0014_vet_visit_notes.sql) — qué le dijo/hizo el veterinario
+ * en la cita real, contado por el cuidador para que la IA lo tenga como contexto la próxima vez.
+ */
+export const vetVisitNoteSchema = z.object({
+  pet_id: z.string().uuid(),
+  ai_conversation_id: z.string().uuid().optional(),
+  note: z.string().min(1, 'Contanos qué te dijo el veterinario').max(2000),
+});
+export type VetVisitNoteFormValues = z.infer<typeof vetVisitNoteSchema>;
+
+/**
  * Un turno del chat de pre-diagnóstico (POST a `/api/ai/prediagnostico`, ver
  * 0009_ai_prediagnostico.sql). `conversationId` ausente = arranca una conversación nueva para
  * `petId`; presente = continúa una ya activa. `imagePath` (0011_ai_chat_images.sql, idea 1.1 del

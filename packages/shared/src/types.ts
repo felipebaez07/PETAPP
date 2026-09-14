@@ -252,6 +252,24 @@ export interface AiConversation {
   updated_at: string;
 }
 
+/**
+ * Nota de seguimiento después de la cita veterinaria real (0014_vet_visit_notes.sql) — el
+ * cuidador le cuenta a la IA qué le dijo/hizo el veterinario. `ai_conversation_id` liga esta nota
+ * al chat de pre-diagnóstico que la originó (si vino de ahí — puede ser `null`, una nota de
+ * seguimiento suelta también es válida). El backend usa el historial de estas notas + los
+ * resúmenes de conversaciones anteriores de la misma mascota como contexto para la próxima
+ * conversación, para que la IA no empiece de cero cada vez.
+ */
+export interface VetVisitNote {
+  id: string;
+  pet_id: string;
+  owner_id: string;
+  ai_conversation_id: string | null;
+  note: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface AiMessage {
   id: string;
   conversation_id: string;
