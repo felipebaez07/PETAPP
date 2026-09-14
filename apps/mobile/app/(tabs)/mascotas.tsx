@@ -39,6 +39,7 @@ export default function PetsScreen() {
       <ScreenHeader
         title="Mascotas"
         subtitle={pets.length === 1 ? '1 mascota registrada' : `${pets.length} mascotas registradas`}
+        gradient
         right={
           <Pressable
             onPress={() => router.push('/mascotas/nueva')}

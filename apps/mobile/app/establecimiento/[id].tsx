@@ -11,8 +11,15 @@ import type { EstablishmentReview } from '@petapp/shared';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { Building2, CalendarPlus, Info, MapPin, MessageCircle, Phone, SearchX, ShieldCheck } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Alert, Image, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Text, TextInput, View } from 'react-native';
 import { useForm } from 'react-hook-form';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
 
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -52,6 +59,24 @@ export default function EstablishmentDetailScreen() {
     defaultValues: { preferred_datetime: '' },
   });
   const preferredDatetime = watchDate('preferred_datetime');
+
+  // "Stretchy header" clásico de iOS: al jalar hacia abajo más allá del tope (overscroll,
+  // scrollY negativo), la portada se agranda para llenar ese espacio en vez de dejar un hueco en
+  // blanco o quedarse estática — le da la sensación de una superficie física que se estira, no
+  // una imagen pegada. No se anima nada al scrollear hacia arriba (scrollY positivo): en un
+  // <ScrollView> normal (no un header fijo/absoluto), desplazar la imagen ahí la separaría del
+  // resto del contenido de forma rara. `Extrapolation.CLAMP` evita que seguir jalando después del
+  // rango pensado siga agrandándola sin límite.
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler((event) => {
+    scrollY.value = event.contentOffset.y;
+  });
+  const coverAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: interpolate(scrollY.value, [-150, 0], [-60, 0], Extrapolation.CLAMP) },
+      { scale: interpolate(scrollY.value, [-150, 0], [1.35, 1], Extrapolation.CLAMP) },
+    ],
+  }));
 
   useEffect(() => {
     let active = true;
@@ -192,11 +217,16 @@ export default function EstablishmentDetailScreen() {
   return (
     <>
       <Stack.Screen options={{ title: establishment.name }} />
-      <ScrollView className="flex-1 bg-background" contentContainerStyle={{ padding: 20, gap: 20 }}>
+      <Animated.ScrollView
+        className="flex-1 bg-background"
+        contentContainerStyle={{ padding: 20, gap: 20 }}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+      >
         {establishment.cover_image_url ? (
-          <Image
+          <Animated.Image
             source={{ uri: establishment.cover_image_url }}
-            style={{ width: '100%', height: 140, borderRadius: 16 }}
+            style={[{ width: '100%', height: 140, borderRadius: 16 }, coverAnimatedStyle]}
             resizeMode="cover"
           />
         ) : null}
@@ -440,7 +470,7 @@ export default function EstablishmentDetailScreen() {
             </View>
           ) : null}
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
     </>
   );
 }

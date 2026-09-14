@@ -88,7 +88,7 @@ export default function DirectoryScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ScreenHeader title="Directorio" subtitle={`Prestadores veterinarios verificados en ${PILOT_CITY}`} />
+      <ScreenHeader title="Directorio" subtitle={`Prestadores veterinarios verificados en ${PILOT_CITY}`} gradient />
 
       <View className="gap-3 px-5 pt-4">
         <View className="min-h-11 flex-row items-center gap-2 rounded-sm border border-border bg-card px-3">
