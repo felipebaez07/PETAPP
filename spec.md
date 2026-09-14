@@ -29,6 +29,8 @@ histórico definitivo (ese sigue siendo cada sección numerada de abajo).
 - [x] Migración de RLS para que el prestador vea "próximos vencimientos" de sus pacientes —
   `0013_preventive_events_establishment_read.sql`, ver sección 21 (hecho: 2026-09-13, **falta
   aplicarla en el Supabase real** — SQL Editor).
+- [ ] **Aplicar `0014_vet_visit_notes.sql` y `0015_establishment_review_reports.sql`** en el
+  Supabase real (SQL Editor) — ver sección 22, siguen solo como archivos locales.
 - [ ] 3 vulnerabilidades de `npm audit` (`next`→`sharp` alta, `eslint`→`js-yaml` alta, `next`
   crítica) detectadas al instalar `groq-sdk` (2026-09-09) — son de dependencias transitivas
   preexistentes, no de `groq-sdk` en sí, pero no se investigaron a fondo (ver sección 17).
@@ -1502,3 +1504,51 @@ de web y `npx expo export --platform web` de mobile sin errores.
   logo como paleta de marca — siguen anotados como decisiones aparte.
 - [ ] Aplicar `0013_preventive_events_establishment_read.sql` en el proyecto Supabase real (SQL
   Editor) — sigue solo como archivo local.
+
+## 22. Fondo/transiciones mobile + cerrar el círculo del pre-diagnóstico + 2 ideas del banco (2026-09-13)
+
+Continuación de la sección 21 en el mismo día: el usuario pidió "hazlas todas" sobre las 5 ideas
+recomendadas al final de esa sección, empezando por más pulido visual de mobile.
+
+- [x] **Fondo con degradé** en Directorio y Mis mascotas (`ScreenHeader` con prop opcional
+  `gradient`, `expo-linear-gradient` nuevo) y **parallax "stretchy header"** en la portada del
+  establecimiento (Reanimated, se agranda al jalar hacia abajo). Sigue la misma regla de
+  restricción del sistema de diseño ("un solo momento hero decorativo") — no se aplicó a todas
+  las pestañas.
+- [x] **Idea 1 (la que el usuario pidió "bajo todo concepto"): cerrar el círculo del
+  pre-diagnóstico.** Migración `0014_vet_visit_notes.sql` (revisada con `db-guardian`): el
+  cuidador cuenta qué le dijo/hizo el veterinario después de la cita real, y el backend de IA
+  (`route.ts`) arma un "historial previo de esta mascota" (resúmenes de pre-diagnósticos
+  completados + estas notas, últimos 6 eventos cronológicos) que inyecta en el prompt de sistema
+  de cada conversación nueva — la IA ya no arranca de cero cada vez.
+- [x] **Idea 4: historial visible.** Antes los resúmenes anteriores solo alimentaban el contexto
+  de la IA en silencio — ahora hay una sección "Historial de seguimiento" en la ficha de la
+  mascota (web y mobile) con el timeline combinado.
+- [x] **Idea 5: moderación básica de reseñas.** Migración `0015_establishment_review_reports.sql`
+  (tabla separada de la reseña misma, nunca se abre UPDATE a nadie más que el dueño de la reseña).
+  Botón "Reportar" en la ficha del establecimiento + panel `/panel/admin/resenas` para que un
+  admin borre o descarte.
+
+**Ideas 2 y 3 — deliberadamente NO implementadas esta pasada** (recordatorios push fuera de la
+app, y notificar al prestador de solicitudes/reseñas nuevas): ambas necesitan infraestructura que
+todavía no existe en el proyecto, no son solo código de UI/DB como el resto de esta sección —
+`expo-notifications` + guardar el token de push por usuario + **algo que dispare el envío en el
+momento correcto** (un cron/scheduler — Vercel Cron o una Edge Function de Supabase con
+`pg_cron`, ninguno configurado hoy). Implementarlas a medias (ej. guardar el token pero sin
+scheduler real) dejaría una función que parece que funciona pero nunca envía nada. Recomendación:
+antes de construirlas, decidir explícitamente qué proveedor de scheduler usar — es la misma
+naturaleza de decisión que "franjas de disponibilidad tipo Calendly" (sección 16): una pieza más
+grande que vale una conversación aparte, no algo para decidir solo en medio de otra pasada.
+
+**Verificación de esta pasada:** `npm run typecheck` en verde en las 3 workspaces, `npm run build`
+de web y `npx expo export --platform web` de mobile sin errores en cada uno de los 4 commits de
+esta sección.
+
+**Pendiente honesto de esta pasada:**
+
+- [ ] Aplicar `0014_vet_visit_notes.sql` y `0015_establishment_review_reports.sql` en el proyecto
+  Supabase real (SQL Editor) — siguen solo como archivos locales.
+- [ ] Nada de esto se probó en un navegador/dispositivo real — igual que el resto del módulo de
+  IA, este entorno no tiene uno disponible.
+- [ ] El "Historial de seguimiento" combinado no tiene paginación — con meses de uso, esa lista
+  puede crecer bastante; no es un problema hoy con el piloto recién empezando.
