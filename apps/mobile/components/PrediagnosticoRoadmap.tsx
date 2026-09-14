@@ -91,7 +91,11 @@ function RoadmapRow({
         <Text className="flex-1 font-body text-sm text-mutedForeground">
           Solo la tuviste en cuenta: {item.title}
         </Text>
-        <Pressable onPress={handleUndo} hitSlop={8}>
+        <Pressable
+          onPress={handleUndo}
+          hitSlop={8}
+          style={({ pressed }) => (pressed ? { opacity: 0.6 } : undefined)}
+        >
           <Text className="font-bodySemibold text-sm text-primary">Deshacer</Text>
         </Pressable>
       </View>

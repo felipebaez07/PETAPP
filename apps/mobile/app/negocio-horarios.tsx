@@ -148,6 +148,7 @@ export default function NegocioHorariosScreen() {
         onPress={() => setIs24h((v) => !v)}
         accessibilityRole="switch"
         accessibilityState={{ checked: is24h }}
+        style={({ pressed }) => (pressed ? { opacity: 0.85 } : undefined)}
         className="flex-row items-center justify-between gap-3 rounded-xl bg-card p-4 shadow-sm"
       >
         <Text className="font-bodySemibold text-base text-foreground">Atendemos las 24 horas, todos los días</Text>
@@ -182,6 +183,7 @@ export default function NegocioHorariosScreen() {
                 onPress={() => updateDay(index, { closed: !day.closed })}
                 accessibilityRole="switch"
                 accessibilityState={{ checked: day.closed }}
+                style={({ pressed }) => (pressed ? { opacity: 0.7 } : undefined)}
                 className="flex-row items-center gap-2"
               >
                 <Text className="font-body text-sm text-mutedForeground">Cerrado</Text>

@@ -122,6 +122,7 @@ export function AppointmentSlotPicker<TFieldValues extends FieldValues>({
               key={h}
               onPress={() => pickHour(h)}
               className={`rounded-sm border px-3 py-2 ${hour === h ? 'border-primary bg-primary' : 'border-border bg-card'}`}
+              style={({ pressed }) => (pressed ? { opacity: 0.7 } : undefined)}
             >
               <Text className={`font-bodyMedium text-xs ${hour === h ? 'text-white' : 'text-foreground'}`}>
                 {formatAppointmentSlotLabel(h)}

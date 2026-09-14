@@ -15,6 +15,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -212,8 +213,9 @@ export default function PrediagnosticoScreen() {
             </Text>
           ) : null}
           {turns.map((turn, index) => (
-            <View
+            <Animated.View
               key={index}
+              entering={FadeInUp.duration(220).springify().damping(26).stiffness(220)}
               className={`flex-row gap-2 ${turn.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               {turn.role === 'assistant' ? (
@@ -244,7 +246,7 @@ export default function PrediagnosticoScreen() {
                   <User size={16} color="#0369A1" />
                 </View>
               ) : null}
-            </View>
+            </Animated.View>
           ))}
           {sending ? <Text className="font-body text-sm text-mutedForeground">El asistente está escribiendo…</Text> : null}
         </ScrollView>
@@ -255,7 +257,13 @@ export default function PrediagnosticoScreen() {
             <Text className="flex-1 font-body text-xs text-mutedForeground" numberOfLines={1}>
               {photo.name ?? 'Foto seleccionada'}
             </Text>
-            <Pressable onPress={removePhoto} hitSlop={8} accessibilityRole="button" accessibilityLabel="Quitar foto">
+            <Pressable
+              onPress={removePhoto}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Quitar foto"
+              style={({ pressed }) => (pressed ? { opacity: 0.6 } : undefined)}
+            >
               <X size={18} color="#64748B" />
             </Pressable>
           </View>
@@ -272,6 +280,7 @@ export default function PrediagnosticoScreen() {
             disabled={sending}
             accessibilityRole="button"
             accessibilityLabel="Adjuntar foto"
+            style={({ pressed }) => (pressed ? { opacity: 0.7 } : undefined)}
             className="h-11 w-11 items-center justify-center rounded-md border border-border bg-background"
           >
             <ImagePlus size={18} color="#64748B" />
@@ -290,6 +299,7 @@ export default function PrediagnosticoScreen() {
             disabled={sending || (!draft.trim() && !photo)}
             accessibilityRole="button"
             accessibilityLabel="Enviar"
+            style={({ pressed }) => (pressed ? { transform: [{ scale: 0.92 }] } : undefined)}
             className={`h-11 w-11 items-center justify-center rounded-md bg-primary ${
               sending || (!draft.trim() && !photo) ? 'opacity-50' : ''
             }`}
