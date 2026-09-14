@@ -4,9 +4,23 @@ import { getCurrentUser } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { VerifiedBadge } from '@/components/directorio/verified-badge';
 import { CreateEstablishmentForm } from '@/components/panel/create-establishment-form';
-import { CATEGORY_LABELS } from '@petapp/shared';
+import {
+  CATEGORY_LABELS,
+  PREVENTIVE_EVENT_TYPE_LABELS,
+  todayLocalDateString,
+  type PreventiveEventType,
+} from '@petapp/shared';
+
+interface UpcomingEventRow {
+  id: string;
+  type: PreventiveEventType;
+  title: string;
+  due_date: string;
+  pet: { name: string } | null;
+}
 
 export default async function DashboardHomePage() {
   const user = await getCurrentUser();
@@ -69,6 +83,19 @@ export default async function DashboardHomePage() {
     .eq('establishment_id', user.establishment.id)
     .eq('status', 'pendiente');
 
+  // La RLS de preventive_events (0013_preventive_events_establishment_read.sql) ya filtra esto a
+  // solo las mascotas con una service_request 'confirmada'/'completada' con este establecimiento
+  // — no hace falta (ni se puede, sin otra vuelta) filtrar por establishment_id acá, la policy lo
+  // hace de forma invisible según auth.uid().
+  const { data: upcomingEventsData } = await supabase
+    .from('preventive_events')
+    .select('id, type, title, due_date, pet:pets(name)')
+    .is('completed_at', null)
+    .gte('due_date', todayLocalDateString())
+    .order('due_date', { ascending: true })
+    .limit(6);
+  const upcomingEvents = (upcomingEventsData as unknown as UpcomingEventRow[] | null) ?? [];
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -110,11 +137,36 @@ export default async function DashboardHomePage() {
             <div>
               <CardTitle className="text-base">Próximos vencimientos de tus pacientes</CardTitle>
               <CardDescription>
-                Todavía no disponible: el calendario preventivo es privado del cuidador. Está en el backlog una
-                vista compartida cuando exista una cita confirmada contigo (ver spec.md sección 9).
+                Vacunas, controles y desparasitación de mascotas con una cita confirmada contigo.
               </CardDescription>
             </div>
           </CardHeader>
+          <CardContent>
+            {upcomingEvents.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Nada por ahora — aparecerán acá los vencimientos de mascotas con una cita confirmada o
+                completada contigo.
+              </p>
+            ) : (
+              <ul className="space-y-2.5">
+                {upcomingEvents.map((event) => (
+                  <li key={event.id} className="flex items-center justify-between gap-2 text-sm">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-foreground">
+                        {event.pet?.name ?? 'Mascota'} · {event.title}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(`${event.due_date}T00:00:00`).toLocaleDateString('es-CO')}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="shrink-0">
+                      {PREVENTIVE_EVENT_TYPE_LABELS[event.type]}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
         </Card>
       </div>
 

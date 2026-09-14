@@ -1,10 +1,11 @@
 import type { AiRoadmapItem } from '@petapp/shared';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Bot, PawPrint, Send, Share2, User } from 'lucide-react-native';
+import { Bot, ImagePlus, PawPrint, Send, Share2, User, X } from 'lucide-react-native';
 import { useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -20,12 +21,22 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { PrediagnosticoRoadmap } from '@/components/PrediagnosticoRoadmap';
 import { usePets } from '@/contexts/PetsContext';
 import { supabase } from '@/lib/supabase';
+import {
+  fileExtensionFromName,
+  generateFileId,
+  pickImageFromLibrary,
+  uploadFileToBucket,
+  validatePhotoAsset,
+  type PickedFile,
+} from '@/lib/uploads';
 
 const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL;
 
 interface ChatTurn {
   role: 'user' | 'assistant';
   content: string;
+  /** Vista previa local de una foto adjunta a este turno — solo dura la sesión. */
+  imagePreviewUri?: string;
 }
 
 export default function PrediagnosticoScreen() {
@@ -36,6 +47,8 @@ export default function PrediagnosticoScreen() {
 
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [draft, setDraft] = useState('');
+  const [photo, setPhoto] = useState<PickedFile | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
   const [roadmap, setRoadmap] = useState<AiRoadmapItem[] | null>(null);
@@ -72,12 +85,49 @@ export default function PrediagnosticoScreen() {
     );
   }
 
+  const pickPhoto = async () => {
+    setPhotoError(null);
+    const asset = await pickImageFromLibrary();
+    if (!asset) return;
+    const validationError = validatePhotoAsset(asset);
+    if (validationError) {
+      setPhotoError(validationError);
+      return;
+    }
+    setPhoto(asset);
+  };
+
+  const removePhoto = () => {
+    setPhoto(null);
+    setPhotoError(null);
+  };
+
   const send = async () => {
     const message = draft.trim();
-    if (!message || sending || summary) return;
+    const pendingPhoto = photo;
+    if ((!message && !pendingPhoto) || sending || summary) return;
     setSending(true);
-    setTurns((prev) => [...prev, { role: 'user', content: message }]);
+
+    // Si hay foto, se sube ANTES de armar el turno — si la subida falla, no queremos un mensaje
+    // "fantasma" en el chat sin foto real detrás. Mismo bucket/patrón que la versión web
+    // (0011_ai_chat_images.sql): el primer segmento de la ruta tiene que ser el dueño de la
+    // mascota (pet.owner_id, que acá siempre es el propio usuario logueado).
+    let imagePath: string | undefined;
+    if (pendingPhoto) {
+      const ext = fileExtensionFromName(pendingPhoto.name, 'jpg');
+      const path = `${pet.owner_id}/${generateFileId()}.${ext}`;
+      const { error: uploadError } = await uploadFileToBucket('ai-chat-images', path, pendingPhoto);
+      if (uploadError) {
+        Alert.alert('No se pudo subir la foto', 'Intenta de nuevo.');
+        setSending(false);
+        return;
+      }
+      imagePath = path;
+    }
+
+    setTurns((prev) => [...prev, { role: 'user', content: message, imagePreviewUri: pendingPhoto?.uri }]);
     setDraft('');
+    setPhoto(null);
 
     try {
       if (!WEB_URL) throw new Error('missing-web-url');
@@ -88,7 +138,7 @@ export default function PrediagnosticoScreen() {
       const res = await fetch(`${WEB_URL}/api/ai/prediagnostico`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ petId: pet.id, conversationId: conversationId ?? undefined, message }),
+        body: JSON.stringify({ petId: pet.id, conversationId: conversationId ?? undefined, message, imagePath }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -115,12 +165,13 @@ export default function PrediagnosticoScreen() {
     setConversationId(null);
     setSummary(null);
     setRoadmap(null);
+    removePhoto();
   };
 
   const shareSummary = () => {
     if (!summary) return;
     Share.share({
-      message: `Pre-diagnóstico para ${pet.name}\nGenerado por el asistente de IA de PETAPP — no es un diagnóstico real.\n\n${summary}`,
+      message: `Pre-diagnóstico para ${pet.name}\nGenerado por el asistente de IA de Almanimapp — no es un diagnóstico real.\n\n${summary}`,
     });
   };
 
@@ -157,7 +208,7 @@ export default function PrediagnosticoScreen() {
           {turns.length === 0 ? (
             <Text className="font-body text-sm text-mutedForeground">
               Empieza contando qué notaste en {pet.name}: qué síntoma, desde cuándo, y cualquier otro detalle que
-              te parezca importante.
+              te parezca importante. También podés adjuntar una foto.
             </Text>
           ) : null}
           {turns.map((turn, index) => (
@@ -171,13 +222,22 @@ export default function PrediagnosticoScreen() {
                 </View>
               ) : null}
               <View
-                className={`max-w-[80%] rounded-xl px-3 py-2 ${
+                className={`max-w-[80%] gap-2 rounded-xl px-3 py-2 ${
                   turn.role === 'user' ? 'bg-primary' : 'bg-muted'
                 }`}
               >
-                <Text className={`font-body text-sm ${turn.role === 'user' ? 'text-white' : 'text-foreground'}`}>
-                  {turn.content}
-                </Text>
+                {turn.imagePreviewUri ? (
+                  <Image
+                    source={{ uri: turn.imagePreviewUri }}
+                    style={{ width: 160, height: 160, borderRadius: 8 }}
+                    resizeMode="cover"
+                  />
+                ) : null}
+                {turn.content ? (
+                  <Text className={`font-body text-sm ${turn.role === 'user' ? 'text-white' : 'text-foreground'}`}>
+                    {turn.content}
+                  </Text>
+                ) : null}
               </View>
               {turn.role === 'user' ? (
                 <View className="h-7 w-7 items-center justify-center rounded-full bg-primary/20">
@@ -189,7 +249,33 @@ export default function PrediagnosticoScreen() {
           {sending ? <Text className="font-body text-sm text-mutedForeground">El asistente está escribiendo…</Text> : null}
         </ScrollView>
 
+        {photo ? (
+          <View className="flex-row items-center gap-2 border-t border-border bg-card px-3 pt-3">
+            <Image source={{ uri: photo.uri }} style={{ width: 44, height: 44, borderRadius: 6 }} />
+            <Text className="flex-1 font-body text-xs text-mutedForeground" numberOfLines={1}>
+              {photo.name ?? 'Foto seleccionada'}
+            </Text>
+            <Pressable onPress={removePhoto} hitSlop={8} accessibilityRole="button" accessibilityLabel="Quitar foto">
+              <X size={18} color="#64748B" />
+            </Pressable>
+          </View>
+        ) : null}
+        {photoError ? (
+          <Text className="border-t border-border bg-card px-3 pt-2 font-body text-xs text-destructive">
+            {photoError}
+          </Text>
+        ) : null}
+
         <View className="flex-row items-end gap-2 border-t border-border bg-card p-3">
+          <Pressable
+            onPress={pickPhoto}
+            disabled={sending}
+            accessibilityRole="button"
+            accessibilityLabel="Adjuntar foto"
+            className="h-11 w-11 items-center justify-center rounded-md border border-border bg-background"
+          >
+            <ImagePlus size={18} color="#64748B" />
+          </Pressable>
           <TextInput
             className="min-h-11 flex-1 rounded-sm border border-border bg-background px-3 py-2 font-body text-base text-foreground"
             value={draft}
@@ -201,11 +287,11 @@ export default function PrediagnosticoScreen() {
           />
           <Pressable
             onPress={send}
-            disabled={sending || !draft.trim()}
+            disabled={sending || (!draft.trim() && !photo)}
             accessibilityRole="button"
             accessibilityLabel="Enviar"
             className={`h-11 w-11 items-center justify-center rounded-md bg-primary ${
-              sending || !draft.trim() ? 'opacity-50' : ''
+              sending || (!draft.trim() && !photo) ? 'opacity-50' : ''
             }`}
           >
             {sending ? <ActivityIndicator color="#FFFFFF" /> : <Send size={18} color="#FFFFFF" />}

@@ -7,6 +7,7 @@ import {
   isOpenNow,
   type EstablishmentWithDetails,
 } from '@petapp/shared';
+import type { EstablishmentReview } from '@petapp/shared';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { Building2, CalendarPlus, Info, MapPin, MessageCircle, Phone, SearchX, ShieldCheck } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
@@ -18,12 +19,14 @@ import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
 import { AppointmentSlotPicker } from '@/components/ui/AppointmentSlotPicker';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { EstablishmentReviewForm } from '@/components/EstablishmentReviewForm';
+import { EstablishmentReviews } from '@/components/EstablishmentReviews';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { RemoteImage } from '@/components/ui/RemoteImage';
 import { StatusDot } from '@/components/ui/StatusDot';
 import { usePets } from '@/contexts/PetsContext';
 import { getCurrentUser, type CurrentUser } from '@/lib/auth';
-import { fetchEstablishmentById } from '@/lib/data';
+import { fetchEstablishmentById, fetchEstablishmentReviews, ownerCanReviewEstablishment } from '@/lib/data';
 import { openExternalUrl } from '@/lib/linking';
 import { supabase } from '@/lib/supabase';
 
@@ -34,6 +37,8 @@ export default function EstablishmentDetailScreen() {
   );
   const [loadError, setLoadError] = useState(false);
   const [viewer, setViewer] = useState<CurrentUser | null | undefined>(undefined);
+  const [reviews, setReviews] = useState<EstablishmentReview[]>([]);
+  const [canReview, setCanReview] = useState(false);
   const { pets } = usePets();
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [selectedPetId, setSelectedPetId] = useState<string | null>(null);
@@ -76,6 +81,39 @@ export default function EstablishmentDetailScreen() {
     };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    fetchEstablishmentReviews(id)
+      .then((data) => {
+        if (active) setReviews(data);
+      })
+      .catch(() => {
+        // Las reseñas son un extra de la ficha, no el contenido principal — si falla la
+        // consulta, se deja la lista vacía en vez de romper toda la pantalla.
+      });
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  useEffect(() => {
+    let active = true;
+    if (viewer?.profile.role !== 'propietario') {
+      setCanReview(false);
+      return;
+    }
+    ownerCanReviewEstablishment(viewer.profile.id, id)
+      .then((result) => {
+        if (active) setCanReview(result);
+      })
+      .catch(() => {
+        if (active) setCanReview(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [viewer, id]);
+
   if (loadError) {
     return (
       <>
@@ -110,6 +148,7 @@ export default function EstablishmentDetailScreen() {
   const verified = establishment.verification_status === 'verificado';
   const hoursByDay = new Map(establishment.hours.map((h) => [h.day_of_week, h]));
   const today = new Date().getDay();
+  const myReview = viewer ? (reviews.find((r) => r.pet_owner_id === viewer.profile.id) ?? null) : null;
 
   function handleWhatsApp() {
     if (!establishment || !establishment.whatsapp_number) return;
@@ -381,6 +420,23 @@ export default function EstablishmentDetailScreen() {
               <Text className="flex-1 font-body text-sm text-mutedForeground">
                 Este establecimiento aún no tiene datos de contacto disponibles.
               </Text>
+            </View>
+          ) : null}
+        </View>
+
+        <View className="gap-3 rounded-xl bg-card p-4 shadow-sm">
+          <Text className="font-heading text-lg text-foreground">Reseñas de cuidadores</Text>
+          <EstablishmentReviews reviews={reviews} />
+          {canReview ? (
+            <View className="gap-2 border-t border-border pt-4">
+              <Text className="font-bodySemibold text-sm text-foreground">
+                {myReview ? 'Tu reseña' : '¿Ya tuviste una cita acá? Cuéntale a otros cuidadores'}
+              </Text>
+              <EstablishmentReviewForm
+                establishmentId={establishment.id}
+                ownerId={viewer!.profile.id}
+                existingReview={myReview}
+              />
             </View>
           ) : null}
         </View>

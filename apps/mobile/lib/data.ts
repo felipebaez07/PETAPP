@@ -2,6 +2,7 @@ import {
   DEMO_ESTABLISHMENTS,
   DEMO_PET_DOCUMENTS,
   DEMO_PREVENTIVE_EVENTS,
+  type EstablishmentReview,
   type EstablishmentWithDetails,
   type PetDocument,
   type PreventiveEvent,
@@ -127,4 +128,37 @@ export async function getSignedPetDocumentUrl(
     return { url: null, error: error?.message ?? 'No se pudo generar el enlace.' };
   }
   return { url: data.signedUrl, error: null };
+}
+
+/** Reseñas públicas de un establecimiento (0012_establishment_reviews.sql) — mismo criterio de
+ * lectura pública que la versión web (`getEstablishmentReviews`), sin fixture de demo porque no
+ * hay reseñas de ejemplo en @petapp/shared. */
+export async function fetchEstablishmentReviews(establishmentId: string): Promise<EstablishmentReview[]> {
+  if (!isSupabaseConfigured) return [];
+  const { data, error } = await supabase
+    .from('establishment_reviews')
+    .select('*')
+    .eq('establishment_id', establishmentId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as unknown as EstablishmentReview[];
+}
+
+/**
+ * Si el cuidador puede reseñar este establecimiento (tuvo una `service_request` 'completada' con
+ * él) — mismo criterio que `ownerCanReviewEstablishment` de la versión web. Solo decide si
+ * mostrarle el formulario; la policy de INSERT (`has_completed_service_request`) es la que de
+ * verdad lo exige del lado de la base.
+ */
+export async function ownerCanReviewEstablishment(ownerId: string, establishmentId: string): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  const { data } = await supabase
+    .from('service_requests')
+    .select('id')
+    .eq('pet_owner_id', ownerId)
+    .eq('establishment_id', establishmentId)
+    .eq('status', 'completada')
+    .limit(1)
+    .maybeSingle();
+  return Boolean(data);
 }
