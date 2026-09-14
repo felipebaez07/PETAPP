@@ -32,8 +32,8 @@ histórico definitivo (ese sigue siendo cada sección numerada de abajo).
   `policy "preventive_events_establishment_read" already exists`, señal de que ya estaba puesta).
 - [x] **Aplicar `0014_vet_visit_notes.sql`** en el Supabase real (hecho: 2026-09-13, confirmado
   por el usuario).
-- [ ] **Aplicar `0015_establishment_review_reports.sql`** en el Supabase real (SQL Editor) — ver
-  sección 22, sigue solo como archivo local.
+- [x] **Aplicar `0015_establishment_review_reports.sql`** en el Supabase real (hecho: 2026-09-13,
+  confirmado por el usuario).
 - [ ] 3 vulnerabilidades de `npm audit` (`next`→`sharp` alta, `eslint`→`js-yaml` alta, `next`
   crítica) detectadas al instalar `groq-sdk` (2026-09-09) — son de dependencias transitivas
   preexistentes, no de `groq-sdk` en sí, pero no se investigaron a fondo (ver sección 17).
@@ -1551,8 +1551,12 @@ esta sección.
 
 - [x] Aplicar `0014_vet_visit_notes.sql` en el proyecto Supabase real (hecho: 2026-09-13, el
   usuario lo confirmó).
-- [ ] Aplicar `0015_establishment_review_reports.sql` en el proyecto Supabase real (SQL Editor) —
-  sigue solo como archivo local.
+- [x] Aplicar `0015_establishment_review_reports.sql` en el proyecto Supabase real (hecho:
+  2026-09-13, el usuario lo confirmó).
+
+Con esto, las migraciones 0009-0015 (todo el módulo de IA, ruta de seguimiento, foto, reseñas,
+"próximos vencimientos" del prestador, y seguimiento veterinario/moderación de esta sección) ya
+están todas aplicadas en el Supabase real del piloto.
 - [ ] Nada de esto se probó en un navegador/dispositivo real — igual que el resto del módulo de
   IA, este entorno no tiene uno disponible.
 - [ ] El "Historial de seguimiento" combinado no tiene paginación — con meses de uso, esa lista
