@@ -78,7 +78,13 @@ export function AuthForm({ mode, initialRole }: { mode: 'login' | 'registro'; in
     const supabase = createSupabaseBrowserClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+        // Sin esto, Google reutiliza en silencio la sesión activa del navegador y se salta el
+        // selector de cuentas — un problema real cuando el usuario tiene varias cuentas de
+        // Google y termina sin querer en la que no era, con datos de una cuenta distinta.
+        queryParams: { prompt: 'select_account' },
+      },
     });
     if (error) {
       setErrorMessage(error.message);

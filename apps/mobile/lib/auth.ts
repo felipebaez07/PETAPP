@@ -105,7 +105,13 @@ export async function signInWithGoogle(): Promise<{ error: string | null }> {
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo, skipBrowserRedirect: true },
+    options: {
+      redirectTo,
+      skipBrowserRedirect: true,
+      // Mismo motivo que en apps/web/src/components/panel/auth-form.tsx: sin esto, Google
+      // reutiliza en silencio la sesión activa y se salta el selector de cuentas.
+      queryParams: { prompt: 'select_account' },
+    },
   });
   if (error || !data?.url) {
     return { error: error?.message ?? 'No se pudo iniciar sesión con Google.' };
