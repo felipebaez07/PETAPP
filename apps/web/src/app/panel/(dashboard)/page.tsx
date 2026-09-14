@@ -38,6 +38,9 @@ export default async function DashboardHomePage() {
           <Button asChild variant="outline">
             <Link href="/panel/admin/aliados">Verificar aliados</Link>
           </Button>
+          <Button asChild variant="outline">
+            <Link href="/panel/admin/resenas">Reseñas reportadas</Link>
+          </Button>
         </div>
       </div>
     );

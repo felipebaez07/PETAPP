@@ -110,3 +110,23 @@ export async function upsertEstablishmentReview(formData: FormData): Promise<Est
   if (slug) revalidatePath(`/directorio/${slug}`);
   return { ok: true };
 }
+
+/**
+ * Reporta una reseña como abusiva/falsa (idea 5 del banco de recomendaciones) — inserta en
+ * `establishment_review_reports`, nunca toca la reseña misma. La unique (review_id, reporter_id)
+ * evita reportes duplicados del mismo cuidador; si ya la había reportado, el insert falla y acá
+ * se trata como éxito igual (el resultado para el cuidador es el mismo: "ya quedó reportada").
+ */
+export async function reportEstablishmentReview(reviewId: string): Promise<EstablishmentReviewActionResult> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: 'Inicia sesión para reportar una reseña.' };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from('establishment_review_reports')
+    .insert({ review_id: reviewId, reporter_id: user.profile.id });
+  if (error && !error.message.includes('duplicate key')) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}

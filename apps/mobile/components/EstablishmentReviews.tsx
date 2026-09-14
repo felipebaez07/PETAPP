@@ -1,10 +1,14 @@
 import type { EstablishmentReview } from '@petapp/shared';
-import { Star } from 'lucide-react-native';
-import { Text, View } from 'react-native';
+import { Flag, Star } from 'lucide-react-native';
+import { useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
+
+import { supabase } from '@/lib/supabase';
 
 /** Lista de reseñas + promedio de una ficha de establecimiento — mismo criterio que la versión
- * web (`components/directorio/establishment-reviews.tsx`), lectura pública. */
-export function EstablishmentReviews({ reviews }: { reviews: EstablishmentReview[] }) {
+ * web (`components/directorio/establishment-reviews.tsx`), lectura pública. `viewerId` oculta el
+ * botón de reportar en la propia reseña del cuidador y en general cuando no hay sesión. */
+export function EstablishmentReviews({ reviews, viewerId }: { reviews: EstablishmentReview[]; viewerId: string | null }) {
   if (reviews.length === 0) {
     return (
       <Text className="font-body text-sm text-mutedForeground">
@@ -39,10 +43,42 @@ export function EstablishmentReviews({ reviews }: { reviews: EstablishmentReview
             {review.comment ? (
               <Text className="font-body text-sm text-foreground/90">{review.comment}</Text>
             ) : null}
+            {viewerId && viewerId !== review.pet_owner_id ? (
+              <ReportButton reviewId={review.id} />
+            ) : null}
           </View>
         ))}
       </View>
     </View>
+  );
+}
+
+function ReportButton({ reviewId }: { reviewId: string }) {
+  const [state, setState] = useState<'idle' | 'sending' | 'sent'>('idle');
+
+  if (state === 'sent') {
+    return <Text className="font-body text-xs text-mutedForeground">Reportada, gracias</Text>;
+  }
+
+  return (
+    <Pressable
+      disabled={state === 'sending'}
+      onPress={async () => {
+        setState('sending');
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from('establishment_review_reports').insert({ review_id: reviewId, reporter_id: user.id });
+        }
+        setState('sent');
+      }}
+      className="flex-row items-center gap-1 self-start"
+      style={({ pressed }) => (pressed ? { opacity: 0.6 } : undefined)}
+    >
+      <Flag size={12} color="#64748B" />
+      <Text className="font-body text-xs text-mutedForeground">Reportar</Text>
+    </Pressable>
   );
 }
 

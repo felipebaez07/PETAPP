@@ -1,11 +1,15 @@
 import { Star } from 'lucide-react';
 import type { EstablishmentReview } from '@petapp/shared';
+import { ReportReviewButton } from './report-review-button';
 
 /**
  * Lista de reseñas + promedio de una ficha del directorio (idea 3.1 del banco de ideas). Server
- * component puro — los datos ya vienen leídos con lectura pública, no necesita cliente.
+ * component en sí mismo (los datos ya vienen leídos con lectura pública) — el botón de reportar
+ * de cada fila es la única parte interactiva, aislada en su propio client component.
+ * `viewerId` oculta el botón en la propia reseña del cuidador (no tiene sentido reportarse a
+ * uno mismo) y en general cuando no hay sesión.
  */
-export function EstablishmentReviews({ reviews }: { reviews: EstablishmentReview[] }) {
+export function EstablishmentReviews({ reviews, viewerId }: { reviews: EstablishmentReview[]; viewerId: string | null }) {
   if (reviews.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -33,6 +37,11 @@ export function EstablishmentReviews({ reviews }: { reviews: EstablishmentReview
               <StarRating value={review.rating} />
             </div>
             {review.comment && <p className="mt-1 text-sm text-foreground/90">{review.comment}</p>}
+            {viewerId && viewerId !== review.pet_owner_id && (
+              <div className="mt-1.5">
+                <ReportReviewButton reviewId={review.id} />
+              </div>
+            )}
           </li>
         ))}
       </ul>

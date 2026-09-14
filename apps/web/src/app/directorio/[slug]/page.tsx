@@ -147,7 +147,7 @@ export default async function EstablishmentDetailPage({ params }: { params: Prom
           <CardTitle>Reseñas de cuidadores</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <EstablishmentReviews reviews={reviews} />
+          <EstablishmentReviews reviews={reviews} viewerId={viewer?.profile.id ?? null} />
           {canReview && (
             <div className="border-t border-border pt-4">
               <h3 className="mb-3 text-sm font-medium text-foreground">

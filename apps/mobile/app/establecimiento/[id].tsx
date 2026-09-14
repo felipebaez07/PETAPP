@@ -456,7 +456,7 @@ export default function EstablishmentDetailScreen() {
 
         <View className="gap-3 rounded-xl bg-card p-4 shadow-sm">
           <Text className="font-heading text-lg text-foreground">Reseñas de cuidadores</Text>
-          <EstablishmentReviews reviews={reviews} />
+          <EstablishmentReviews reviews={reviews} viewerId={viewer?.profile.id ?? null} />
           {canReview ? (
             <View className="gap-2 border-t border-border pt-4">
               <Text className="font-bodySemibold text-sm text-foreground">
