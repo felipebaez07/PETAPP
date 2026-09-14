@@ -34,6 +34,7 @@ import { DatePickerField } from '@/components/ui/DatePickerField';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FormTextField } from '@/components/ui/FormTextField';
 import { RemoteImage } from '@/components/ui/RemoteImage';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 import { PetDocumentRow } from '@/components/PetDocumentRow';
 import { PreventiveEventRow } from '@/components/PreventiveEventRow';
 import { usePets } from '@/contexts/PetsContext';
@@ -426,7 +427,8 @@ export default function PetDetailScreen() {
   return (
     <>
       <Stack.Screen options={{ title: pet.name }} />
-      <ScrollView className="flex-1 bg-background" contentContainerStyle={{ padding: 20, gap: 28 }}>
+      <ScreenBackground>
+      <ScrollView className="flex-1" contentContainerStyle={{ padding: 20, gap: 28 }}>
         <View className="flex-row items-center gap-3 rounded-xl bg-card p-4 shadow-sm">
           <Pressable
             onPress={handlePickPetPhoto}
@@ -743,6 +745,7 @@ export default function PetDetailScreen() {
           )}
         </View>
       </ScrollView>
+      </ScreenBackground>
     </>
   );
 }

@@ -11,6 +11,9 @@ WebBrowser.maybeCompleteAuthSession();
 export interface CurrentUser {
   profile: Profile;
   establishment: Establishment | null;
+  /** Viene de `auth.users`, no de `profiles` (que no guarda email) — se muestra en el Perfil
+   * para poder distinguir a simple vista cuentas de Google distintas con el mismo nombre. */
+  email: string | null;
 }
 
 /** Equivalente móvil de apps/web/src/lib/auth.ts — sin @supabase/ssr, mismo resultado. */
@@ -41,7 +44,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     establishment = (data?.[0] as Establishment | undefined) ?? null;
   }
 
-  return { profile: profile as Profile, establishment };
+  return { profile: profile as Profile, establishment, email: authData.user.email ?? null };
 }
 
 /**

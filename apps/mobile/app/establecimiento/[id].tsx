@@ -30,6 +30,7 @@ import { EstablishmentReviewForm } from '@/components/EstablishmentReviewForm';
 import { EstablishmentReviews } from '@/components/EstablishmentReviews';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { RemoteImage } from '@/components/ui/RemoteImage';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 import { StatusDot } from '@/components/ui/StatusDot';
 import { usePets } from '@/contexts/PetsContext';
 import { getCurrentUser, type CurrentUser } from '@/lib/auth';
@@ -217,8 +218,9 @@ export default function EstablishmentDetailScreen() {
   return (
     <>
       <Stack.Screen options={{ title: establishment.name }} />
+      <ScreenBackground>
       <Animated.ScrollView
-        className="flex-1 bg-background"
+        className="flex-1"
         contentContainerStyle={{ padding: 20, gap: 20 }}
         onScroll={onScroll}
         scrollEventThrottle={16}
@@ -471,6 +473,7 @@ export default function EstablishmentDetailScreen() {
           ) : null}
         </View>
       </Animated.ScrollView>
+      </ScreenBackground>
     </>
   );
 }

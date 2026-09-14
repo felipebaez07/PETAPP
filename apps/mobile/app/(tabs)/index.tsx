@@ -23,6 +23,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { PreventiveEventRow } from '@/components/PreventiveEventRow';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingState } from '@/components/ui/LoadingState';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { usePets } from '@/contexts/PetsContext';
 import { getCurrentUser, type CurrentUser } from '@/lib/auth';
@@ -146,7 +147,8 @@ function BusinessHomeScreen({ establishment }: { establishment: Establishment | 
   ];
 
   return (
-    <ScrollView className="flex-1 bg-background" contentContainerStyle={{ paddingBottom: tabBarBottomInset }}>
+    <ScreenBackground>
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: tabBarBottomInset }}>
       <ScreenHeader
         title="Inicio"
         subtitle={establishment ? `Panel de ${establishment.name}` : 'Panel de tu negocio en PETAPP'}
@@ -236,7 +238,8 @@ function BusinessHomeScreen({ establishment }: { establishment: Establishment | 
           </View>
         </View>
       )}
-    </ScrollView>
+      </ScrollView>
+    </ScreenBackground>
   );
 }
 
@@ -315,7 +318,8 @@ function CuidadorHomeScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-background" contentContainerStyle={{ paddingBottom: tabBarBottomInset }}>
+    <ScreenBackground>
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: tabBarBottomInset }}>
       <ScreenHeader title="Inicio" subtitle={APP_TAGLINE} />
 
       {isDemo ? (
@@ -413,6 +417,7 @@ function CuidadorHomeScreen() {
           />
         </View>
       ) : null}
-    </ScrollView>
+      </ScrollView>
+    </ScreenBackground>
   );
 }

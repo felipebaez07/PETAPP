@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { FormTextField } from '@/components/ui/FormTextField';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { RemoteImage } from '@/components/ui/RemoteImage';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 import { SwitchField } from '@/components/ui/SwitchField';
 import { getCurrentUser } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
@@ -123,7 +124,8 @@ export default function NegocioPerfilScreen() {
   const is24h = watch('is_24_7');
 
   return (
-    <ScrollView className="flex-1 bg-background" contentContainerStyle={{ padding: 20, gap: 24 }}>
+    <ScreenBackground>
+      <ScrollView className="flex-1" contentContainerStyle={{ padding: 20, gap: 24 }}>
       <View className="gap-1">
         <Text className="font-heading text-lg text-foreground">Información pública</Text>
         <Text className="font-body text-sm text-mutedForeground">
@@ -199,6 +201,7 @@ export default function NegocioPerfilScreen() {
       {saved ? <Text className="font-body text-sm text-success">Cambios guardados.</Text> : null}
 
       <Button label="Guardar cambios" onPress={handleSubmit(onSubmit)} loading={isSubmitting} />
-    </ScrollView>
+      </ScrollView>
+    </ScreenBackground>
   );
 }

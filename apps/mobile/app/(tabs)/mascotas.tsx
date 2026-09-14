@@ -7,6 +7,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { PetCard } from '@/components/PetCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingState } from '@/components/ui/LoadingState';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { usePets } from '@/contexts/PetsContext';
 import { useTabBarBottomInset } from '@/lib/tabBar';
@@ -35,7 +36,7 @@ export default function PetsScreen() {
   }
 
   return (
-    <View className="flex-1 bg-background">
+    <ScreenBackground>
       <ScreenHeader
         title="Mascotas"
         subtitle={pets.length === 1 ? '1 mascota registrada' : `${pets.length} mascotas registradas`}
@@ -85,6 +86,6 @@ export default function PetsScreen() {
           contentContainerStyle={{ padding: 20, paddingBottom: tabBarBottomInset }}
         />
       )}
-    </View>
+    </ScreenBackground>
   );
 }

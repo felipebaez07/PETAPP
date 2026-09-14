@@ -19,6 +19,7 @@ import { ChipSelectField } from '@/components/ui/ChipSelectField';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FormTextField } from '@/components/ui/FormTextField';
 import { LoadingState } from '@/components/ui/LoadingState';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 import { getCurrentUser } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 
@@ -136,7 +137,8 @@ export default function NegocioPlanScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-background" contentContainerStyle={{ padding: 20, gap: 24 }}>
+    <ScreenBackground>
+      <ScrollView className="flex-1" contentContainerStyle={{ padding: 20, gap: 24 }}>
       <View className="gap-1">
         <Text className="font-heading text-lg text-foreground">Tu plan en PETAPP</Text>
         <Text className="font-body text-sm text-mutedForeground">
@@ -193,6 +195,7 @@ export default function NegocioPlanScreen() {
         onPress={handleSubmit(onSubmit)}
         loading={isSubmitting}
       />
-    </ScrollView>
+      </ScrollView>
+    </ScreenBackground>
   );
 }

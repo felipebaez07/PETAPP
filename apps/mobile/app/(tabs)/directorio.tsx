@@ -14,6 +14,7 @@ import { EstablishmentCard } from '@/components/EstablishmentCard';
 import { Chip } from '@/components/ui/Chip';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingState } from '@/components/ui/LoadingState';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { fetchEstablishments } from '@/lib/data';
 import { useTabBarBottomInset } from '@/lib/tabBar';
@@ -87,7 +88,7 @@ export default function DirectoryScreen() {
   }
 
   return (
-    <View className="flex-1 bg-background">
+    <ScreenBackground>
       <ScreenHeader title="Directorio" subtitle={`Prestadores veterinarios verificados en ${PILOT_CITY}`} gradient />
 
       <View className="gap-3 px-5 pt-4">
@@ -165,6 +166,6 @@ export default function DirectoryScreen() {
           contentContainerStyle={{ padding: 20, paddingTop: 16, paddingBottom: tabBarBottomInset }}
         />
       )}
-    </View>
+    </ScreenBackground>
   );
 }

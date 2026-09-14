@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Lexend, Source_Sans_3 } from 'next/font/google';
 import { Navbar } from '@/components/site/navbar';
 import { Footer } from '@/components/site/footer';
+import { AnimalSilhouettesBackground } from '@/components/site/animal-silhouettes-background';
 import { APP_NAME, APP_TAGLINE } from '@petapp/shared';
 import './globals.css';
 
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es" className={`${lexend.variable} ${sourceSans.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-body">
+        <AnimalSilhouettesBackground />
         <Navbar />
         <main className="flex-1">{children}</main>
         <Footer />

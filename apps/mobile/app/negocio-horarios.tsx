@@ -7,6 +7,7 @@ import { Alert, Pressable, ScrollView, Switch, Text, TextInput, View } from 'rea
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingState } from '@/components/ui/LoadingState';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 import { getCurrentUser } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import type { Establishment } from '@petapp/shared';
@@ -136,7 +137,8 @@ export default function NegocioHorariosScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-background" contentContainerStyle={{ padding: 20, gap: 24 }}>
+    <ScreenBackground>
+      <ScrollView className="flex-1" contentContainerStyle={{ padding: 20, gap: 24 }}>
       <View className="gap-1">
         <Text className="font-heading text-lg text-foreground">Disponibilidad semanal</Text>
         <Text className="font-body text-sm text-mutedForeground">
@@ -228,6 +230,7 @@ export default function NegocioHorariosScreen() {
       {saved ? <Text className="font-body text-sm text-success">Horarios actualizados.</Text> : null}
 
       <Button label="Guardar horarios" onPress={handleSubmit} loading={submitting} />
-    </ScrollView>
+      </ScrollView>
+    </ScreenBackground>
   );
 }

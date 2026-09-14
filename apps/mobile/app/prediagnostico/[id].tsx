@@ -20,6 +20,7 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PrediagnosticoRoadmap } from '@/components/PrediagnosticoRoadmap';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 import { VetVisitNoteForm } from '@/components/VetVisitNoteForm';
 import { usePets } from '@/contexts/PetsContext';
 import { supabase } from '@/lib/supabase';
@@ -181,7 +182,8 @@ export default function PrediagnosticoScreen() {
     return (
       <>
         <Stack.Screen options={{ title: 'Pre-diagnóstico' }} />
-        <ScrollView className="flex-1 bg-background" contentContainerStyle={{ padding: 20, gap: 16 }}>
+        <ScreenBackground>
+        <ScrollView className="flex-1" contentContainerStyle={{ padding: 20, gap: 16 }}>
           <View className="gap-3 rounded-xl border border-secondary bg-card p-4 shadow-sm">
             <Text className="font-bodySemibold text-sm text-foreground">
               Este resumen no es un diagnóstico — es una guía para tu consulta veterinaria.
@@ -197,6 +199,7 @@ export default function PrediagnosticoScreen() {
             <VetVisitNoteForm petId={pet.id} ownerId={pet.owner_id} conversationId={conversationId} />
           ) : null}
         </ScrollView>
+        </ScreenBackground>
       </>
     );
   }
@@ -204,8 +207,9 @@ export default function PrediagnosticoScreen() {
   return (
     <>
       <Stack.Screen options={{ title: 'Pre-diagnóstico' }} />
+      <ScreenBackground>
       <KeyboardAvoidingView
-        className="flex-1 bg-background"
+        className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={90}
       >
@@ -312,6 +316,7 @@ export default function PrediagnosticoScreen() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+      </ScreenBackground>
     </>
   );
 }

@@ -21,6 +21,7 @@ import { useRouter } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
 import { LoadingState } from '@/components/ui/LoadingState';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { getCurrentUser, signInWithGoogle, type CurrentUser } from '@/lib/auth';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
@@ -190,10 +191,11 @@ export default function ProfileScreen() {
 
   if (user) {
     return (
-      <ScrollView
-        className="flex-1 bg-background"
-        contentContainerStyle={{ paddingBottom: tabBarBottomInset }}
-      >
+      <ScreenBackground>
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ paddingBottom: tabBarBottomInset }}
+        >
         <ScreenHeader title="Perfil" subtitle={`Tu cuenta en ${APP_NAME}`} />
         <View className="gap-4 p-5">
           <View className="flex-row items-center gap-3 rounded-xl bg-card p-4 shadow-sm">
@@ -202,6 +204,9 @@ export default function ProfileScreen() {
             </View>
             <View className="flex-1">
               <Text className="font-heading text-base text-foreground">{user.profile.full_name}</Text>
+              {user.email ? (
+                <Text className="font-body text-xs text-mutedForeground">{user.email}</Text>
+              ) : null}
               <Text className="font-body text-sm text-mutedForeground">
                 {ROLE_LABELS[user.profile.role] ?? user.profile.role}
               </Text>
@@ -263,16 +268,18 @@ export default function ProfileScreen() {
 
           <Button label="Cerrar sesión" variant="outline" icon={LogOut} onPress={handleSignOut} />
         </View>
-      </ScrollView>
+        </ScrollView>
+      </ScreenBackground>
     );
   }
 
   if (entryStep === 'choice') {
     return (
-      <ScrollView
-        className="flex-1 bg-background"
-        contentContainerStyle={{ paddingBottom: tabBarBottomInset }}
-      >
+      <ScreenBackground>
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ paddingBottom: tabBarBottomInset }}
+        >
         <ScreenHeader
           title={`Bienvenido a ${APP_NAME}`}
           subtitle="Seguimiento preventivo, documentos y prestadores verificados en un solo lugar"
@@ -308,17 +315,19 @@ export default function ProfileScreen() {
             </Animated.View>
           ))}
         </View>
-      </ScrollView>
+        </ScrollView>
+      </ScreenBackground>
     );
   }
 
   const chosenOption = WELCOME_OPTIONS.find((option) => option.value === role) ?? WELCOME_OPTIONS[0];
 
   return (
-    <ScrollView
-      className="flex-1 bg-background"
-      contentContainerStyle={{ paddingBottom: tabBarBottomInset }}
-    >
+    <ScreenBackground>
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: tabBarBottomInset }}
+      >
       <ScreenHeader title="Perfil" subtitle={`Tu cuenta en ${APP_NAME}`} />
 
       <Animated.View
@@ -446,6 +455,7 @@ export default function ProfileScreen() {
           />
         </View>
       </Animated.View>
-    </ScrollView>
+      </ScrollView>
+    </ScreenBackground>
   );
 }

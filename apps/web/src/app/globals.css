@@ -123,6 +123,34 @@ body {
   font-family: var(--font-body);
 }
 
+/* Siluetas de animalitos viajando de lado a lado en el fondo (Apple §14: se
+   apagan con prefers-reduced-motion en vez de solo desaparecer). */
+@keyframes drift-right {
+  from { transform: translateX(-10vw); }
+  to { transform: translateX(110vw); }
+}
+
+@keyframes drift-left {
+  from { transform: translateX(110vw); }
+  to { transform: translateX(-10vw); }
+}
+
+.animate-drift-right {
+  animation: drift-right linear infinite;
+}
+
+.animate-drift-left {
+  animation: drift-left linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-drift-right,
+  .animate-drift-left {
+    animation: none;
+    left: 50%;
+  }
+}
+
 /* Jerarquía tipográfica (Apple §15): tracking negativo y leading apretado en
    tamaños grandes, tracking casi nulo y leading holgado en texto de cuerpo. */
 h1, h2, h3, h4, h5, h6 {

@@ -16,6 +16,7 @@ import { ChipSelectField } from '@/components/ui/ChipSelectField';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FormTextField } from '@/components/ui/FormTextField';
 import { LoadingState } from '@/components/ui/LoadingState';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 import { getCurrentUser, type CurrentUser } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 
@@ -123,7 +124,8 @@ export default function NegocioCrearScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-background" contentContainerStyle={{ padding: 20, gap: 24 }}>
+    <ScreenBackground>
+      <ScrollView className="flex-1" contentContainerStyle={{ padding: 20, gap: 24 }}>
       <View className="gap-1">
         <Text className="font-heading text-lg text-foreground">Crea el perfil de tu negocio</Text>
         <Text className="font-body text-sm text-mutedForeground">
@@ -157,6 +159,7 @@ export default function NegocioCrearScreen() {
       {errorMessage ? <Text className="font-body text-sm text-destructive">{errorMessage}</Text> : null}
 
       <Button label="Crear mi negocio" onPress={handleSubmit(onSubmit)} loading={isSubmitting} />
-    </ScrollView>
+      </ScrollView>
+    </ScreenBackground>
   );
 }

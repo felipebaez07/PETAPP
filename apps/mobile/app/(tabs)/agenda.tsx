@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingState } from '@/components/ui/LoadingState';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { getCurrentUser } from '@/lib/auth';
 import { formatAgendaDateHeader, formatAgendaTime, localDateKey } from '@/lib/labels';
@@ -133,7 +134,8 @@ export default function AgendaScreen() {
   let rowIndex = 0;
 
   return (
-    <ScrollView className="flex-1 bg-background" contentContainerStyle={{ paddingBottom: tabBarBottomInset }}>
+    <ScreenBackground>
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: tabBarBottomInset }}>
       <ScreenHeader title="Agenda" subtitle="Qué cuidador viene, con qué mascota y cuándo" />
 
       <View className="gap-5 px-5 pt-5">
@@ -244,6 +246,7 @@ export default function AgendaScreen() {
           )}
         </View>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </ScreenBackground>
   );
 }

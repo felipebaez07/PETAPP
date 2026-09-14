@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { ChipSelectField } from '@/components/ui/ChipSelectField';
 import { DatePickerField } from '@/components/ui/DatePickerField';
 import { FormTextField } from '@/components/ui/FormTextField';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 import { SwitchField } from '@/components/ui/SwitchField';
 import { usePets } from '@/contexts/PetsContext';
 import { supabase } from '@/lib/supabase';
@@ -103,7 +104,8 @@ export default function NewPetScreen() {
   });
 
   return (
-    <ScrollView className="flex-1 bg-background" contentContainerStyle={{ padding: 20, gap: 20 }}>
+    <ScreenBackground>
+      <ScrollView className="flex-1" contentContainerStyle={{ padding: 20, gap: 20 }}>
       <Text className="font-body text-sm text-mutedForeground">
         Completa la ficha básica de tu mascota. Podrás editarla más adelante.
       </Text>
@@ -175,6 +177,7 @@ export default function NewPetScreen() {
         <Button label="Guardar mascota" onPress={() => onSubmit()} loading={isSubmitting || saving} />
         <Button label="Cancelar" variant="ghost" onPress={() => router.back()} />
       </View>
-    </ScrollView>
+      </ScrollView>
+    </ScreenBackground>
   );
 }
