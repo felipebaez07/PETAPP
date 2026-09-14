@@ -12,7 +12,7 @@ import { AddPreventiveEventPanel } from '@/components/cuidador/add-preventive-ev
 import { PreventiveEventRow } from '@/components/cuidador/preventive-event-row';
 import { AddDocumentPanel } from '@/components/cuidador/add-document-panel';
 import { DocumentRow } from '@/components/cuidador/document-row';
-import { SPECIES_LABELS, type PetWithDetails, type VetVisitNote } from '@petapp/shared';
+import { SPECIES_LABELS, type AiConversation, type PetWithDetails, type VetVisitNote } from '@petapp/shared';
 
 export default async function PetDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -35,15 +35,33 @@ export default async function PetDetailPage({ params }: { params: Promise<{ id: 
     return a.due_date.localeCompare(b.due_date);
   });
 
-  // Cierra el círculo del pre-diagnóstico (idea explícita del usuario): lo que el cuidador contó
-  // que dijo/hizo el veterinario después de la cita real, para tener un historial además de que
-  // el backend de IA (route.ts) ya lo use como contexto en la próxima consulta.
-  const { data: vetVisitNotesData } = await supabase
-    .from('vet_visit_notes')
-    .select('*')
-    .eq('pet_id', pet.id)
-    .order('created_at', { ascending: false });
+  // Cierra el círculo del pre-diagnóstico (idea explícita del usuario): un timeline único que
+  // mezcla los resúmenes de pre-diagnósticos completados con lo que el cuidador fue contando que
+  // dijo/hizo el veterinario en cada cita real — el mismo historial combinado que el backend de
+  // IA (route.ts) ya usa como contexto en la próxima consulta, ahora visible acá.
+  const [{ data: vetVisitNotesData }, { data: pastConversationsData }] = await Promise.all([
+    supabase.from('vet_visit_notes').select('*').eq('pet_id', pet.id).order('created_at', { ascending: false }),
+    supabase
+      .from('ai_conversations')
+      .select('id, summary, created_at')
+      .eq('pet_id', pet.id)
+      .eq('status', 'completada')
+      .not('summary', 'is', null)
+      .order('created_at', { ascending: false }),
+  ]);
   const vetVisitNotes = (vetVisitNotesData as VetVisitNote[] | null) ?? [];
+  const pastConversations = (pastConversationsData as Pick<AiConversation, 'id' | 'summary' | 'created_at'>[] | null) ?? [];
+
+  interface TimelineEntry {
+    key: string;
+    date: string;
+    kind: 'resumen' | 'veterinario';
+    text: string;
+  }
+  const timeline: TimelineEntry[] = [
+    ...pastConversations.map((c) => ({ key: `c-${c.id}`, date: c.created_at, kind: 'resumen' as const, text: c.summary! })),
+    ...vetVisitNotes.map((n) => ({ key: `n-${n.id}`, date: n.created_at, kind: 'veterinario' as const, text: n.note })),
+  ].sort((a, b) => b.date.localeCompare(a.date));
 
   return (
     <div>
@@ -127,30 +145,32 @@ export default async function PetDetailPage({ params }: { params: Promise<{ id: 
         </CardContent>
       </Card>
 
-      {vetVisitNotes.length > 0 && (
+      {timeline.length > 0 && (
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Historial veterinario</CardTitle>
+            <CardTitle>Historial de seguimiento</CardTitle>
             <CardDescription>
-              Lo que fuiste contando después de cada cita real — el asistente de IA ya lo tiene en cuenta en
-              las próximas consultas.
+              Pre-diagnósticos con IA y lo que fuiste contando después de cada cita real — el asistente ya
+              tiene esto en cuenta en las próximas consultas.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <ul className="space-y-3 divide-y divide-border">
-              {vetVisitNotes.map((visitNote, index) => (
-                <RevealItem key={visitNote.id} index={index} as="li">
+              {timeline.map((entry, index) => (
+                <RevealItem key={entry.key} index={index} as="li">
                   <div className="flex items-start gap-2.5 pt-3 first:pt-0">
-                    <Stethoscope className="mt-0.5 size-4 shrink-0 text-secondary" aria-hidden />
+                    {entry.kind === 'veterinario' ? (
+                      <Stethoscope className="mt-0.5 size-4 shrink-0 text-secondary" aria-hidden />
+                    ) : (
+                      <Sparkles className="mt-0.5 size-4 shrink-0 text-secondary" aria-hidden />
+                    )}
                     <div>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(visitNote.created_at).toLocaleDateString('es-CO', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric',
-                        })}
+                        {new Date(entry.date).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        {' · '}
+                        {entry.kind === 'veterinario' ? 'Lo que dijo el veterinario' : 'Resumen del asistente de IA'}
                       </p>
-                      <p className="text-sm text-foreground/90">{visitNote.note}</p>
+                      <p className="whitespace-pre-wrap text-sm text-foreground/90">{entry.text}</p>
                     </div>
                   </div>
                 </RevealItem>

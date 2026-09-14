@@ -176,3 +176,20 @@ export async function fetchVetVisitNotesByPet(petId: string): Promise<VetVisitNo
   if (error) throw error;
   return (data ?? []) as unknown as VetVisitNote[];
 }
+
+/** Resúmenes de conversaciones de pre-diagnóstico ya completadas de una mascota — mismo timeline
+ * combinado (con `fetchVetVisitNotesByPet`) que ya usa `route.ts` como contexto para la IA. */
+export async function fetchPastAiSummariesByPet(
+  petId: string
+): Promise<{ id: string; summary: string; created_at: string }[]> {
+  if (!isSupabaseConfigured) return [];
+  const { data, error } = await supabase
+    .from('ai_conversations')
+    .select('id, summary, created_at')
+    .eq('pet_id', petId)
+    .eq('status', 'completada')
+    .not('summary', 'is', null)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as { id: string; summary: string; created_at: string }[];
+}

@@ -6,7 +6,6 @@ import {
   SPECIES_LABELS,
   type PetDocument,
   type PreventiveEvent,
-  type VetVisitNote,
 } from '@petapp/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -38,7 +37,7 @@ import { RemoteImage } from '@/components/ui/RemoteImage';
 import { PetDocumentRow } from '@/components/PetDocumentRow';
 import { PreventiveEventRow } from '@/components/PreventiveEventRow';
 import { usePets } from '@/contexts/PetsContext';
-import { fetchPetDocumentsByPet, fetchPreventiveEventsByPet, fetchVetVisitNotesByPet } from '@/lib/data';
+import { fetchPastAiSummariesByPet, fetchPetDocumentsByPet, fetchPreventiveEventsByPet, fetchVetVisitNotesByPet } from '@/lib/data';
 import { formatPetAge, SEX_LABELS } from '@/lib/labels';
 import { supabase } from '@/lib/supabase';
 import {
@@ -99,6 +98,16 @@ function sortByCompletedDesc(events: PreventiveEvent[]): PreventiveEvent[] {
   return [...events].sort((a, b) => (b.completed_at ?? '').localeCompare(a.completed_at ?? ''));
 }
 
+/** Un ítem del "Historial de seguimiento" — mezcla resúmenes de pre-diagnóstico completados con
+ * notas de seguimiento veterinario (0014_vet_visit_notes.sql), mismo timeline combinado que ya
+ * arma `route.ts` como contexto para la IA. */
+interface TimelineEntry {
+  key: string;
+  date: string;
+  kind: 'resumen' | 'veterinario';
+  text: string;
+}
+
 export default function PetDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -107,7 +116,7 @@ export default function PetDetailScreen() {
 
   const [events, setEvents] = useState<PreventiveEvent[]>([]);
   const [documents, setDocuments] = useState<PetDocument[]>([]);
-  const [vetVisitNotes, setVetVisitNotes] = useState<VetVisitNote[]>([]);
+  const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [documentMode, setDocumentMode] = useState<'file' | 'link'>(isDemo ? 'link' : 'file');
@@ -131,17 +140,30 @@ export default function PetDetailScreen() {
       // `pets`, así que nunca se consulta el backend con su id.
       setEvents(sortByDueDate(DEMO_PREVENTIVE_EVENTS.filter((e) => e.pet_id === pet.id)));
       setDocuments(DEMO_PET_DOCUMENTS.filter((d) => d.pet_id === pet.id));
-      setVetVisitNotes([]);
+      setTimeline([]);
       setLoading(false);
       return;
     }
     setLoading(true);
-    Promise.all([fetchPreventiveEventsByPet(pet.id), fetchPetDocumentsByPet(pet.id), fetchVetVisitNotesByPet(pet.id)])
-      .then(([ev, docs, notes]) => {
+    Promise.all([
+      fetchPreventiveEventsByPet(pet.id),
+      fetchPetDocumentsByPet(pet.id),
+      fetchVetVisitNotesByPet(pet.id),
+      fetchPastAiSummariesByPet(pet.id),
+    ])
+      .then(([ev, docs, notes, summaries]) => {
         if (!active) return;
         setEvents(sortByDueDate(ev));
         setDocuments(docs);
-        setVetVisitNotes(notes);
+        // Cierra el círculo del pre-diagnóstico: un timeline único mezclando los resúmenes de
+        // pre-diagnósticos completados con lo que el cuidador fue contando que dijo/hizo el
+        // veterinario en cada cita real — mismo historial combinado que ya usa route.ts como
+        // contexto para la IA.
+        const combined: TimelineEntry[] = [
+          ...summaries.map((s) => ({ key: `c-${s.id}`, date: s.created_at, kind: 'resumen' as const, text: s.summary })),
+          ...notes.map((n) => ({ key: `n-${n.id}`, date: n.created_at, kind: 'veterinario' as const, text: n.note })),
+        ].sort((a, b) => b.date.localeCompare(a.date));
+        setTimeline(combined);
       })
       .catch(() => {
         // Sin este catch, un error de red dejaba las listas vacías y mostraba los empty
@@ -593,28 +615,31 @@ export default function PetDetailScreen() {
           )}
         </View>
 
-        {/* Historial veterinario — cierra el círculo del pre-diagnóstico: lo que el cuidador fue
-            contando después de cada cita real (ver components/VetVisitNoteForm.tsx), que el
-            backend de IA ya usa como contexto en la próxima consulta. */}
-        {vetVisitNotes.length > 0 ? (
+        {/* Historial de seguimiento — cierra el círculo del pre-diagnóstico: mezcla los resúmenes
+            de pre-diagnóstico completados con lo que el cuidador fue contando que dijo/hizo el
+            veterinario en cada cita real (ver components/VetVisitNoteForm.tsx), mismo timeline
+            que el backend de IA ya usa como contexto en la próxima consulta. */}
+        {timeline.length > 0 ? (
           <View className="gap-3">
-            <Text className="font-heading text-lg text-foreground">Historial veterinario</Text>
+            <Text className="font-heading text-lg text-foreground">Historial de seguimiento</Text>
             <View className="gap-2.5 rounded-xl bg-card p-4 shadow-sm">
-              {vetVisitNotes.map((visitNote, index) => (
+              {timeline.map((entry, index) => (
                 <View
-                  key={visitNote.id}
+                  key={entry.key}
                   className={index > 0 ? 'flex-row gap-2.5 border-t border-border pt-2.5' : 'flex-row gap-2.5'}
                 >
-                  <Stethoscope size={16} color="#059669" style={{ marginTop: 2 }} />
+                  {entry.kind === 'veterinario' ? (
+                    <Stethoscope size={16} color="#059669" style={{ marginTop: 2 }} />
+                  ) : (
+                    <Sparkles size={16} color="#059669" style={{ marginTop: 2 }} />
+                  )}
                   <View className="flex-1">
                     <Text className="font-body text-xs text-mutedForeground">
-                      {new Date(visitNote.created_at).toLocaleDateString('es-CO', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                      })}
+                      {new Date(entry.date).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      {' · '}
+                      {entry.kind === 'veterinario' ? 'Lo que dijo el veterinario' : 'Resumen del asistente de IA'}
                     </Text>
-                    <Text className="font-body text-sm text-foreground">{visitNote.note}</Text>
+                    <Text className="font-body text-sm text-foreground">{entry.text}</Text>
                   </View>
                 </View>
               ))}
