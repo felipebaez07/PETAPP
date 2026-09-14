@@ -26,12 +26,14 @@ histórico definitivo (ese sigue siendo cada sección numerada de abajo).
   necesita rescatar nada de ahí (sección 3).
 - [ ] Borrado de archivos huérfanos en Supabase Storage (`pet-photos`/`pet-documents`) al eliminar
   una mascota o un documento — hoy el archivo se queda huérfano en el bucket (secciones 10, 12).
-- [ ] Migración de RLS para que el prestador vea "próximos vencimientos" de sus pacientes en su
-  resumen del panel — hoy solo puede ver eso si hay una `service_request` confirmada/completada con
-  él, y no está implementado (sección 9 original, primer ítem del backlog viejo).
+- [x] Migración de RLS para que el prestador vea "próximos vencimientos" de sus pacientes —
+  `0013_preventive_events_establishment_read.sql`, ver sección 21 (hecho: 2026-09-13, **falta
+  aplicarla en el Supabase real** — SQL Editor).
 - [ ] 3 vulnerabilidades de `npm audit` (`next`→`sharp` alta, `eslint`→`js-yaml` alta, `next`
   crítica) detectadas al instalar `groq-sdk` (2026-09-09) — son de dependencias transitivas
   preexistentes, no de `groq-sdk` en sí, pero no se investigaron a fondo (ver sección 17).
+- [x] Auditoría de seguridad de todo lo construido esta semana — sin hallazgos de alta confianza
+  (ver sección 21, hecho: 2026-09-13).
 
 ### 🤖 Módulo de IA (pre-diagnóstico + ruta de seguimiento + foto + WhatsApp, secciones 14-15, 17-19) — probado en vivo por el usuario 2026-09-13
 - [x] Motor cambiado de Gemini a Groq — ver sección 17 (hecho: 2026-09-09).
@@ -45,8 +47,7 @@ histórico definitivo (ese sigue siendo cada sección numerada de abajo).
   usuario lo confirmó — resolvió el "No se pudo subir la foto" que vio al probar el chat).
 - [x] Probar el flujo completo del chat en navegador con sesión real, incluyendo la foto de
   síntoma contra `qwen/qwen3.6-27b` — el usuario confirmó que ya funciona (hecho: 2026-09-13).
-- [ ] Foto de síntoma solo está implementada en web — mobile queda pendiente si se quiere ahí
-  también (sección 17).
+- [x] Foto de síntoma llevada a mobile también — ver sección 21 (hecho: 2026-09-13).
 - [x] **Enviar el resumen por WhatsApp (idea 1.2 del banco de ideas)** — ver sección 19
   (hecho: 2026-09-13, falta que el usuario lo pruebe en producción tras el próximo deploy).
 - [ ] `EXPO_PUBLIC_WEB_URL` en un build real de EAS — no es un pendiente urgente todavía: el repo
@@ -1442,6 +1443,62 @@ pendiente" de arriba para cuando se quiera retomar.
 - [ ] Probar en producción: que aparezca el formulario solo con una cita `completada` real, que
   el promedio y la lista se vean bien con 0/1/varias reseñas, y que editar una reseña existente
   actualice la misma tarjeta en vez de crear una nueva.
-- [ ] Mobile no tiene esta función todavía.
+- [x] Mobile ya tiene esta función — ver sección 21 (hecho: 2026-09-13).
 - [ ] No hay forma de "reportar" una reseña abusiva desde la UI todavía — por ahora solo un admin
   con acceso directo a Supabase podría borrarla (la policy de DELETE ya lo permite).
+
+## 21. RLS para el panel del prestador + paridad mobile + auditoría de seguridad + pulido (2026-09-13)
+
+Pedido del usuario en un solo mensaje: arreglar los pendientes que quedaron anotados, llevar la
+foto de síntoma y las reseñas a mobile, auditar seguridad, y pulir diseño/animaciones. Se investigó
+primero con un agente Explore (estado real de RLS/policies) antes de escribir la migración, y se
+usó la skill `db-guardian` para clasificar el riesgo antes de aplicarla.
+
+- [x] **`0013_preventive_events_establishment_read.sql`**: nueva función `security definer`
+  `establishment_has_relationship_with_pet` (mismo patrón que `pet_belongs_to_user` de 0008 y
+  `has_completed_service_request` de 0012) + una policy de SELECT nueva en `preventive_events` —
+  puramente aditiva, clasificada 🟢 por `db-guardian` (sin filas tocadas, sin DROP). Un
+  establecimiento ahora puede ver los vencimientos de una mascota solo si tiene una
+  `service_request` `confirmada`/`completada` con ella. Bloqueado desde el backlog original,
+  sección 9. El panel del prestador (`panel/(dashboard)/page.tsx`) ya consume esto y muestra la
+  lista real en vez del placeholder estático.
+- [x] **Mobile a la par de dos features que solo existían en web**: foto de síntoma en el chat de
+  pre-diagnóstico (mismo bucket/patrón de subida que ya usa la app para fotos de mascota) y
+  reseñas/calificaciones de establecimientos (mismo criterio de elegibilidad y upsert que la
+  versión web).
+- [x] **Auditoría de seguridad**: se armó el diff completo de todo lo construido esta semana
+  (~3500 líneas, desde el módulo de IA hasta acá) y se mandó a un agente dedicado con la misma
+  metodología de la skill `security-review` (categorías de vulnerabilidad, exigencia de
+  confianza >80%, filtrado de falsos positivos). **Resultado: sin hallazgos de alta confianza.**
+  Se verificó específicamente: las 5 migraciones de RLS nuevas (0009-0013), el auth dual del
+  endpoint de IA (cookie web / Bearer mobile), el bucket `ai-chat-images` (sin path traversal
+  entre usuarios), y el upsert de reseñas (solo puede tocar la fila propia). Dos pendientes de
+  seguridad ya conocidos siguen abiertos, no son hallazgos nuevos: rotar `GROQ_API_KEY` (quedó
+  expuesta en el chat de la sesión pasada) y activar "Confirm email" en Supabase Auth.
+- [x] **Pulido de mobile con la skill `apple-design`**: auditoría de los 18 archivos que usan
+  `Pressable` en `apps/mobile` — la mayoría ya sigue un patrón consistente de feedback al
+  presionar (opacity 0.6-0.85 para acciones tipo ícono, scale 0.97-0.98 para tarjetas/filas), pero
+  5 quedaban sin ningún feedback visual: "Deshacer" en la ruta de seguimiento
+  (`PrediagnosticoRoadmap.tsx`), las franjas horarias del picker de citas
+  (`AppointmentSlotPicker.tsx`), los toggles de horario del negocio (`negocio-horarios.tsx`, 24/7
+  y por día), y tres botones del chat de pre-diagnóstico (quitar foto, adjuntar, enviar — código
+  de esta misma sesión). Corregidos todos, mismo criterio ya establecido en el resto de la app. De
+  paso, los mensajes del chat ahora entran con un `FadeInUp` sutil (mismo spring
+  damping/stiffness que ya usa el resto de la app) en vez de aparecer de golpe.
+
+**Verificación de esta pasada:** `npm run typecheck` en verde en las 3 workspaces, `npm run build`
+de web y `npx expo export --platform web` de mobile sin errores.
+
+**Pendiente honesto de esta pasada:**
+
+- [ ] **El pulido de diseño fue acotado a las 4 pantallas de mayor tráfico** (directorio, ficha de
+  mascota, chat de IA, perfil/bienvenida) y solo a feedback de presión + una animación de entrada
+  — el pedido original ("todo el sistema móvil en diseño, transiciones, imágenes, muy estético")
+  es una iniciativa mucho más grande que una sola pasada; el usuario ya confirmó priorizar así
+  cuando se le preguntó. Sigue pendiente: auditar el resto de las pantallas, y unificar la familia
+  de variantes de `FadeInDown` (duration/delay difieren entre `240/35`, `260/40`, `260/60`,
+  `280/40` según la pantalla — cada archivo redeclara su propia constante, no hay una fuente única).
+- [ ] No se tocó el ícono nativo de la app mobile (ver sección 16/18) ni la paleta de colores del
+  logo como paleta de marca — siguen anotados como decisiones aparte.
+- [ ] Aplicar `0013_preventive_events_establishment_read.sql` en el proyecto Supabase real (SQL
+  Editor) — sigue solo como archivo local.
