@@ -30,8 +30,10 @@ histórico definitivo (ese sigue siendo cada sección numerada de abajo).
   `0013_preventive_events_establishment_read.sql`, ver sección 21 (hecho: 2026-09-13, **ya
   aplicada en el Supabase real** — confirmado 2026-09-13: al reintentar pegarla dio
   `policy "preventive_events_establishment_read" already exists`, señal de que ya estaba puesta).
-- [ ] **Aplicar `0014_vet_visit_notes.sql` y `0015_establishment_review_reports.sql`** en el
-  Supabase real (SQL Editor) — ver sección 22, siguen solo como archivos locales.
+- [x] **Aplicar `0014_vet_visit_notes.sql`** en el Supabase real (hecho: 2026-09-13, confirmado
+  por el usuario).
+- [ ] **Aplicar `0015_establishment_review_reports.sql`** en el Supabase real (SQL Editor) — ver
+  sección 22, sigue solo como archivo local.
 - [ ] 3 vulnerabilidades de `npm audit` (`next`→`sharp` alta, `eslint`→`js-yaml` alta, `next`
   crítica) detectadas al instalar `groq-sdk` (2026-09-09) — son de dependencias transitivas
   preexistentes, no de `groq-sdk` en sí, pero no se investigaron a fondo (ver sección 17).
@@ -1547,8 +1549,10 @@ esta sección.
 
 **Pendiente honesto de esta pasada:**
 
-- [ ] Aplicar `0014_vet_visit_notes.sql` y `0015_establishment_review_reports.sql` en el proyecto
-  Supabase real (SQL Editor) — siguen solo como archivos locales.
+- [x] Aplicar `0014_vet_visit_notes.sql` en el proyecto Supabase real (hecho: 2026-09-13, el
+  usuario lo confirmó).
+- [ ] Aplicar `0015_establishment_review_reports.sql` en el proyecto Supabase real (SQL Editor) —
+  sigue solo como archivo local.
 - [ ] Nada de esto se probó en un navegador/dispositivo real — igual que el resto del módulo de
   IA, este entorno no tiene uno disponible.
 - [ ] El "Historial de seguimiento" combinado no tiene paginación — con meses de uso, esa lista
