@@ -27,8 +27,9 @@ histórico definitivo (ese sigue siendo cada sección numerada de abajo).
 - [ ] Borrado de archivos huérfanos en Supabase Storage (`pet-photos`/`pet-documents`) al eliminar
   una mascota o un documento — hoy el archivo se queda huérfano en el bucket (secciones 10, 12).
 - [x] Migración de RLS para que el prestador vea "próximos vencimientos" de sus pacientes —
-  `0013_preventive_events_establishment_read.sql`, ver sección 21 (hecho: 2026-09-13, **falta
-  aplicarla en el Supabase real** — SQL Editor).
+  `0013_preventive_events_establishment_read.sql`, ver sección 21 (hecho: 2026-09-13, **ya
+  aplicada en el Supabase real** — confirmado 2026-09-13: al reintentar pegarla dio
+  `policy "preventive_events_establishment_read" already exists`, señal de que ya estaba puesta).
 - [ ] **Aplicar `0014_vet_visit_notes.sql` y `0015_establishment_review_reports.sql`** en el
   Supabase real (SQL Editor) — ver sección 22, siguen solo como archivos locales.
 - [ ] 3 vulnerabilidades de `npm audit` (`next`→`sharp` alta, `eslint`→`js-yaml` alta, `next`
@@ -1502,8 +1503,8 @@ de web y `npx expo export --platform web` de mobile sin errores.
   `280/40` según la pantalla — cada archivo redeclara su propia constante, no hay una fuente única).
 - [ ] No se tocó el ícono nativo de la app mobile (ver sección 16/18) ni la paleta de colores del
   logo como paleta de marca — siguen anotados como decisiones aparte.
-- [ ] Aplicar `0013_preventive_events_establishment_read.sql` en el proyecto Supabase real (SQL
-  Editor) — sigue solo como archivo local.
+- [x] Aplicar `0013_preventive_events_establishment_read.sql` en el proyecto Supabase real — ya
+  estaba aplicada (confirmado 2026-09-13 al reintentar pegarla, dio "policy already exists").
 
 ## 22. Fondo/transiciones mobile + cerrar el círculo del pre-diagnóstico + 2 ideas del banco (2026-09-13)
 
