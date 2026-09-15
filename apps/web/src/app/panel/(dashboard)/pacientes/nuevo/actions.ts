@@ -4,13 +4,17 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { clinicalPatientSchema, type PetSpecies } from '@petapp/shared';
+import { clinicalPatientSchema, type PetSex, type PetSpecies } from '@petapp/shared';
 
 export interface PetSearchResult {
   id: string;
   name: string;
   species: PetSpecies;
   breed: string | null;
+  sex: PetSex;
+  birth_date: string | null;
+  sterilized: boolean;
+  notes: string | null;
   owner_name: string | null;
 }
 
@@ -19,14 +23,47 @@ interface PetSearchRow {
   name: string;
   species: PetSpecies;
   breed: string | null;
+  sex: PetSex;
+  birth_date: string | null;
+  sterilized: boolean;
+  notes: string | null;
   owner: { full_name: string } | null;
 }
 
+const PET_SEARCH_COLUMNS = 'id, name, species, breed, sex, birth_date, sterilized, notes, owner:profiles(full_name)';
+// `!inner` en vez del embed normal: sin esto, filtrar por `owner.full_name` no restringe las
+// filas de `pets` que vuelven (PostgREST solo filtraría el contenido embebido, no la fila base),
+// así que la búsqueda "por dueño" devolvería todas las mascotas en vez de solo las que calzan.
+const PET_SEARCH_COLUMNS_OWNER_JOIN =
+  'id, name, species, breed, sex, birth_date, sterilized, notes, owner:profiles!inner(full_name)';
+
+function toResult(pet: PetSearchRow): PetSearchResult {
+  return {
+    id: pet.id,
+    name: pet.name,
+    species: pet.species,
+    breed: pet.breed,
+    sex: pet.sex,
+    birth_date: pet.birth_date,
+    sterilized: pet.sterilized,
+    notes: pet.notes,
+    owner_name: pet.owner?.full_name ?? null,
+  };
+}
+
 /**
- * Busca mascotas ya registradas en la plataforma por nombre, para el modo "vincular mascota ya
- * registrada" de ClinicalPatientForm. La RLS de `pets` ya restringe lo que un establecimiento
- * puede ver a las mascotas con las que tiene una relación (vía `service_requests`) — no hace
- * falta (ni se puede: `pets` no tiene `establishment_id`) filtrar por establecimiento acá.
+ * Busca mascotas ya registradas en la plataforma, para el modo "vincular mascota ya registrada"
+ * de ClinicalPatientForm. Busca tanto por nombre de la mascota como por nombre del dueño — un
+ * mismo nombre de mascota ("Roco", "Max") se repite muchísimo entre pacientes distintos, mientras
+ * que un dueño tiene pocas mascotas, así que buscar por dueño encuentra el paciente correcto más
+ * rápido (pedido explícito del usuario, 2026-09-15). Son dos consultas separadas en vez de un
+ * `.or()` porque el filtro por nombre del dueño cae en la tabla `profiles` unida (`owner`), y
+ * PostgREST no soporta esa combinación en un solo `.or()` de forma confiable — se corren en
+ * paralelo y se combinan acá, dedupe por id.
+ *
+ * La RLS de `pets` ya restringe lo que un establecimiento puede ver a las mascotas con las que
+ * tiene una relación (vía `service_requests`) — no hace falta (ni se puede: `pets` no tiene
+ * `establishment_id`) filtrar por establecimiento acá.
  */
 export async function searchPets(query: string): Promise<PetSearchResult[]> {
   const user = await getCurrentUser();
@@ -36,19 +73,21 @@ export async function searchPets(query: string): Promise<PetSearchResult[]> {
   if (!q) return [];
 
   const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
-    .from('pets')
-    .select('id, name, species, breed, owner:profiles(full_name)')
-    .ilike('name', `%${q}%`)
-    .limit(10);
+  const [byName, byOwner] = await Promise.all([
+    supabase.from('pets').select(PET_SEARCH_COLUMNS).ilike('name', `%${q}%`).limit(10),
+    supabase
+      .from('pets')
+      .select(PET_SEARCH_COLUMNS_OWNER_JOIN)
+      .ilike('owner.full_name', `%${q}%`)
+      .limit(10),
+  ]);
 
-  return ((data ?? []) as unknown as PetSearchRow[]).map((pet) => ({
-    id: pet.id,
-    name: pet.name,
-    species: pet.species,
-    breed: pet.breed,
-    owner_name: pet.owner?.full_name ?? null,
-  }));
+  const rows = [...(byName.data ?? []), ...(byOwner.data ?? [])] as unknown as PetSearchRow[];
+  const seen = new Map<string, PetSearchResult>();
+  for (const pet of rows) {
+    if (!seen.has(pet.id)) seen.set(pet.id, toResult(pet));
+  }
+  return [...seen.values()].slice(0, 10);
 }
 
 function str(formData: FormData, key: string): string {

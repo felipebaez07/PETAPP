@@ -176,14 +176,14 @@ export function ClinicalPatientForm() {
           </Card>
         ) : (
           <div className="space-y-2">
-            <Label htmlFor="pet-search">Buscar mascota por nombre</Label>
+            <Label htmlFor="pet-search">Buscar por nombre de la mascota o del dueño</Label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
               <Input
                 id="pet-search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Ej. Luna"
+                placeholder="Ej. Luna, o el nombre del dueño"
                 className="pl-9"
               />
             </div>
@@ -268,15 +268,26 @@ export function ClinicalPatientForm() {
         </div>
       )}
 
-      <div className="space-y-4 border-t border-border pt-4">
-        <p className="text-sm font-medium text-foreground">Ficha clínica</p>
+      {/* `key` fuerza a React a remontar este bloque (y sus `defaultValue`/`defaultChecked`) cada
+          vez que cambia la mascota vinculada o el modo — si no, cambiar de mascota seleccionada
+          no actualizaría lo ya tipado en estos campos, porque `defaultValue` solo se aplica en el
+          montaje inicial. */}
+      <div key={mode === 'vincular' ? (selectedPet?.id ?? 'sin-seleccionar') : 'nuevo'} className="space-y-4 border-t border-border pt-4">
+        <p className="text-sm font-medium text-foreground">
+          Ficha clínica
+          {selectedPet && (
+            <span className="ml-2 font-normal text-muted-foreground">
+              — precargada con lo que ya sabemos de {selectedPet.name}, edítala si hace falta
+            </span>
+          )}
+        </p>
 
         <div className="space-y-1.5">
           <Label htmlFor="sex">Sexo</Label>
           <select
             id="sex"
             name="sex"
-            defaultValue="desconocido"
+            defaultValue={selectedPet?.sex ?? 'desconocido'}
             className="flex h-11 w-full max-w-xs rounded-sm border border-input bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {SEX_OPTIONS.map(([value, label]) => (
@@ -294,7 +305,7 @@ export function ClinicalPatientForm() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="birth_date">Fecha de nacimiento (opcional)</Label>
-              <Input id="birth_date" name="birth_date" type="date" />
+              <Input id="birth_date" name="birth_date" type="date" defaultValue={selectedPet?.birth_date ?? ''} />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="estimated_age_years">Edad aproximada en años (opcional)</Label>
@@ -323,7 +334,7 @@ export function ClinicalPatientForm() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Checkbox id="sterilized" name="sterilized" />
+          <Checkbox id="sterilized" name="sterilized" defaultChecked={selectedPet?.sterilized ?? false} />
           <Label htmlFor="sterilized" className="cursor-pointer">
             Esterilizado/a
           </Label>
@@ -339,7 +350,7 @@ export function ClinicalPatientForm() {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="notes">Notas (opcional)</Label>
-          <Textarea id="notes" name="notes" rows={2} />
+          <Textarea id="notes" name="notes" rows={2} defaultValue={selectedPet?.notes ?? ''} />
         </div>
       </div>
 
