@@ -11,7 +11,7 @@ import { addService, deleteService } from './actions';
 
 export default async function ServiciosPage() {
   const user = await getCurrentUser();
-  if (!user?.establishment) redirect('/panel');
+  if (!user?.establishment || !user.isEstablishmentOwner) redirect('/panel');
 
   const supabase = await createSupabaseServerClient();
   const { data: services } = await supabase

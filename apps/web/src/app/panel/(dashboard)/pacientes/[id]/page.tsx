@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { AlertTriangle, PawPrint, Pencil, Stethoscope } from 'lucide-react';
+import { AlertTriangle, FileStack, PawPrint, Pencil, Printer, Stethoscope } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,15 +12,18 @@ import { Badge } from '@/components/ui/badge';
 import { RevealItem } from '@/components/motion/reveal-item';
 import { DeletePatientButton } from '@/components/panel/delete-patient-button';
 import {
+  CLINICAL_DOCUMENT_TYPE_LABELS,
   CLINICAL_RECORD_TYPE_LABELS,
   SPECIES_LABELS,
+  type ClinicalDocument,
   type ClinicalPatient,
   type ClinicalRecord,
   type PetSex,
 } from '@petapp/shared';
-import { addClinicalRecord } from './actions';
+import { addClinicalRecord, createClinicalDocument } from './actions';
 
 const RECORD_TYPE_OPTIONS = Object.entries(CLINICAL_RECORD_TYPE_LABELS) as [ClinicalRecord['record_type'], string][];
+const DOCUMENT_TYPE_OPTIONS = Object.entries(CLINICAL_DOCUMENT_TYPE_LABELS) as [ClinicalDocument['document_type'], string][];
 
 interface ClinicalPatientDetailRow extends ClinicalPatient {
   pet: { name: string; owner: { full_name: string; phone: string | null } | null } | null;
@@ -56,6 +59,15 @@ function computeAge(birthDate: string | null, estimatedAgeYears: number | null):
 function formatDate(dateStr: string): string {
   const date = new Date(`${dateStr}T00:00:00`);
   if (Number.isNaN(date.getTime())) return dateStr;
+  return date.toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+// A diferencia de `formatDate` (fechas tipo `date`, sin hora), `clinical_documents.created_at` y
+// `signed_at` son `timestamptz` completos — parsearlos directo evita el desfase de forzar
+// `T00:00:00` sobre un valor que ya trae su propia hora/zona.
+function formatDateTime(isoStr: string): string {
+  const date = new Date(isoStr);
+  if (Number.isNaN(date.getTime())) return isoStr;
   return date.toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
@@ -99,6 +111,13 @@ export default async function PacienteDetailPage({ params }: { params: Promise<{
     .order('visit_date', { ascending: false })
     .order('created_at', { ascending: false });
   const records = (recordsData ?? []) as ClinicalRecord[];
+
+  const { data: documentsData } = await supabase
+    .from('clinical_documents')
+    .select('*')
+    .eq('clinical_patient_id', patient.id)
+    .order('created_at', { ascending: false });
+  const documents = (documentsData ?? []) as ClinicalDocument[];
 
   const latestWeightRecord = records.find((r) => r.weight_kg != null);
   const age = computeAge(patient.birth_date, patient.estimated_age_years);
@@ -337,6 +356,108 @@ export default async function PacienteDetailPage({ params }: { params: Promise<{
                       </p>
                     );
                   })}
+                </CardContent>
+              </Card>
+            </RevealItem>
+          ))}
+        </div>
+      )}
+
+      <Card className="mb-6 mt-6">
+        <CardHeader>
+          <CardTitle>Nuevo documento</CardTitle>
+          <CardDescription>Consentimientos, remisiones, órdenes o fórmulas listos para firma del dueño.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form action={createClinicalDocument} className="space-y-4">
+            <input type="hidden" name="clinical_patient_id" value={patient.id} />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="doc-title">Título</Label>
+                <Input id="doc-title" name="title" required placeholder="Ej. Consentimiento de cirugía" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="document_type">Tipo</Label>
+                <select
+                  id="document_type"
+                  name="document_type"
+                  defaultValue="otro"
+                  className="flex h-11 w-full rounded-sm border border-input bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {DOCUMENT_TYPE_OPTIONS.map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {records.length > 0 && (
+              <div className="space-y-1.5">
+                <Label htmlFor="clinical_record_id">Vincular a una consulta (opcional)</Label>
+                <select
+                  id="clinical_record_id"
+                  name="clinical_record_id"
+                  defaultValue=""
+                  className="flex h-11 w-full max-w-md rounded-sm border border-input bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="">Sin vincular</option>
+                  {records.map((record) => (
+                    <option key={record.id} value={record.id}>
+                      {formatDate(record.visit_date)} — {record.reason}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <Label htmlFor="doc-content">Contenido</Label>
+              <Textarea id="doc-content" name="content" rows={6} required maxLength={5000} />
+            </div>
+
+            <Button type="submit">Guardar documento</Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <h2 className="mb-3 font-heading text-lg font-semibold text-foreground">Documentos</h2>
+      {documents.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center gap-2 p-8 text-center">
+            <FileStack className="size-8 text-muted-foreground" aria-hidden />
+            <p className="text-sm text-muted-foreground">Todavía no hay documentos generados para este paciente.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {documents.map((doc, index) => (
+            <RevealItem key={doc.id} index={index}>
+              <Card>
+                <CardHeader className="flex-row items-start justify-between gap-2 space-y-0">
+                  <div>
+                    <CardTitle className="text-base">{doc.title}</CardTitle>
+                    <CardDescription>{formatDateTime(doc.created_at)}</CardDescription>
+                  </div>
+                  <Badge variant="outline">{CLINICAL_DOCUMENT_TYPE_LABELS[doc.document_type]}</Badge>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm text-foreground/90">
+                  <p className="line-clamp-4 whitespace-pre-wrap">{doc.content}</p>
+                  {doc.signed_at ? (
+                    <Badge variant="success">
+                      Firmado por {doc.signer_name ?? 'el dueño'} el {formatDateTime(doc.signed_at)}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline">Pendiente de firma</Badge>
+                  )}
+                  <div>
+                    <Button asChild variant="outline" size="sm" className="gap-1.5">
+                      <Link href={`/panel/pacientes/${patient.id}/documentos/${doc.id}`}>
+                        <Printer className="size-4" /> Ver / imprimir
+                      </Link>
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </RevealItem>

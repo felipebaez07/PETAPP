@@ -19,7 +19,7 @@ export interface PlanActionResult {
  */
 export async function updateProviderPlan(formData: FormData): Promise<PlanActionResult> {
   const user = await getCurrentUser();
-  if (!user?.establishment) return { ok: false, error: 'No autorizado.' };
+  if (!user?.establishment || !user.isEstablishmentOwner) return { ok: false, error: 'No autorizado.' };
 
   const parsed = providerPlanSchema.safeParse({
     plan_code: String(formData.get('plan_code') ?? ''),

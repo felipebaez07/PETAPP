@@ -1712,3 +1712,95 @@ antes de commitear (mobile no se tocó, no hizo falta `expo export`).
   recordatorios automáticos, facturación/marketing) siguen sin construir — cada una necesita su
   propia conversación de alcance antes de empezar, mismo criterio que otras decisiones grandes de
   esta sesión.
+
+## 26. Tres módulos de OkVet: multi-usuario, documentos con firma, recordatorios (2026-09-15)
+
+El usuario pidió arrancar los 4 módulos grandes de la sección 25. Antes de escribir código se
+resolvieron los dos bloqueos reales con dos preguntas rápidas: **facturación electrónica** queda
+pendiente (el usuario no sabe todavía si PeTech factura como intermediario o cada establecimiento
+por su cuenta — sigue sin construir nada, LG-006 sigue abierto) y **recordatorios** usa **Resend**
+para correo (decisión del usuario). Con eso, se construyeron los otros tres en paralelo: yo diseñé
+las 3 migraciones nuevas y el cambio más riesgoso (multi-usuario, porque toca el login de toda la
+app) directo, y delegué a dos agentes en segundo plano "documentos" y "recordatorios" sobre
+esquemas ya fijados — mismo patrón ya usado varias veces esta sesión (yo diseño el esquema, un
+agente construye la UI/lógica sobre un contrato ya cerrado).
+
+### 26.1 Multi-usuario por establecimiento
+
+- [x] Migración `0018_establishment_staff.sql` (revisada con criterio `db-guardian`: aditiva pura,
+  veredicto aplicar). Tabla `establishment_staff` (establishment_id, profile_id, role
+  'veterinario'|'auxiliar', status 'activo'|'inactivo', added_by). **Decisión de alcance tomada
+  por mí, no confirmada en detalle con el usuario**: el personal se agrega por email de una cuenta
+  que YA existe en PeTech — no hay flujo de invitación a alguien sin cuenta todavía. Función
+  `find_profile_id_by_email` (security definer) para poder buscar por email ya que `profiles` no
+  guarda ese dato — riesgo aceptado y documentado en el propio SQL: cualquier autenticado puede
+  confirmar si un email tiene cuenta (enumeración leve, mismo trade-off que casi cualquier "agregar
+  por correo" de una app B2B).
+- [x] El personal tiene acceso operativo completo (pacientes, consultas, agenda de citas, próximos
+  vencimientos) vía policies nuevas puramente aditivas sobre `clinical_patients`, `clinical_records`,
+  `service_requests` y `preventive_events` — ninguna policy existente se tocó. **NO** tiene acceso a
+  configuración del negocio (perfil, horarios, servicios, plan) — frontera de alcance deliberada.
+- [x] `getCurrentUser()` (`apps/web/src/lib/auth.ts`) ahora resuelve `establishment` tanto para el
+  dueño como para personal activo, y expone `isEstablishmentOwner` — el personal puede seguir
+  teniendo `role: 'propietario'` en su perfil, la autorización real depende de esto y no del role.
+  Nav del panel (`layout.tsx`) y las 4 pantallas de configuración (perfil/horarios/servicios/plan)
+  actualizadas para exigir `isEstablishmentOwner`, no solo `establishment`.
+- [x] Pantalla nueva `/panel/personal`: agregar por email + rol, listar equipo, activar/desactivar,
+  quitar.
+- [ ] **No construido**: paridad mobile, invitar a alguien SIN cuenta todavía, permisos más finos
+  entre 'veterinario' y 'auxiliar' (hoy son solo una etiqueta, no cambian lo que pueden hacer).
+
+### 26.2 Documentos para firma
+
+- [x] Migración `0019_clinical_documents.sql` — tabla `clinical_documents` (consentimiento/
+  remisión/orden/fórmula/otro), ligada a un `clinical_patient` y opcionalmente a un
+  `clinical_record` puntual. RLS: dueño + personal del establecimiento (full CRUD), dueño de la
+  mascota (lectura + "firma" acotada). **IMPORTANTE, documentado también en el SQL**: esto NO es
+  firma electrónica con validez legal plena — es el dueño escribiendo su nombre y aceptando, con
+  fecha/hora, mismo nivel que cualquier formulario web de aceptación. Venderlo como más que eso
+  sería engañoso.
+- [x] Panel de establecimiento (`/panel/pacientes/[id]`): crear documento (tipo, título, contenido,
+  opcionalmente ligado a una consulta), lista de documentos con estado Firmado/Pendiente, vista
+  imprimible (`window.print()` — no hay librería de PDF en el proyecto, no se agregó una nueva).
+- [x] Lado cuidador (`/cuidador/mascotas/[id]`): ve los documentos de su mascota, puede firmar los
+  pendientes (nombre + aceptar). La acción de firma solo puede tocar `signer_name`/`signed_at`,
+  nunca el contenido, y no puede re-firmar uno ya firmado — verificado en el código, no solo
+  confiado a la RLS.
+- [ ] **No construido**: firma electrónica real (proveedor certificado), plantillas predefinidas
+  por tipo de documento (hoy el contenido es texto libre que el establecimiento redacta a mano).
+
+### 26.3 Recordatorios automáticos
+
+- [x] Migración `0020_preventive_events_reminder_tracking.sql` — columna `reminder_sent_at` en
+  `preventive_events` para no reenviar el mismo recordatorio todos los días.
+- [x] `apps/web/src/lib/supabase/admin.ts` — cliente Supabase con la service role key (nuevo
+  patrón en este proyecto, todo lo demás usa RLS con la sesión del usuario), `server-only`,
+  documentado con advertencia explícita de que nunca debe llegar al bundle del cliente.
+- [x] `apps/web/src/app/api/cron/recordatorios/route.ts` — corre diario vía Vercel Cron
+  (`apps/web/vercel.json`, `0 13 * * *` UTC ≈ 8am Colombia), busca `preventive_events` que vencen
+  en los próximos 3 días y no se han avisado, resuelve el email del dueño con
+  `admin.auth.admin.getUserById` (mismo motivo ya conocido: el email vive en `auth.users`, no en
+  `profiles`), envía por Resend, marca `reminder_sent_at`. Autenticado con el header que Vercel
+  Cron manda automáticamente (`Authorization: Bearer CRON_SECRET`) — sin ese secreto configurado,
+  la ruta rechaza todo con 401 por defecto (falla cerrado).
+- [ ] **Pendiente de configuración del usuario, bloqueante para que esto funcione de verdad**:
+  agregar en Vercel las 3 variables de entorno nuevas — `SUPABASE_SERVICE_ROLE_KEY` (Supabase →
+  Settings → API), `RESEND_API_KEY` (resend.com), `CRON_SECRET` (cualquier string largo al azar) —
+  y verificar el dominio de envío en el dashboard de Resend (el `from` usa `petech.co` como
+  placeholder, no va a entregar nada hasta que ese dominio esté verificado ahí).
+- [ ] **No construido**: WhatsApp (solo correo por ahora, decisión explícita del usuario para
+  arrancar), plantillas de email más elaboradas (hoy es texto plano).
+
+**Verificación de toda la sección**: `npm run typecheck` (3 workspaces) y `npm run build` real de
+Next.js en verde, corridos de nuevo DESPUÉS de fusionar el trabajo de los 3 módulos (mío + los dos
+agentes) para confirmar que no hubiera conflictos entre archivos que los tres tocaron a la vez
+(`packages/shared`, `pacientes/[id]/page.tsx` y `actions.ts`, `panel/(dashboard)/layout.tsx`).
+Revisé a mano las partes más sensibles (la acción de firma, el cliente admin, la ruta de cron)
+antes de dar esto por terminado — no me quedé solo con el reporte de los agentes.
+
+**Pendiente general de la sección**:
+- [ ] **Aplicar en Supabase real, en este orden exacto**: `0016` → `0017` → `0018` → `0019` →
+  `0020` (ninguna de las cinco está aplicada todavía).
+- [ ] Facturación electrónica y marketing (LG-006) siguen sin resolver la decisión estructural —
+  nada construido ahí.
+- [ ] Nada de esta sección se probó en un navegador real.

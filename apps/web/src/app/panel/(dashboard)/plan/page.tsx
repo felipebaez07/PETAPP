@@ -15,7 +15,7 @@ const STATUS_BADGE_VARIANT: Record<ProviderPlan['status'], 'default' | 'success'
 
 export default async function PlanPage() {
   const user = await getCurrentUser();
-  if (!user?.establishment) redirect('/panel');
+  if (!user?.establishment || !user.isEstablishmentOwner) redirect('/panel');
 
   const supabase = await createSupabaseServerClient();
   const { data: plan } = await supabase

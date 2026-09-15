@@ -196,6 +196,19 @@ export const clinicalRecordSchema = z.object({
 export type ClinicalRecordFormValues = z.infer<typeof clinicalRecordSchema>;
 
 /**
+ * Documento para firma (consentimiento, remisión, orden, fórmula) de un `ClinicalPatient` ya
+ * creado (0019_clinical_documents.sql). `clinical_record_id` es opcional — el establecimiento
+ * puede vincularlo a una consulta puntual ya registrada, o crearlo directo sobre el paciente.
+ */
+export const clinicalDocumentSchema = z.object({
+  clinical_record_id: z.string().uuid().optional(),
+  document_type: z.enum(['consentimiento', 'remision', 'orden', 'formula', 'otro']).default('otro'),
+  title: z.string().min(1, 'Ponle un título al documento').max(200),
+  content: z.string().min(1, 'Escribe el contenido del documento').max(5000),
+});
+export type ClinicalDocumentFormValues = z.infer<typeof clinicalDocumentSchema>;
+
+/**
  * Un turno del chat de pre-diagnóstico (POST a `/api/ai/prediagnostico`, ver
  * 0009_ai_prediagnostico.sql). `conversationId` ausente = arranca una conversación nueva para
  * `petId`; presente = continúa una ya activa. `imagePath` (0011_ai_chat_images.sql, idea 1.1 del

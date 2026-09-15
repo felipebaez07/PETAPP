@@ -7,7 +7,7 @@ import type { EstablishmentHours } from '@petapp/shared';
 
 export default async function HorariosPage() {
   const user = await getCurrentUser();
-  if (!user?.establishment) redirect('/panel');
+  if (!user?.establishment || !user.isEstablishmentOwner) redirect('/panel');
 
   const supabase = await createSupabaseServerClient();
   const { data: hours } = await supabase

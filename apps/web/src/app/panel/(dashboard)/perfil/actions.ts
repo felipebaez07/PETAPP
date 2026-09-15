@@ -11,7 +11,7 @@ export interface UpdateProfileResult {
 
 export async function updateEstablishmentProfile(formData: FormData): Promise<UpdateProfileResult> {
   const user = await getCurrentUser();
-  if (!user?.establishment) return { ok: false, error: 'No autorizado.' };
+  if (!user?.establishment || !user.isEstablishmentOwner) return { ok: false, error: 'No autorizado.' };
 
   const name = String(formData.get('name') ?? '').trim();
   const description = String(formData.get('description') ?? '').trim();

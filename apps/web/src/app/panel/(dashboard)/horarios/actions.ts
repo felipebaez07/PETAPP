@@ -13,7 +13,7 @@ export interface DayInput {
 
 export async function updateHours(days: DayInput[], is24h: boolean): Promise<{ ok: boolean; error?: string }> {
   const user = await getCurrentUser();
-  if (!user?.establishment) return { ok: false, error: 'No autorizado.' };
+  if (!user?.establishment || !user.isEstablishmentOwner) return { ok: false, error: 'No autorizado.' };
 
   const supabase = await createSupabaseServerClient();
 

@@ -8,6 +8,7 @@ import type {
   ProviderPlanCode,
   ProviderPlanStatus,
   ClinicalRecordType,
+  ClinicalDocumentType,
 } from './types';
 
 export const APP_NAME = 'PeTech';
@@ -76,7 +77,15 @@ export const CLINICAL_RECORD_TYPE_LABELS: Record<ClinicalRecordType, string> = {
   otro: 'Otro',
 };
 
-export const DAY_LABELS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'] as const;
+export const CLINICAL_DOCUMENT_TYPE_LABELS: Record<ClinicalDocumentType, string> = {
+  consentimiento: 'Consentimiento',
+  remision: 'Remisión',
+  orden: 'Orden',
+  formula: 'Fórmula',
+  otro: 'Otro',
+};
+
+export const DAY_LABELS =['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'] as const;
 export const DAY_LABELS_SHORT = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'] as const;
 
 // Design tokens — deben coincidir con design-system/petapp/MASTER.md (paleta v2: azul clínico + menta)

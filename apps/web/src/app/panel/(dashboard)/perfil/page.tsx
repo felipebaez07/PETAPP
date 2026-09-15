@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 
 export default async function PerfilPage() {
   const user = await getCurrentUser();
-  if (!user?.establishment) redirect('/panel');
+  if (!user?.establishment || !user.isEstablishmentOwner) redirect('/panel');
 
   return (
     <div className="max-w-2xl">

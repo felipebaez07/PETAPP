@@ -33,6 +33,8 @@ export type ProviderPlanStatus = 'prueba' | 'activa' | 'pausada' | 'cancelada';
 
 export type ClinicalRecordType = 'consulta_general' | 'control' | 'vacunacion' | 'desparasitacion' | 'cirugia' | 'otro';
 
+export type ClinicalDocumentType = 'consentimiento' | 'remision' | 'orden' | 'formula' | 'otro';
+
 export interface Profile {
   id: string;
   role: UserRole;
@@ -321,6 +323,28 @@ export interface ClinicalRecord {
   medications: string | null;
   vaccines_applied: string | null;
   follow_up_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Documento para firma (consentimiento, remisión, orden, fórmula u otro) ligado a un
+ * `ClinicalPatient` y, opcionalmente, a la consulta (`ClinicalRecord`) que lo originó
+ * (`clinical_record_id` null = se creó directo sobre el paciente, sin pasar por una consulta
+ * puntual). Ver 0019_clinical_documents.sql — IMPORTANTE: "firmar" acá es solo que el dueño
+ * escriba su nombre y acepte, con `signed_at` como fecha/hora — esto NO es una firma electrónica
+ * con validez legal plena. `signed_at` null = pendiente de firma.
+ */
+export interface ClinicalDocument {
+  id: string;
+  clinical_patient_id: string;
+  clinical_record_id: string | null;
+  establishment_id: string;
+  document_type: ClinicalDocumentType;
+  title: string;
+  content: string;
+  signer_name: string | null;
+  signed_at: string | null;
   created_at: string;
   updated_at: string;
 }

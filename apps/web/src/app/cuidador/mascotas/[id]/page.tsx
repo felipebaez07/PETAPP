@@ -12,7 +12,8 @@ import { AddPreventiveEventPanel } from '@/components/cuidador/add-preventive-ev
 import { PreventiveEventRow } from '@/components/cuidador/preventive-event-row';
 import { AddDocumentPanel } from '@/components/cuidador/add-document-panel';
 import { DocumentRow } from '@/components/cuidador/document-row';
-import { SPECIES_LABELS, type AiConversation, type PetWithDetails, type VetVisitNote } from '@petapp/shared';
+import { ClinicalDocumentItem } from '@/components/cuidador/clinical-document-item';
+import { SPECIES_LABELS, type AiConversation, type ClinicalDocument, type PetWithDetails, type VetVisitNote } from '@petapp/shared';
 
 export default async function PetDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -51,6 +52,19 @@ export default async function PetDetailPage({ params }: { params: Promise<{ id: 
   ]);
   const vetVisitNotes = (vetVisitNotesData as VetVisitNote[] | null) ?? [];
   const pastConversations = (pastConversationsData as Pick<AiConversation, 'id' | 'summary' | 'created_at'>[] | null) ?? [];
+
+  // Documentos para firma (0019_clinical_documents.sql) redactados por el establecimiento —
+  // llegan por `clinical_patients.pet_id`, no hay una FK directa de `clinical_documents` a `pets`.
+  // `!inner` en el embed obliga a PostgREST a filtrar las filas de `clinical_documents` por
+  // `clinical_patient.pet_id` (sin `!inner` solo filtraría el contenido embebido, devolviendo TODOS
+  // los documentos de TODOS los pacientes) — mismo patrón ya usado en
+  // panel/pacientes/nuevo/actions.ts para buscar por dueño.
+  const { data: clinicalDocumentsData } = await supabase
+    .from('clinical_documents')
+    .select('*, clinical_patient:clinical_patients!inner(pet_id)')
+    .eq('clinical_patient.pet_id', pet.id)
+    .order('created_at', { ascending: false });
+  const clinicalDocuments = (clinicalDocumentsData as unknown as ClinicalDocument[] | null) ?? [];
 
   interface TimelineEntry {
     key: string;
@@ -204,6 +218,27 @@ export default async function PetDetailPage({ params }: { params: Promise<{ id: 
           )}
         </CardContent>
       </Card>
+
+      {clinicalDocuments.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Documentos para firma</CardTitle>
+            <CardDescription>
+              Consentimientos, remisiones, órdenes y fórmulas de {pet.name} — firmar acá es solo escribir tu
+              nombre y aceptar, no reemplaza una firma electrónica con validez legal plena.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul>
+              {clinicalDocuments.map((document, index) => (
+                <RevealItem key={document.id} index={index} as="li">
+                  <ClinicalDocumentItem doc={document} defaultSignerName={user.profile.full_name} />
+                </RevealItem>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

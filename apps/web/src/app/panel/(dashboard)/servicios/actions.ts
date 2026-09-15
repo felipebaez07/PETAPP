@@ -6,7 +6,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export async function addService(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
-  if (!user?.establishment) return;
+  if (!user?.establishment || !user.isEstablishmentOwner) return;
 
   const name = String(formData.get('name') ?? '').trim();
   const description = String(formData.get('description') ?? '').trim();
@@ -27,7 +27,7 @@ export async function addService(formData: FormData): Promise<void> {
 
 export async function deleteService(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
-  if (!user?.establishment) return;
+  if (!user?.establishment || !user.isEstablishmentOwner) return;
 
   const id = String(formData.get('id') ?? '');
   if (!id) return;

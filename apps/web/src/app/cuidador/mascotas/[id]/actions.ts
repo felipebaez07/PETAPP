@@ -154,3 +154,54 @@ export async function deletePetDocument(documentId: string, petId: string): Prom
   revalidatePath(`/cuidador/mascotas/${petId}`);
   return { ok: true };
 }
+
+interface ClinicalDocumentSignLookup {
+  id: string;
+  signed_at: string | null;
+  clinical_patient: { pet_id: string } | null;
+}
+
+/**
+ * "Firma" un `clinical_document` redactado por el establecimiento (0019_clinical_documents.sql).
+ * IMPORTANTE — esto NO es una firma electrónica con validez legal plena: es el dueño escribiendo
+ * su nombre y aceptando, con fecha/hora. El `.update()` de acá envía ÚNICAMENTE `signer_name` y
+ * `signed_at` — nunca `content`/`title`/`document_type` — porque la policy RLS
+ * `clinical_documents_pet_owner_sign` no restringe columnas por sí sola, solo qué filas y bajo qué
+ * condición (`signed_at is null`) se pueden tocar; el `.is('signed_at', null)` de abajo repite esa
+ * misma condición del lado de la acción, como defensa en profundidad — no se puede re-firmar ni
+ * "desfirmar" un documento ya firmado.
+ */
+export async function signClinicalDocument(documentId: string, signerName: string): Promise<ActionResult> {
+  const user = await getCurrentUser();
+  if (!user || user.profile.role !== 'propietario') return { ok: false, error: 'No autorizado.' };
+
+  const trimmedName = signerName.trim();
+  if (!trimmedName) return { ok: false, error: 'Escribe tu nombre para firmar.' };
+
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from('clinical_documents')
+    .select('id, signed_at, clinical_patient:clinical_patients(pet_id)')
+    .eq('id', documentId)
+    .maybeSingle();
+  const doc = data as unknown as ClinicalDocumentSignLookup | null;
+
+  if (!doc) return { ok: false, error: 'Documento no encontrado.' };
+  if (doc.signed_at) return { ok: false, error: 'Este documento ya fue firmado.' };
+
+  const petId = doc.clinical_patient?.pet_id;
+  if (!petId) return { ok: false, error: 'Documento no encontrado.' };
+
+  const owns = await assertOwnsPet(petId);
+  if (!owns.ok) return owns;
+
+  const { error } = await supabase
+    .from('clinical_documents')
+    .update({ signer_name: trimmedName, signed_at: new Date().toISOString() })
+    .eq('id', documentId)
+    .is('signed_at', null);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/cuidador/mascotas/${petId}`);
+  return { ok: true };
+}

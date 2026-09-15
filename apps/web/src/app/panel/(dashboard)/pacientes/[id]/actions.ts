@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { clinicalPatientSchema, clinicalRecordSchema } from '@petapp/shared';
+import { clinicalPatientSchema, clinicalRecordSchema, clinicalDocumentSchema } from '@petapp/shared';
 
 function str(formData: FormData, key: string): string {
   return String(formData.get(key) ?? '').trim();
@@ -81,6 +81,53 @@ export async function addClinicalRecord(formData: FormData): Promise<void> {
     medications: parsed.data.medications || null,
     vaccines_applied: parsed.data.vaccines_applied || null,
     follow_up_date: parsed.data.follow_up_date || null,
+  });
+  if (error) return;
+
+  revalidatePath(`/panel/pacientes/${clinicalPatientId}`);
+}
+
+/**
+ * Crea un documento para firma (consentimiento, remisión, orden, fórmula) de un paciente ya
+ * existente (0019_clinical_documents.sql). Mismo patrón que `addClinicalRecord`: recibe
+ * `FormData` directo desde `<form action={...}>`, confirma que el paciente le pertenece a este
+ * establecimiento antes de insertar (defensa en profundidad, la RLS ya lo exige), y si algo no
+ * pasa el schema simplemente no inserta nada.
+ */
+export async function createClinicalDocument(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user?.establishment) return;
+
+  const clinicalPatientId = str(formData, 'clinical_patient_id');
+  if (!clinicalPatientId) return;
+
+  const supabase = await createSupabaseServerClient();
+  const { data: patient } = await supabase
+    .from('clinical_patients')
+    .select('id')
+    .eq('id', clinicalPatientId)
+    .eq('establishment_id', user.establishment.id)
+    .maybeSingle();
+  if (!patient) return;
+
+  const clinicalRecordId = str(formData, 'clinical_record_id');
+  const raw = {
+    clinical_record_id: clinicalRecordId || undefined,
+    document_type: str(formData, 'document_type') || undefined,
+    title: str(formData, 'title'),
+    content: str(formData, 'content'),
+  };
+
+  const parsed = clinicalDocumentSchema.safeParse(raw);
+  if (!parsed.success) return;
+
+  const { error } = await supabase.from('clinical_documents').insert({
+    clinical_patient_id: clinicalPatientId,
+    clinical_record_id: parsed.data.clinical_record_id ?? null,
+    establishment_id: user.establishment.id,
+    document_type: parsed.data.document_type,
+    title: parsed.data.title,
+    content: parsed.data.content,
   });
   if (error) return;
 
