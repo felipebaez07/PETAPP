@@ -1,5 +1,6 @@
+import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { AlertTriangle, PawPrint, Stethoscope } from 'lucide-react';
+import { AlertTriangle, PawPrint, Pencil, Stethoscope } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -8,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { RevealItem } from '@/components/motion/reveal-item';
+import { DeletePatientButton } from '@/components/panel/delete-patient-button';
 import { SPECIES_LABELS, type ClinicalPatient, type ClinicalRecord, type PetSex } from '@petapp/shared';
 import { addClinicalRecord } from './actions';
 
@@ -95,18 +97,28 @@ export default async function PacienteDetailPage({ params }: { params: Promise<{
 
   return (
     <div className="max-w-3xl">
-      <div className="mb-4 flex items-center gap-3">
-        <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-muted">
-          <PawPrint className="size-7 text-secondary" aria-hidden />
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-muted">
+            <PawPrint className="size-7 text-secondary" aria-hidden />
+          </div>
+          <div>
+            <h1 className="font-heading text-2xl font-bold text-foreground">{patient.name}</h1>
+            <p className="text-sm text-muted-foreground">
+              {SPECIES_LABELS[patient.species]}
+              {patient.breed ? ` · ${patient.breed}` : ''}
+              {` · ${SEX_LABELS[patient.sex]}`}
+              {age ? ` · ${age}` : ''}
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="font-heading text-2xl font-bold text-foreground">{patient.name}</h1>
-          <p className="text-sm text-muted-foreground">
-            {SPECIES_LABELS[patient.species]}
-            {patient.breed ? ` · ${patient.breed}` : ''}
-            {` · ${SEX_LABELS[patient.sex]}`}
-            {age ? ` · ${age}` : ''}
-          </p>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm" className="gap-1.5">
+            <Link href={`/panel/pacientes/${patient.id}/editar`}>
+              <Pencil className="size-4" /> Editar
+            </Link>
+          </Button>
+          <DeletePatientButton patientId={patient.id} patientName={patient.name} />
         </div>
       </div>
 
