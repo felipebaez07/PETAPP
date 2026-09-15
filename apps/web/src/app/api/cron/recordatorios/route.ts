@@ -100,9 +100,12 @@ export async function GET(request: Request) {
 
       try {
         await resend.emails.send({
-          // Dominio placeholder — hay que verificarlo en el dashboard de Resend antes de que
-          // los envíos realmente entreguen (paso manual, no se puede hacer desde código).
-          from: 'PeTech <recordatorios@petech.co>',
+          // Remitente de prueba de Resend — no requiere verificar un dominio propio, pero solo
+          // entrega al correo con el que te registraste en Resend (útil para probar el flujo
+          // completo, no para mandarle recordatorios reales a cualquier cuidador). Cuando haya un
+          // dominio propio verificado en el dashboard de Resend, cambiar esto a algo como
+          // 'PeTech <recordatorios@tudominio.co>'.
+          from: 'PeTech <onboarding@resend.dev>',
           to: email,
           subject: `Recordatorio: ${pet.name} tiene "${event.title}" pronto`,
           text: `Hola ${ownerName},\n\nTe escribimos para recordarte que ${pet.name} tiene pendiente "${event.title}" (${event.type}) con fecha de vencimiento el ${dueDateFormatted}.\n\nNo olvides agendar la cita a tiempo.\n\n— El equipo de PeTech`,
