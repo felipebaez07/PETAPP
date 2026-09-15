@@ -7,6 +7,7 @@ import type {
   PetDocumentType,
   ProviderPlanCode,
   ProviderPlanStatus,
+  ClinicalRecordType,
 } from './types';
 
 export const APP_NAME = 'PeTech';
@@ -64,6 +65,15 @@ export const PROVIDER_PLAN_STATUS_LABELS: Record<ProviderPlanStatus, string> = {
   activa: 'Activa',
   pausada: 'Pausada',
   cancelada: 'Cancelada',
+};
+
+export const CLINICAL_RECORD_TYPE_LABELS: Record<ClinicalRecordType, string> = {
+  consulta_general: 'Consulta general',
+  control: 'Control / evolución',
+  vacunacion: 'Vacunación',
+  desparasitacion: 'Desparasitación',
+  cirugia: 'Cirugía',
+  otro: 'Otro',
 };
 
 export const DAY_LABELS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'] as const;

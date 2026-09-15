@@ -8,10 +8,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { RevealItem } from '@/components/motion/reveal-item';
 import { DeletePatientButton } from '@/components/panel/delete-patient-button';
-import { SPECIES_LABELS, type ClinicalPatient, type ClinicalRecord, type PetSex } from '@petapp/shared';
+import {
+  CLINICAL_RECORD_TYPE_LABELS,
+  SPECIES_LABELS,
+  type ClinicalPatient,
+  type ClinicalRecord,
+  type PetSex,
+} from '@petapp/shared';
 import { addClinicalRecord } from './actions';
+
+const RECORD_TYPE_OPTIONS = Object.entries(CLINICAL_RECORD_TYPE_LABELS) as [ClinicalRecord['record_type'], string][];
 
 interface ClinicalPatientDetailRow extends ClinicalPatient {
   pet: { name: string; owner: { full_name: string; phone: string | null } | null } | null;
@@ -222,6 +231,22 @@ export default async function PacienteDetailPage({ params }: { params: Promise<{
             </div>
 
             <div className="space-y-1.5">
+              <Label htmlFor="record_type">Tipo de consulta</Label>
+              <select
+                id="record_type"
+                name="record_type"
+                defaultValue="consulta_general"
+                className="flex h-11 w-full max-w-xs rounded-sm border border-input bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {RECORD_TYPE_OPTIONS.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
               <Label htmlFor="subjective">Subjetivo (lo que cuenta el dueño)</Label>
               <Textarea id="subjective" name="subjective" rows={2} />
             </div>
@@ -295,9 +320,12 @@ export default async function PacienteDetailPage({ params }: { params: Promise<{
           {records.map((record, index) => (
             <RevealItem key={record.id} index={index}>
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">{record.reason}</CardTitle>
-                  <CardDescription>{formatDate(record.visit_date)}</CardDescription>
+                <CardHeader className="flex-row items-start justify-between gap-2 space-y-0">
+                  <div>
+                    <CardTitle className="text-base">{record.reason}</CardTitle>
+                    <CardDescription>{formatDate(record.visit_date)}</CardDescription>
+                  </div>
+                  <Badge variant="outline">{CLINICAL_RECORD_TYPE_LABELS[record.record_type]}</Badge>
                 </CardHeader>
                 <CardContent className="space-y-1 text-sm text-foreground/90">
                   {SOAP_FIELDS.filter(({ key }) => record[key] != null && record[key] !== '').map(({ key, label, format }) => {

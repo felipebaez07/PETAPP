@@ -44,6 +44,7 @@ export async function addClinicalRecord(formData: FormData): Promise<void> {
 
   const raw = {
     visit_date: str(formData, 'visit_date'),
+    record_type: str(formData, 'record_type') || undefined,
     reason: str(formData, 'reason'),
     subjective: str(formData, 'subjective'),
     weight_kg: num(formData, 'weight_kg'),
@@ -66,6 +67,7 @@ export async function addClinicalRecord(formData: FormData): Promise<void> {
     clinical_patient_id: clinicalPatientId,
     establishment_id: user.establishment.id,
     visit_date: parsed.data.visit_date,
+    record_type: parsed.data.record_type,
     reason: parsed.data.reason,
     subjective: parsed.data.subjective || null,
     weight_kg: parsed.data.weight_kg ?? null,

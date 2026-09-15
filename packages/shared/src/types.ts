@@ -31,6 +31,8 @@ export type ProviderPlanCode = 'basico' | 'pro';
 
 export type ProviderPlanStatus = 'prueba' | 'activa' | 'pausada' | 'cancelada';
 
+export type ClinicalRecordType = 'consulta_general' | 'control' | 'vacunacion' | 'desparasitacion' | 'cirugia' | 'otro';
+
 export interface Profile {
   id: string;
   role: UserRole;
@@ -305,6 +307,7 @@ export interface ClinicalRecord {
   clinical_patient_id: string;
   establishment_id: string;
   visit_date: string;
+  record_type: ClinicalRecordType;
   reason: string;
   subjective: string | null;
   weight_kg: number | null;

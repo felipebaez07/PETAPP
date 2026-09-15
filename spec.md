@@ -1665,3 +1665,50 @@ piezas intermedias en el scratchpad de la sesión, fuera del repo).
 
 **Pendiente honesto:** nada de esto se vio en un navegador o dispositivo real — mismo caso que el
 resto del módulo de IA y de historia clínica, este entorno no tiene uno disponible.
+
+## 25. Análisis competitivo (OkVet) + mejoras al panel de establecimiento (2026-09-15)
+
+El usuario pegó los 5 módulos de OkVet (software veterinario competidor: Administración, Historias
+clínicas, Seguimiento y documentos, Comunicación y servicios, Facturación y marketing) y pidió
+investigar más a fondo y usarlo de guía para mejorar el panel de establecimiento. Investigación con
+WebSearch/WebFetch contra el sitio real de OkVet (`okvet.co`) — ver comparación completa en la
+respuesta de esa conversación. Resumen de la brecha encontrada:
+
+- **Administración**: falta multi-usuario por establecimiento (hoy un establecimiento = un solo
+  `owner_id`) — es la pieza que más desbloquearía el resto (agenda personal por veterinario, quién
+  atendió cada consulta). Queda como decisión grande pendiente, no se construyó esta pasada.
+- **Historias clínicas**: ya construido (sección 23). Brecha identificada: sin tipo de consulta
+  estructurado.
+- **Seguimiento y documentos**: controles/evoluciones ya cubiertos. Falta consentimientos/
+  remisiones/órdenes/fórmulas con firma — módulo nuevo, tamaño comparable al de historia clínica,
+  no construido.
+- **Comunicación y servicios**: recordatorios automáticos siguen bloqueados por falta de scheduler
+  (mismo pendiente de la sección 22, ideas 2/3).
+- **Facturación y marketing**: nada construido. Registrado en `docs/legal/registro-legal.md` como
+  **LG-006** (facturación electrónica DIAN + pagos + marketing WhatsApp/SMS) — decisión estructural
+  (quién factura ante la DIAN) que hay que resolver antes de escribir código ahí, no algo urgente
+  hoy porque no se ha construido nada.
+
+El usuario eligió, de las opciones presentadas, arrancar por lo más barato: **tipo de consulta**.
+
+- [x] **`record_type` en `clinical_records`** (migración `supabase/migrations/0017_clinical_record_type.sql`,
+  revisada con criterio `db-guardian`: aditiva pura, `ADD COLUMN` con default constante, veredicto
+  aplicar). Enum nativo de Postgres (`clinical_record_type`, mismo patrón que
+  `preventive_event_type` de 0005) con 6 valores: `consulta_general` (default), `control`,
+  `vacunacion`, `desparasitacion`, `cirugia`, `otro`. Pensado para más adelante poder alimentar
+  automáticamente `preventive_events` desde una vacunación real registrada acá — no construido
+  todavía, solo el campo que lo hace posible.
+- [x] Tipo agregado al selector del formulario "Agregar consulta" y mostrado como badge en cada
+  tarjeta del timeline de `/panel/pacientes/[id]`. Tipos y labels en `packages/shared`
+  (`ClinicalRecordType`, `CLINICAL_RECORD_TYPE_LABELS`).
+
+**Verificación:** `npm run typecheck` (3 workspaces) y `npm run build` real de Next.js en verde
+antes de commitear (mobile no se tocó, no hizo falta `expo export`).
+
+**Pendiente**:
+- [ ] **Aplicar `0016_clinical_records.sql` y `0017_clinical_record_type.sql`** en el proyecto
+  Supabase real, en ese orden — ninguna de las dos está aplicada todavía.
+- [ ] Las 4 mejoras grandes de la sección de OkVet (multi-usuario, documentos con firma,
+  recordatorios automáticos, facturación/marketing) siguen sin construir — cada una necesita su
+  propia conversación de alcance antes de empezar, mismo criterio que otras decisiones grandes de
+  esta sesión.

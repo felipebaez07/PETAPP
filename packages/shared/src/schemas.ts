@@ -178,6 +178,7 @@ export type ClinicalPatientFormValues = z.infer<typeof clinicalPatientSchema>;
 /** Una consulta (formato SOAP) para un ClinicalPatient ya creado. */
 export const clinicalRecordSchema = z.object({
   visit_date: z.string().min(1),
+  record_type: z.enum(['consulta_general', 'control', 'vacunacion', 'desparasitacion', 'cirugia', 'otro']).default('consulta_general'),
   reason: z.string().min(1, 'Contanos el motivo de la consulta').max(300),
   subjective: z.string().max(2000).optional().or(z.literal('')),
   weight_kg: z.coerce.number().min(0).max(500).optional(),
