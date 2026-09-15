@@ -105,3 +105,34 @@ corresponda antes de resolverlo. Se agrega, nunca se sobrescribe.
   - Política de retención/uso de datos de Groq sobre las imágenes que procesa (si las guarda para
     entrenar modelos, por cuánto tiempo, etc.) — no asumir que es igual a la de Google.
 - **Estado**: abierto.
+
+## LG-006
+
+- **Detectado**: 2026-09-15, analizando el software competidor OkVet como referencia para mejorar
+  el panel de establecimientos/veterinarias (módulo "Facturación y marketing" de OkVet: factura
+  electrónica conectada a la DIAN, pagos bancarios, campañas de SMS/WhatsApp). Es una idea a
+  futuro que salió de ese análisis — no hay nada de esto construido en PeTech todavía.
+- **Área**: Pagos / facturación electrónica / tributario + marketing por WhatsApp.
+- **Riesgo**: 🔴 alto (si se construye).
+- **Por qué aplica**: en Colombia, la facturación electrónica ante la DIAN tiene requisitos
+  técnicos y de habilitación específicos (no es simplemente generar un PDF) — es el tipo de
+  decisión estructural (a nombre de quién factura, quién es responsable tributario frente a la
+  DIAN: ¿PeTech como intermediario, o cada establecimiento directamente?) que hay que resolver
+  antes de construir encima, no después. Además, cobrar con pasarela de pagos añade requisitos de
+  seguridad/PCI y de a quién pertenece el dinero que entra. Las campañas de WhatsApp/SMS
+  segmentadas caen bajo habeas data/antispam (consentimiento del propietario para recibir
+  marketing, no solo notificaciones transaccionales).
+- **¿Bloquea?**: No bloquea nada hoy — no se ha construido nada de este módulo. Si más adelante se
+  decide construirlo, sí bloquea empezar sin antes resolver quién factura y dónde vive el dinero.
+- **Antes de qué hay que resolverlo**: antes de escribir cualquier código de facturación
+  electrónica o de integración con una pasarela de pagos — es de las primeras preguntas a resolver
+  en esa conversación, no algo para decidir a medio camino.
+- **Checklist de qué averiguar**:
+  - Si PeTech facturaría en nombre propio (intermediario) o si cada establecimiento se habilita
+    como facturador electrónico independiente ante la DIAN.
+  - Requisitos de habilitación de facturación electrónica de la DIAN para el modelo que se elija.
+  - Si una pasarela de pagos (ej. Wompi, PayU, Mercado Pago) ya resuelve el aspecto tributario/PCI,
+    o si hace falta contratar aparte.
+  - Consentimiento explícito y opt-out para marketing por WhatsApp/SMS (distinto del consentimiento
+    ya necesario para notificaciones transaccionales como recordatorios de citas).
+- **Estado**: abierto.
