@@ -1799,8 +1799,47 @@ Revisé a mano las partes más sensibles (la acción de firma, el cliente admin,
 antes de dar esto por terminado — no me quedé solo con el reporte de los agentes.
 
 **Pendiente general de la sección**:
-- [ ] **Aplicar en Supabase real, en este orden exacto**: `0016` → `0017` → `0018` → `0019` →
-  `0020` (ninguna de las cinco está aplicada todavía).
+- [x] **Aplicar en Supabase real** `0016` → `0020` (confirmado por el usuario: las 5 ya corrieron).
+- [x] Variables de entorno del cron puestas en Vercel (`SUPABASE_SERVICE_ROLE_KEY`,
+  `RESEND_API_KEY`, `CRON_SECRET` — confirmado 2026-09-15) y probado con una llamada directa al
+  endpoint: `HTTP 200`, `{"found":0,"sent":0,"skipped":0,"failed":0}` — auth y consulta a la base
+  funcionan; el envío real por Resend todavía no se probó de punta a punta porque no había ningún
+  `preventive_event` venciendo en los próximos 3 días en ese momento. Remitente cambiado a
+  `onboarding@resend.dev` (sandbox de Resend, sin dominio propio verificado) — solo entrega al
+  correo de la cuenta de Resend del usuario hasta que verifique un dominio real.
 - [ ] Facturación electrónica y marketing (LG-006) siguen sin resolver la decisión estructural —
   nada construido ahí.
-- [ ] Nada de esta sección se probó en un navegador real.
+- [ ] Nada de esta sección se probó en un navegador real (salvo el cron, probado directo por API).
+
+## 27. Plantillas por tipo de documento + membrete + PDF real (2026-09-15)
+
+Continuación directa de la sección 26.2: el usuario vio la pantalla de "Nuevo documento" y pidió
+tres mejoras — plantilla predefinida por tipo (solo pedir lo específico de cada uno, autocompletar
+el resto), membrete de la empresa al imprimir, y descarga en PDF real (no solo `window.print()`)
+desde ambos perfiles.
+
+- [x] `packages/shared/src/clinicalDocumentTemplates.ts` (diseñado por mí, sin migración —
+  `clinical_documents.content` sigue siendo un solo texto, esto solo lo compone mejor):
+  `CLINICAL_DOCUMENT_TEMPLATE_FIELDS` (campos específicos por tipo — consentimiento: procedimiento/
+  riesgos/observaciones; remisión: motivo/destino/resumen clínico; orden: exámenes/indicación;
+  fórmula: medicamentos/indicaciones; `otro` sin plantilla, sigue siendo texto libre) y
+  `composeClinicalDocumentContent()` que arma el texto final con encabezado (paciente/dueño/
+  veterinario/establecimiento/fecha, + datos de la consulta vinculada si la hay) y una declaración
+  de autorización estándar para consentimientos.
+- [x] `ClinicalDocumentForm` (nuevo componente cliente): al elegir el tipo, muestra los campos de
+  esa plantilla y arma una "Vista previa" editable en vivo — el veterinario puede ajustar el texto
+  antes de guardar. Sigue posteando a la misma acción `createClinicalDocument` sin cambios.
+- [x] Membrete del establecimiento (nombre, dirección, teléfono, logo) en la vista imprimible.
+- [x] PDF real (`@react-pdf/renderer`, nueva dependencia) vía `apps/web/src/app/api/documentos/[documentId]/pdf/route.ts`
+  — usa la sesión normal (no el cliente admin), la RLS de `clinical_documents` ya deja pasar
+  exactamente a quien debe: dueño/personal del establecimiento o dueño de la mascota. Botón
+  "Descargar PDF" agregado en las tres vistas (panel del establecimiento, vista imprimible, y el
+  lado del cuidador) — el mismo enlace autenticado sirve para las tres, incluido "descargarlo
+  mediante un link" para quien no tiene la app móvil (que todavía no tiene esta sección construida).
+- [ ] **No construido**: nada de esto en mobile — sigue siendo web-only, mismo criterio que el
+  resto del módulo de Documentos.
+
+**Verificación:** `npm run typecheck` (3 workspaces) y `npm run build` real de Next.js, corridos de
+nuevo por mí después del reporte del agente (no me quedé solo con eso) — revisé a mano la ruta del
+PDF (usa RLS normal, no admin, 404 si no hay acceso — sin fuga de si el documento existe) y el
+componente del formulario.

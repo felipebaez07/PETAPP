@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileSignature } from 'lucide-react';
+import { Download, FileSignature } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,6 +59,13 @@ export function ClinicalDocumentItem({
         <Badge variant="outline">{CLINICAL_DOCUMENT_TYPE_LABELS[doc.document_type]}</Badge>
       </div>
       <p className="line-clamp-4 whitespace-pre-wrap text-sm text-foreground/90">{doc.content}</p>
+      <div>
+        <Button asChild variant="outline" size="sm" className="gap-1.5">
+          <a href={`/api/documentos/${doc.id}/pdf`} target="_blank" rel="noopener noreferrer">
+            <Download className="size-4" /> Descargar PDF
+          </a>
+        </Button>
+      </div>
       {doc.signed_at ? (
         <Badge variant="success">
           Firmado por {doc.signer_name ?? 'ti'} el {formatDateTime(doc.signed_at)}

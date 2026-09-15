@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { AlertTriangle, FileStack, PawPrint, Pencil, Printer, Stethoscope } from 'lucide-react';
+import { AlertTriangle, Download, FileStack, PawPrint, Pencil, Printer, Stethoscope } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RevealItem } from '@/components/motion/reveal-item';
 import { DeletePatientButton } from '@/components/panel/delete-patient-button';
+import { ClinicalDocumentForm } from '@/components/panel/clinical-document-form';
 import {
   CLINICAL_DOCUMENT_TYPE_LABELS,
   CLINICAL_RECORD_TYPE_LABELS,
@@ -20,10 +21,9 @@ import {
   type ClinicalRecord,
   type PetSex,
 } from '@petapp/shared';
-import { addClinicalRecord, createClinicalDocument } from './actions';
+import { addClinicalRecord } from './actions';
 
 const RECORD_TYPE_OPTIONS = Object.entries(CLINICAL_RECORD_TYPE_LABELS) as [ClinicalRecord['record_type'], string][];
-const DOCUMENT_TYPE_OPTIONS = Object.entries(CLINICAL_DOCUMENT_TYPE_LABELS) as [ClinicalDocument['document_type'], string][];
 
 interface ClinicalPatientDetailRow extends ClinicalPatient {
   pet: { name: string; owner: { full_name: string; phone: string | null } | null } | null;
@@ -122,6 +122,8 @@ export default async function PacienteDetailPage({ params }: { params: Promise<{
   const latestWeightRecord = records.find((r) => r.weight_kg != null);
   const age = computeAge(patient.birth_date, patient.estimated_age_years);
   const hasAlert = Boolean(patient.allergies || patient.chronic_conditions);
+  const ownerName = patient.pet?.owner?.full_name ?? patient.owner_full_name ?? 'Sin registrar';
+  const todayLabel = new Date().toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
     <div className="max-w-3xl">
@@ -179,7 +181,7 @@ export default async function PacienteDetailPage({ params }: { params: Promise<{
         <CardContent className="grid gap-2 text-sm text-foreground/90 sm:grid-cols-2">
           <p>
             <span className="text-muted-foreground">Dueño/a: </span>
-            {patient.pet?.owner?.full_name ?? patient.owner_full_name ?? 'Sin registrar'}
+            {ownerName}
           </p>
           {(patient.pet?.owner?.phone ?? patient.owner_phone) && (
             <p>
@@ -369,56 +371,18 @@ export default async function PacienteDetailPage({ params }: { params: Promise<{
           <CardDescription>Consentimientos, remisiones, órdenes o fórmulas listos para firma del dueño.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={createClinicalDocument} className="space-y-4">
-            <input type="hidden" name="clinical_patient_id" value={patient.id} />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="doc-title">Título</Label>
-                <Input id="doc-title" name="title" required placeholder="Ej. Consentimiento de cirugía" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="document_type">Tipo</Label>
-                <select
-                  id="document_type"
-                  name="document_type"
-                  defaultValue="otro"
-                  className="flex h-11 w-full rounded-sm border border-input bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  {DOCUMENT_TYPE_OPTIONS.map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {records.length > 0 && (
-              <div className="space-y-1.5">
-                <Label htmlFor="clinical_record_id">Vincular a una consulta (opcional)</Label>
-                <select
-                  id="clinical_record_id"
-                  name="clinical_record_id"
-                  defaultValue=""
-                  className="flex h-11 w-full max-w-md rounded-sm border border-input bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <option value="">Sin vincular</option>
-                  {records.map((record) => (
-                    <option key={record.id} value={record.id}>
-                      {formatDate(record.visit_date)} — {record.reason}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <div className="space-y-1.5">
-              <Label htmlFor="doc-content">Contenido</Label>
-              <Textarea id="doc-content" name="content" rows={6} required maxLength={5000} />
-            </div>
-
-            <Button type="submit">Guardar documento</Button>
-          </form>
+          <ClinicalDocumentForm
+            patientId={patient.id}
+            patientName={patient.name}
+            speciesLabel={SPECIES_LABELS[patient.species]}
+            breed={patient.breed}
+            sexLabel={SEX_LABELS[patient.sex]}
+            ownerName={ownerName}
+            establishmentName={user.establishment.name}
+            vetName={user.profile.full_name}
+            todayLabel={todayLabel}
+            records={records}
+          />
         </CardContent>
       </Card>
 
@@ -451,11 +415,16 @@ export default async function PacienteDetailPage({ params }: { params: Promise<{
                   ) : (
                     <Badge variant="outline">Pendiente de firma</Badge>
                   )}
-                  <div>
+                  <div className="flex flex-wrap gap-2">
                     <Button asChild variant="outline" size="sm" className="gap-1.5">
                       <Link href={`/panel/pacientes/${patient.id}/documentos/${doc.id}`}>
                         <Printer className="size-4" /> Ver / imprimir
                       </Link>
+                    </Button>
+                    <Button asChild variant="outline" size="sm" className="gap-1.5">
+                      <a href={`/api/documentos/${doc.id}/pdf`} target="_blank" rel="noopener noreferrer">
+                        <Download className="size-4" /> Descargar PDF
+                      </a>
                     </Button>
                   </div>
                 </CardContent>
