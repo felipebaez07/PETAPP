@@ -174,7 +174,7 @@ export default function PrediagnosticoScreen() {
   const shareSummary = () => {
     if (!summary) return;
     Share.share({
-      message: `Pre-diagnóstico para ${pet.name}\nGenerado por el asistente de IA de Almanimapp — no es un diagnóstico real.\n\n${summary}`,
+      message: `Pre-diagnóstico para ${pet.name}\nGenerado por el asistente de IA de PeTech — no es un diagnóstico real.\n\n${summary}`,
     });
   };
 

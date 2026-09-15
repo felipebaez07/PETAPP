@@ -1620,3 +1620,48 @@ están todas aplicadas en el Supabase real del piloto.
   busca nombre del paciente y nombre del dueño walk-in. Limitación aceptada, documentada en el
   código, no es un blocker para el piloto.
 - [ ] Paridad mobile de "Pacientes" para el panel de establecimiento — no construida esta pasada.
+
+## 24. Rebranding a PeTech (2026-09-15)
+
+El usuario pegó el logo nuevo directo en el chat (no hay forma de extraer un archivo de una
+imagen pegada en la conversación con las herramientas disponibles) — se le pidió que lo guardara
+en el proyecto; quedó en `apps/web/public/` con su nombre original de exportación de ChatGPT
+("ChatGPT Image Sep 14, 2026, 07_15_46 PM.png"), PNG con alfa real (1278×1231). Se generaron todas
+las variantes con Python/Pillow (recorte al bounding-box real del contenido opaco, sin suponer
+márgenes) y el archivo original se borró de `public/` una vez derivadas (quedó una copia de las
+piezas intermedias en el scratchpad de la sesión, fuera del repo).
+
+- [x] **Nombre**: `APP_NAME` en `packages/shared/src/constants.ts` → `'PeTech'` (de ahí sale solo
+  a navbar, footer, `<title>`, pantalla de bienvenida de mobile — no hubo que tocar esos textos).
+  También: descripción de `package.json` raíz, `expo.name` y el texto de permiso de fotos en
+  `apps/mobile/app.json`, y el texto del mensaje de WhatsApp del pre-diagnóstico
+  (`apps/mobile/app/prediagnostico/[id].tsx`). **Deliberadamente NO se tocó** `expo.slug` ni
+  `expo.scheme` (`"petapp"`) en `app.json` — el scheme está en la lista blanca de redirect URLs de
+  Supabase Auth (`petapp://**`) y cambiarlo rompería el login con Google en mobile hasta
+  actualizar esa configuración aparte; es un identificador técnico, no branding visible.
+- [x] **Logo**: assets nuevos derivados del PNG que pegó el usuario —
+  `apps/web/public/brand/petech-icon.png` (máster alta resolución), `petech-icon-small.png` (240px
+  ancho, la que realmente usan navbar/footer), `petech-lockup.png` (escudo + wordmark, para el
+  hero) — mismos tres archivos duplicados en `apps/mobile/assets/images/` donde aplica. Favicon
+  web (`apps/web/src/app/icon.png`, convención de Next.js) regenerado cuadrado 256×256. Mobile:
+  ícono de app (`icon.png`, 1024×1024, compuesto sobre blanco opaco — iOS no maneja bien
+  transparencia en el ícono), favicon del export web, splash screen, y las 3 capas del ícono
+  adaptativo de Android (fondo sólido con el teal de marca `#05BDB8` muestreado del propio logo,
+  foreground con el glifo dentro de la zona segura ~62%, monochrome como silueta de un solo color
+  a partir del canal alfa — así lo tinta el sistema). Se borraron todos los `almanimapp-*.png`
+  viejos (web y mobile) que quedaron sin uso.
+- [ ] **No se tocó la paleta de colores** (`COLORS` en `constants.ts`, tokens de Tailwind) — el
+  pedido fue "cambia todo lo relacionado al logo anterior y el nombre", no un rediseño de color;
+  el logo nuevo es teal/multicolor, bastante distinto del azul clínico actual, así que si más
+  adelante se quiere alinear la paleta del producto con la del logo, es una conversación aparte
+  (mismo criterio que otras decisiones de diseño grandes de esta sesión).
+- [ ] **No se tocaron** los comentarios internos `-- PETAPP —` / `// PETAPP —` en migraciones y
+  código (ni el scope del paquete `@petapp/shared`, ni el nombre del repo de GitHub) — son
+  identificadores internos/históricos, no branding visible, y renombrar migraciones ya aplicadas
+  en producción rompe la regla de `db-guardian` de no editar migraciones aplicadas.
+
+**Verificación:** `npm run typecheck` (3 workspaces), `npm run build` real de Next.js, y
+`npx expo export --platform web` de mobile, los tres en verde antes de commitear.
+
+**Pendiente honesto:** nada de esto se vio en un navegador o dispositivo real — mismo caso que el
+resto del módulo de IA y de historia clínica, este entorno no tiene uno disponible.

@@ -8,7 +8,7 @@ export function Footer() {
       <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div>
           <p className="flex items-center gap-2 font-heading font-semibold text-foreground">
-            <Image src="/brand/almanimapp-icon-small.png" alt="" aria-hidden width={240} height={167} unoptimized className="h-5 w-auto opacity-80" />
+            <Image src="/brand/petech-icon-small.png" alt="" aria-hidden width={240} height={257} unoptimized className="h-5 w-auto opacity-80" />
             {APP_NAME}
           </p>
           <p className="text-sm text-muted-foreground">

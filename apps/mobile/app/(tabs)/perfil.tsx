@@ -286,8 +286,8 @@ export default function ProfileScreen() {
         />
         <View className="items-center pt-6">
           <Image
-            source={require('@/assets/images/almanimapp-lockup.png')}
-            style={{ width: 200, height: 142 }}
+            source={require('@/assets/images/petech-lockup.png')}
+            style={{ width: 162, height: 175 }}
             resizeMode="contain"
           />
         </View>

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Almanimapp",
+    "name": "PeTech",
     "slug": "petapp-mobile",
     "version": "0.1.0",
     "orientation": "portrait",
@@ -38,7 +38,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Almanimapp necesita acceder a tus fotos para elegir la foto de tu mascota o subir un documento."
+          "photosPermission": "PeTech necesita acceder a tus fotos para elegir la foto de tu mascota o subir un documento."
         }
       ]
     ],

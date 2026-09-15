@@ -87,10 +87,10 @@ export default async function HomePage() {
               logo (se ve borroso/con bandas de color). El archivo pesa ~1.7MB, aceptable para un
               logo decorativo que carga una sola vez en el hero de la landing. */}
           <Image
-            src="/brand/almanimapp-lockup.png"
+            src="/brand/petech-lockup.png"
             alt={APP_NAME}
-            width={1328}
-            height={944}
+            width={1099}
+            height={1185}
             unoptimized
             className="mx-auto mb-4 h-32 w-auto sm:h-40"
             priority
