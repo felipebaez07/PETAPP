@@ -270,6 +270,58 @@ export interface VetVisitNote {
   updated_at: string;
 }
 
+/** Ficha de paciente vista desde el establecimiento (supabase/migrations/0016_clinical_records.sql).
+ * `pet_id` no nulo = animal ya registrado en la plataforma; nulo = paciente "walk-in", con los
+ * datos de contacto del dueño guardados como texto en owner_full_name/owner_phone/owner_document. */
+export interface ClinicalPatient {
+  id: string;
+  establishment_id: string;
+  pet_id: string | null;
+  owner_full_name: string | null;
+  owner_phone: string | null;
+  owner_document: string | null;
+  name: string;
+  species: PetSpecies;
+  breed: string | null;
+  sex: PetSex;
+  birth_date: string | null;
+  estimated_age_years: number | null;
+  color: string | null;
+  origin_place: string | null;
+  microchip_number: string | null;
+  sterilized: boolean;
+  allergies: string | null;
+  chronic_conditions: string | null;
+  photo_url: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Consulta individual en formato SOAP (Subjetivo/Objetivo/Assessment/Plan), ligada a un
+ * ClinicalPatient. Es la historia clínica oficial que lleva el establecimiento. */
+export interface ClinicalRecord {
+  id: string;
+  clinical_patient_id: string;
+  establishment_id: string;
+  visit_date: string;
+  reason: string;
+  subjective: string | null;
+  weight_kg: number | null;
+  temperature_c: number | null;
+  heart_rate_bpm: number | null;
+  respiratory_rate_bpm: number | null;
+  body_condition_score: number | null;
+  physical_exam_notes: string | null;
+  diagnosis: string | null;
+  treatment_plan: string | null;
+  medications: string | null;
+  vaccines_applied: string | null;
+  follow_up_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface AiMessage {
   id: string;
   conversation_id: string;

@@ -144,6 +144,57 @@ export const vetVisitNoteSchema = z.object({
 export type VetVisitNoteFormValues = z.infer<typeof vetVisitNoteSchema>;
 
 /**
+ * Ficha de paciente del panel de establecimiento (0016_clinical_records.sql). `pet_id` presente =
+ * animal ya registrado en la plataforma, vinculado directo; ausente = paciente walk-in, y ahí
+ * `owner_full_name` pasa a ser obligatorio (ver el `.refine` — es el único dato de contacto que
+ * le queda al establecimiento para ese dueño sin cuenta).
+ */
+export const clinicalPatientSchema = z
+  .object({
+    pet_id: z.string().uuid().optional(),
+    owner_full_name: z.string().max(120).optional().or(z.literal('')),
+    owner_phone: z.string().max(40).optional().or(z.literal('')),
+    owner_document: z.string().max(40).optional().or(z.literal('')),
+    name: z.string().min(1, 'Ponle un nombre al paciente').max(80),
+    species: z.enum(['perro', 'gato', 'otro']),
+    breed: z.string().max(80).optional().or(z.literal('')),
+    sex: z.enum(['macho', 'hembra', 'desconocido']),
+    birth_date: z.string().optional().or(z.literal('')),
+    estimated_age_years: z.coerce.number().min(0).max(60).optional(),
+    color: z.string().max(80).optional().or(z.literal('')),
+    origin_place: z.string().max(120).optional().or(z.literal('')),
+    microchip_number: z.string().max(40).optional().or(z.literal('')),
+    sterilized: z.boolean().default(false),
+    allergies: z.string().max(500).optional().or(z.literal('')),
+    chronic_conditions: z.string().max(500).optional().or(z.literal('')),
+    notes: z.string().max(1000).optional().or(z.literal('')),
+  })
+  .refine((data) => Boolean(data.pet_id) || Boolean(data.owner_full_name?.trim()), {
+    message: 'Si el paciente no tiene cuenta en la plataforma, el nombre del dueño es obligatorio',
+    path: ['owner_full_name'],
+  });
+export type ClinicalPatientFormValues = z.infer<typeof clinicalPatientSchema>;
+
+/** Una consulta (formato SOAP) para un ClinicalPatient ya creado. */
+export const clinicalRecordSchema = z.object({
+  visit_date: z.string().min(1),
+  reason: z.string().min(1, 'Contanos el motivo de la consulta').max(300),
+  subjective: z.string().max(2000).optional().or(z.literal('')),
+  weight_kg: z.coerce.number().min(0).max(500).optional(),
+  temperature_c: z.coerce.number().min(20).max(45).optional(),
+  heart_rate_bpm: z.coerce.number().int().min(0).max(400).optional(),
+  respiratory_rate_bpm: z.coerce.number().int().min(0).max(200).optional(),
+  body_condition_score: z.coerce.number().int().min(1).max(9).optional(),
+  physical_exam_notes: z.string().max(2000).optional().or(z.literal('')),
+  diagnosis: z.string().max(1000).optional().or(z.literal('')),
+  treatment_plan: z.string().max(2000).optional().or(z.literal('')),
+  medications: z.string().max(1000).optional().or(z.literal('')),
+  vaccines_applied: z.string().max(500).optional().or(z.literal('')),
+  follow_up_date: z.string().optional().or(z.literal('')),
+});
+export type ClinicalRecordFormValues = z.infer<typeof clinicalRecordSchema>;
+
+/**
  * Un turno del chat de pre-diagnóstico (POST a `/api/ai/prediagnostico`, ver
  * 0009_ai_prediagnostico.sql). `conversationId` ausente = arranca una conversación nueva para
  * `petId`; presente = continúa una ya activa. `imagePath` (0011_ai_chat_images.sql, idea 1.1 del

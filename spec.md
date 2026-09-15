@@ -1561,3 +1561,62 @@ están todas aplicadas en el Supabase real del piloto.
   IA, este entorno no tiene uno disponible.
 - [ ] El "Historial de seguimiento" combinado no tiene paginación — con meses de uso, esa lista
   puede crecer bastante; no es un problema hoy con el piloto recién empezando.
+
+## 23. Fondo de siluetas de animalitos + fix de selector de cuenta Google + historia clínica del establecimiento (2026-09-14/15)
+
+- [x] **Siluetas de animalitos viajando por el fondo**, pedido explícito del usuario para toda la
+  app, ambos roles. Web: capa `fixed` de baja opacidad (`animal-silhouettes-background.tsx`) en
+  `app/layout.tsx`, un solo punto de inserción porque la mayoría de páginas no pinta su propio
+  fondo opaco. Mobile: cada pantalla SÍ pinta su propio `bg-background` opaco (View o ScrollView
+  raíz), así que se creó `ScreenBackground.tsx` como reemplazo de ese contenedor, aplicado en las
+  14 pantallas de la app (ambos roles). Ambas respetan `prefers-reduced-motion`.
+- [x] **Bug real encontrado en el camino** ("no me cargan mis mascotas en la móvil" — mismo
+  usuario, mismo método de login Google, mismo proyecto Supabase, pero pantalla vacía en mobile):
+  causa real era que el login de Google no mostraba el selector de cuentas — reutilizaba en
+  silencio la sesión de Google ya activa del navegador/dispositivo. Con más de una cuenta de
+  Google, era fácil terminar sin darse cuenta en una cuenta distinta a la de siempre. Fix:
+  `queryParams: { prompt: 'select_account' }` en `signInWithOAuth` (web y mobile), + se agregó el
+  email (de `auth.users`, `profiles` no lo guarda) debajo del nombre en el Perfil de mobile para
+  poder verificar de un vistazo qué cuenta está activa.
+- [x] **Sistema de historia clínica para el panel de establecimiento/veterinaria** (pedido
+  explícito del usuario, con investigación previa de qué debe llevar un panel de este tipo —
+  formato SOAP estándar del sector). Migración `supabase/migrations/0016_clinical_records.sql`
+  (revisada con `db-guardian`, veredicto: aplicar, puramente aditiva) — dos tablas nuevas:
+  - `clinical_patients`: ficha del paciente desde el punto de vista del establecimiento. `pet_id`
+    vincula un animal ya registrado en la plataforma; si es null, es un paciente "walk-in" y los
+    datos de contacto del dueño (`owner_full_name`/`owner_phone`/`owner_document`) se guardan como
+    texto plano en vez de crearle una cuenta — decisión confirmada explícitamente con el usuario
+    para no mezclar datos que ese dueño nunca consintió tener en la plataforma.
+  - `clinical_records`: una fila por consulta, formato SOAP completo (peso, temperatura,
+    frecuencia cardiaca/respiratoria, condición corporal, diagnóstico, tratamiento, medicamentos,
+    vacunas aplicadas, próximo control).
+  - RLS: mismo patrón `owner_id = auth.uid()` vía `establishments.owner_id` para que cada
+    establecimiento vea solo lo suyo (esto resuelve la persistencia pedida). Cuando el paciente
+    está vinculado a una mascota real, se espeja 0013 en la otra dirección: el dueño de la mascota
+    tiene acceso de solo lectura a la ficha clínica oficial (reusa `pet_belongs_to_user` de 0008;
+    nueva función `clinical_record_visible_to_pet_owner` para `clinical_records`, mismo patrón
+    `security definer` que el resto del esquema).
+  - UI web nueva: `/panel/pacientes` (lista + búsqueda por nombre de paciente o dueño walk-in),
+    `/panel/pacientes/nuevo` (form con modo "vincular mascota ya registrada" — búsqueda contra
+    `pets`, restringida automáticamente por RLS a las que el establecimiento ya puede ver vía
+    `service_requests` — o "paciente nuevo sin cuenta"), `/panel/pacientes/[id]` (ficha +
+    alerta destacada de alergias/condiciones crónicas + timeline de consultas + form para agregar
+    una nueva). Tipos (`ClinicalPatient`, `ClinicalRecord`) y schemas Zod
+    (`clinicalPatientSchema`, `clinicalRecordSchema`) en `packages/shared`.
+  - Solo web por ahora — paridad en mobile (pantallas `negocio-*`) queda para una pasada
+    siguiente, mismo criterio de fases ya usado en el resto de la sesión.
+
+**Verificación:** `npm run typecheck` en las 3 workspaces, `npm run build` real de Next.js, y
+`npx expo export --platform web` de mobile, todos en verde antes de cada commit de esta sección.
+
+**Pendiente de la sesión:**
+
+- [ ] **Aplicar `0016_clinical_records.sql`** en el proyecto Supabase real — el usuario todavía no
+  lo confirmó.
+- [ ] Historia clínica del establecimiento sin probar contra datos reales (la migración no está
+  aplicada todavía) ni en un navegador real.
+- [ ] Búsqueda de pacientes en `/panel/pacientes` no alcanza el nombre del dueño cuando el
+  paciente está vinculado a una mascota real (ese nombre vive en `profiles` vía join) — solo
+  busca nombre del paciente y nombre del dueño walk-in. Limitación aceptada, documentada en el
+  código, no es un blocker para el piloto.
+- [ ] Paridad mobile de "Pacientes" para el panel de establecimiento — no construida esta pasada.
