@@ -12,6 +12,7 @@ import {
   PawPrint,
   Stethoscope,
   Users,
+  BarChart3,
   type LucideIcon,
 } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
@@ -62,6 +63,14 @@ const NAV_ITEMS: NavItem[] = [
     href: '/panel/personal',
     label: 'Personal',
     icon: Users,
+    roles: ['establecimiento'],
+    requiresEstablishment: true,
+    requiresOwner: true,
+  },
+  {
+    href: '/panel/metricas',
+    label: 'Métricas',
+    icon: BarChart3,
     roles: ['establecimiento'],
     requiresEstablishment: true,
     requiresOwner: true,

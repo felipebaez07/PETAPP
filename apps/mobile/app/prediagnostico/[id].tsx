@@ -1,7 +1,15 @@
 import type { AiRoadmapItem } from '@petapp/shared';
+import {
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+  useAudioRecorder,
+  useAudioRecorderState,
+} from 'expo-audio';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Bot, ImagePlus, PawPrint, Send, Share2, User, X } from 'lucide-react-native';
-import { useMemo, useRef, useState } from 'react';
+import * as Speech from 'expo-speech';
+import { Bot, ImagePlus, Mic, PawPrint, Send, Share2, Square, User, Volume2, X } from 'lucide-react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -56,7 +64,25 @@ export default function PrediagnosticoScreen() {
   const [summary, setSummary] = useState<string | null>(null);
   const [roadmap, setRoadmap] = useState<AiRoadmapItem[] | null>(null);
   const [sending, setSending] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+  const recordingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // expo-audio (no expo-av: en el SDK instalado acá, expo-av quedó congelado en una versión vieja
+  // sin bump de SDK, mientras que expo-audio y expo-speech sí siguen el versionado 57.x — la
+  // grabación de audio con expo-av está deprecada a favor de expo-audio en SDKs recientes).
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorderState = useAudioRecorderState(audioRecorder);
+
+  // Si la pantalla se desmonta a mitad de una lectura en voz alta, no dejarla hablando en el
+  // vacío.
+  useEffect(() => {
+    return () => {
+      if (recordingTimeoutRef.current) clearTimeout(recordingTimeoutRef.current);
+      Speech.stop();
+    };
+  }, []);
 
   if (!pet) {
     return (
@@ -103,6 +129,109 @@ export default function PrediagnosticoScreen() {
   const removePhoto = () => {
     setPhoto(null);
     setPhotoError(null);
+  };
+
+  // La nota de voz es transitoria: nunca se guarda ni viaja con el mensaje (a diferencia de la
+  // foto) — solo produce texto que llena el cuadro de mensaje para que el cuidador lo revise y
+  // edite antes de enviar (nunca se auto-envía).
+  const transcribeRecording = async (uri: string) => {
+    setTranscribing(true);
+    try {
+      if (!WEB_URL) throw new Error('missing-web-url');
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('missing-session');
+
+      // React Native: no se pone `Content-Type` a mano — `fetch` arma el boundary de
+      // multipart/form-data solo a partir de este objeto especial {uri, name, type}.
+      const formData = new FormData();
+      formData.append('audio', {
+        uri,
+        name: 'nota-de-voz.m4a',
+        type: 'audio/m4a',
+      } as unknown as Blob);
+
+      const res = await fetch(`${WEB_URL}/api/ai/transcribir`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        Alert.alert('No se pudo transcribir', data.error ?? 'Intenta de nuevo.');
+        return;
+      }
+      const text = typeof data.text === 'string' ? data.text.trim() : '';
+      if (text) {
+        setDraft((prev) => (prev.trim() ? `${prev.trim()} ${text}` : text));
+      }
+    } catch {
+      Alert.alert('No se pudo conectar', 'Revisa tu conexión e intenta de nuevo.');
+    } finally {
+      setTranscribing(false);
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      const permission = await requestRecordingPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          'Permiso necesario',
+          'PeTech necesita acceso al micrófono para grabar una nota de voz. Actívalo desde los ajustes del dispositivo.'
+        );
+        return;
+      }
+      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+      await audioRecorder.prepareToRecordAsync();
+      audioRecorder.record();
+      // Corte de seguridad: si el cuidador se olvida de tocar "detener", la grabación no queda
+      // corriendo indefinidamente.
+      recordingTimeoutRef.current = setTimeout(() => {
+        void stopRecording();
+      }, 60_000);
+    } catch {
+      Alert.alert('No se pudo grabar', 'Revisa los permisos del micrófono e intenta de nuevo.');
+    }
+  };
+
+  const stopRecording = async () => {
+    if (recordingTimeoutRef.current) {
+      clearTimeout(recordingTimeoutRef.current);
+      recordingTimeoutRef.current = null;
+    }
+    try {
+      await audioRecorder.stop();
+      const uri = audioRecorder.uri;
+      if (uri) await transcribeRecording(uri);
+    } catch {
+      Alert.alert('No se pudo procesar la grabación', 'Intenta de nuevo.');
+    }
+  };
+
+  const onMicPress = () => {
+    if (recorderState.isRecording) {
+      void stopRecording();
+    } else {
+      void startRecording();
+    }
+  };
+
+  const toggleSpeak = (index: number, text: string) => {
+    if (!text) return;
+    if (speakingIndex === index) {
+      Speech.stop();
+      setSpeakingIndex(null);
+      return;
+    }
+    Speech.stop();
+    Speech.speak(text, {
+      language: 'es-ES',
+      onDone: () => setSpeakingIndex((current) => (current === index ? null : current)),
+      onStopped: () => setSpeakingIndex((current) => (current === index ? null : current)),
+      onError: () => setSpeakingIndex((current) => (current === index ? null : current)),
+    });
+    setSpeakingIndex(index);
   };
 
   const send = async () => {
@@ -248,6 +377,21 @@ export default function PrediagnosticoScreen() {
                     {turn.content}
                   </Text>
                 ) : null}
+                {turn.role === 'assistant' && turn.content ? (
+                  <Pressable
+                    onPress={() => toggleSpeak(index, turn.content)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={speakingIndex === index ? 'Detener lectura' : 'Escuchar respuesta'}
+                    style={({ pressed }) => [{ alignSelf: 'flex-end' }, pressed ? { opacity: 0.6 } : undefined]}
+                  >
+                    {speakingIndex === index ? (
+                      <Square size={14} color="#059669" />
+                    ) : (
+                      <Volume2 size={14} color="#059669" />
+                    )}
+                  </Pressable>
+                ) : null}
               </View>
               {turn.role === 'user' ? (
                 <View className="h-7 w-7 items-center justify-center rounded-full bg-primary/20">
@@ -281,6 +425,11 @@ export default function PrediagnosticoScreen() {
             {photoError}
           </Text>
         ) : null}
+        {transcribing ? (
+          <Text className="border-t border-border bg-card px-3 pt-2 font-body text-xs text-mutedForeground">
+            Transcribiendo…
+          </Text>
+        ) : null}
 
         <View className="flex-row items-end gap-2 border-t border-border bg-card p-3">
           <Pressable
@@ -292,6 +441,22 @@ export default function PrediagnosticoScreen() {
             className="h-11 w-11 items-center justify-center rounded-md border border-border bg-background"
           >
             <ImagePlus size={18} color="#64748B" />
+          </Pressable>
+          <Pressable
+            onPress={onMicPress}
+            disabled={sending || transcribing}
+            accessibilityRole="button"
+            accessibilityLabel={recorderState.isRecording ? 'Detener grabación' : 'Grabar nota de voz'}
+            style={({ pressed }) => (pressed ? { opacity: 0.7 } : undefined)}
+            className={`h-11 w-11 items-center justify-center rounded-md border ${
+              recorderState.isRecording ? 'border-destructive bg-destructive/10' : 'border-border bg-background'
+            }`}
+          >
+            {recorderState.isRecording ? (
+              <Square size={18} color="#DC2626" />
+            ) : (
+              <Mic size={18} color="#64748B" />
+            )}
           </Pressable>
           <TextInput
             className="min-h-11 flex-1 rounded-sm border border-border bg-background px-3 py-2 font-body text-base text-foreground"

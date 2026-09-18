@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import Groq from 'groq-sdk';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabase/config';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { getAuthenticatedClient } from '@/lib/ai-request-auth';
 import {
   aiChatMessageSchema,
   aiRoadmapInputSchema,
@@ -39,31 +38,6 @@ import {
 const TEXT_MODEL = 'openai/gpt-oss-120b';
 const VISION_MODEL = 'qwen/qwen3.6-27b';
 const MAX_TURNS_BEFORE_HINT = 8; // evita conversaciones eternas sin llegar a un resumen
-
-async function getAuthenticatedClient(request: Request): Promise<{
-  supabase: SupabaseClient;
-  userId: string;
-} | null> {
-  const authHeader = request.headers.get('authorization');
-  if (authHeader?.startsWith('Bearer ')) {
-    // Mobile: valida el token con el cliente anon y lo reusa para las consultas siguientes,
-    // que quedan autenticadas como ese usuario (RLS aplica normal, no es una service-role key).
-    const token = authHeader.slice('Bearer '.length);
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    });
-    const { data, error } = await supabase.auth.getUser(token);
-    if (error || !data.user) return null;
-    return { supabase, userId: data.user.id };
-  }
-
-  // Web: la sesión ya viene por cookie.
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data.user) return null;
-  return { supabase, userId: data.user.id };
-}
 
 function buildSystemPrompt(
   pet: { name: string; species: PetSpecies; breed: string | null; birth_date: string | null },

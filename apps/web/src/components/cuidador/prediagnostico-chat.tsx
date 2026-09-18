@@ -1,7 +1,19 @@
 'use client';
 
-import { useId, useRef, useState, type ChangeEvent } from 'react';
-import { Bot, Download, ImagePlus, MessageCircle, Send, TriangleAlert, User, X } from 'lucide-react';
+import { useEffect, useId, useRef, useState, type ChangeEvent } from 'react';
+import {
+  Bot,
+  Download,
+  ImagePlus,
+  MessageCircle,
+  Mic,
+  Send,
+  Square,
+  TriangleAlert,
+  User,
+  Volume2,
+  X,
+} from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -37,11 +49,43 @@ export function PrediagnosticoChat({ petId, petName, ownerId, initialConversatio
   const [roadmap, setRoadmap] = useState<AiRoadmapItem[] | null>(initialConversation?.roadmap ?? null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const [micSupported, setMicSupported] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
   const textareaId = useId();
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const done = Boolean(summary);
+
+  // Detección de soporte del navegador después del montaje (no en el render inicial): evita un
+  // mismatch de hidratación, porque en el server `window`/`navigator` no existen y el HTML
+  // generado ahí siempre debe coincidir con el primer render del cliente.
+  useEffect(() => {
+    setMicSupported(
+      typeof navigator !== 'undefined' &&
+        typeof navigator.mediaDevices?.getUserMedia === 'function' &&
+        typeof MediaRecorder !== 'undefined'
+    );
+    setSpeechSupported(typeof window !== 'undefined' && 'speechSynthesis' in window);
+  }, []);
+
+  // Si el componente se desmonta a mitad de una grabación o de una lectura en voz alta, no dejar
+  // el micrófono abierto ni el speech synthesis hablando en el vacío.
+  useEffect(() => {
+    return () => {
+      if (recordingTimeoutRef.current) clearTimeout(recordingTimeoutRef.current);
+      mediaRecorderRef.current?.stop();
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   const onPhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] ?? null;
@@ -64,6 +108,90 @@ export function PrediagnosticoChat({ petId, petName, ownerId, initialConversatio
     setPhotoPreviewUrl(null);
     setPhotoError(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // La nota de voz es transitoria: nunca se guarda ni viaja con el mensaje (a diferencia de la
+  // foto) — solo produce texto que llena el cuadro de mensaje para que el cuidador lo revise y
+  // edite antes de enviar (nunca se auto-envía).
+  const transcribeRecording = async (blob: Blob) => {
+    if (blob.size === 0) return;
+    setTranscribing(true);
+    setError(null);
+    try {
+      const ext = blob.type.includes('mp4') ? 'mp4' : blob.type.includes('ogg') ? 'ogg' : 'webm';
+      const formData = new FormData();
+      formData.append('audio', blob, `nota-de-voz.${ext}`);
+      const res = await fetch('/api/ai/transcribir', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? 'No se pudo transcribir el audio.');
+        return;
+      }
+      const text = typeof data.text === 'string' ? data.text.trim() : '';
+      if (text) {
+        setDraft((prev) => (prev.trim() ? `${prev.trim()} ${text}` : text));
+      }
+    } catch {
+      setError('No se pudo conectar con el asistente. Revisa tu conexión e intenta de nuevo.');
+    } finally {
+      setTranscribing(false);
+    }
+  };
+
+  const startRecording = async () => {
+    setError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      mediaRecorder.onstop = () => {
+        stream.getTracks().forEach((track) => track.stop());
+        if (recordingTimeoutRef.current) {
+          clearTimeout(recordingTimeoutRef.current);
+          recordingTimeoutRef.current = null;
+        }
+        const blob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' });
+        audioChunksRef.current = [];
+        setRecording(false);
+        void transcribeRecording(blob);
+      };
+      mediaRecorderRef.current = mediaRecorder;
+      mediaRecorder.start();
+      setRecording(true);
+      // Corte de seguridad: si el cuidador se olvida de tocar "detener", la grabación no queda
+      // corriendo indefinidamente.
+      recordingTimeoutRef.current = setTimeout(() => {
+        mediaRecorderRef.current?.stop();
+      }, 60_000);
+    } catch {
+      setError('No se pudo acceder al micrófono. Revisa los permisos del navegador.');
+    }
+  };
+
+  const onMicClick = () => {
+    if (recording) {
+      mediaRecorderRef.current?.stop();
+    } else {
+      void startRecording();
+    }
+  };
+
+  const toggleSpeak = (index: number, text: string) => {
+    if (!speechSupported || !text) return;
+    window.speechSynthesis.cancel();
+    if (speakingIndex === index) {
+      setSpeakingIndex(null);
+      return;
+    }
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'es-ES';
+    utterance.onend = () => setSpeakingIndex((current) => (current === index ? null : current));
+    utterance.onerror = () => setSpeakingIndex((current) => (current === index ? null : current));
+    window.speechSynthesis.speak(utterance);
+    setSpeakingIndex(index);
   };
 
   const send = async () => {
@@ -225,6 +353,24 @@ export function PrediagnosticoChat({ petId, petName, ownerId, initialConversatio
                   />
                 )}
                 {turn.content && <span>{turn.content}</span>}
+                {turn.role === 'assistant' && turn.content && speechSupported && (
+                  <div className="mt-1.5 flex justify-end">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-6"
+                      aria-label={speakingIndex === index ? 'Detener lectura' : 'Escuchar respuesta'}
+                      onClick={() => toggleSpeak(index, turn.content)}
+                    >
+                      {speakingIndex === index ? (
+                        <Square className="size-3.5" />
+                      ) : (
+                        <Volume2 className="size-3.5" />
+                      )}
+                    </Button>
+                  </div>
+                )}
               </div>
               {turn.role === 'user' && (
                 <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/15">
@@ -240,6 +386,7 @@ export function PrediagnosticoChat({ petId, petName, ownerId, initialConversatio
 
       {error && <p className="text-sm text-destructive">{error}</p>}
       {photoError && <p className="text-sm text-destructive">{photoError}</p>}
+      {transcribing && <p className="text-sm text-muted-foreground">Transcribiendo…</p>}
 
       {photoPreviewUrl && (
         <div className="flex items-center gap-2 rounded-md border border-border bg-card p-2">
@@ -280,6 +427,18 @@ export function PrediagnosticoChat({ petId, petName, ownerId, initialConversatio
         >
           <ImagePlus className="size-4" />
         </Button>
+        {micSupported && (
+          <Button
+            type="button"
+            variant={recording ? 'destructive' : 'outline'}
+            size="icon"
+            aria-label={recording ? 'Detener grabación' : 'Grabar nota de voz'}
+            disabled={sending || transcribing}
+            onClick={onMicClick}
+          >
+            {recording ? <Square className="size-4" /> : <Mic className="size-4" />}
+          </Button>
+        )}
         <Textarea
           id={textareaId}
           value={draft}

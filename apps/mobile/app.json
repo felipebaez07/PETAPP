@@ -40,7 +40,8 @@
         {
           "photosPermission": "PeTech necesita acceder a tus fotos para elegir la foto de tu mascota o subir un documento."
         }
-      ]
+      ],
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true

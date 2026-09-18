@@ -1843,3 +1843,61 @@ desde ambos perfiles.
 nuevo por mí después del reporte del agente (no me quedé solo con eso) — revisé a mano la ruta del
 PDF (usa RLS normal, no admin, 404 si no hay acceso — sin fuga de si el documento existe) y el
 componente del formulario.
+
+## 28. Voz para la IA + métricas por consultorio + análisis de teleconsulta (2026-09-17)
+
+Continuación del brainstorm de mejoras: el usuario pidió construir voz-a-texto/texto-a-voz para el
+chat de pre-diagnóstico y un panel de métricas por consultorio, y por separado pidió analizar (sin
+construir) cómo sería un módulo de teleconsulta.
+
+### 28.1 Voz a texto + texto a voz en el chat de pre-diagnóstico
+
+- [x] `apps/web/src/lib/ai-request-auth.ts` — se extrajo `getAuthenticatedClient` (antes vivía solo
+  dentro de `api/ai/prediagnostico/route.ts`) para reusarlo sin duplicar la lógica de auth dual
+  (cookie en web, Bearer token en mobile) en el endpoint nuevo. Comportamiento idéntico, es un
+  recorte, no un cambio — verificado con diff.
+- [x] `apps/web/src/app/api/ai/transcribir/route.ts` — nuevo endpoint sin estado (el audio nunca se
+  guarda, solo entra y sale el texto). Usa Whisper de Groq (`whisper-large-v3-turbo`,
+  `language: 'es'`) — mismo proveedor que ya se usa para el resto de la IA, sin cuenta nueva.
+  Protegido con la misma auth del endpoint de pre-diagnóstico (evita que alguien sin sesión abuse
+  de una llamada paga), tope de 10MB por nota de voz.
+- [x] Botón de micrófono en el chat (web: `MediaRecorder`/`getUserMedia`; mobile: `expo-audio`,
+  **no** `expo-av` — se confirmó que en el SDK instalado `expo-av` quedó congelado en una versión
+  vieja, desacoplada del ciclo de versiones del SDK, la señal de que Expo movió la grabación a
+  `expo-audio`) — el texto transcrito se agrega al cuadro de mensaje para revisar/editar, **nunca
+  se envía solo**, mismo criterio de "componer, revisar, enviar" del resto de la app.
+- [x] Botón de "escuchar" en cada respuesta de la IA — voz nativa del dispositivo
+  (`window.speechSynthesis` en web, `expo-speech` en mobile), **sin proveedor pago** por decisión
+  explícita (ElevenLabs/etc. quedan descartados para esto). Ambos botones se ocultan por completo
+  (no solo se deshabilitan) si el navegador/dispositivo no soporta la API.
+- [ ] **No construido**: nada de esto en el lado del establecimiento (solo aplica al chat de
+  pre-diagnóstico del cuidador).
+
+### 28.2 Métricas por consultorio
+
+- [x] `/panel/metricas` (solo dueño, mismo criterio que perfil/horarios/servicios/plan/personal —
+  son datos de desempeño del negocio, no operativos del día a día). Sin librería de gráficos nueva
+  (deliberado, para no meter una dependencia por una necesidad simple): citas por mes con barras
+  hechas con `<div>`s de Tailwind, no una librería.
+- [x] Cuatro bloques: citas por mes (últimos 6 meses), tasa de conversión (completadas sobre el
+  total de solicitudes ya resueltas — excluye pendientes/confirmadas), calificación promedio de
+  reseñas, pacientes nuevos este mes vs. recurrentes (con ≥2 consultas registradas). Los tres casos
+  de "sin datos todavía" (cero reseñas, cero solicitudes resueltas) muestran un mensaje en vez de
+  un 0%/NaN engañoso.
+
+### 28.3 Teleconsulta — análisis, nada construido
+
+- [ ] Solo diseño/propuesta, a pedido explícito del usuario ("compruébame cómo sería" — no
+  "constrúyelo"). Recomendación: no construir el motor de video desde cero (WebRTC/señalización es
+  su propio proyecto), integrar con **Daily.co** (crea la sala por API, se siente parte de la app)
+  en vez de Jitsi o simplemente compartir un link de Zoom.
+- [x] **LG-007** registrado en `docs/legal/registro-legal.md`: la veterinaria es profesión
+  regulada — no está claro si generar una fórmula/receta sin examen físico presencial tiene
+  restricciones en Colombia. No bloquea nada hoy (no hay nada construido), pero condiciona qué se
+  podría ofrecer por teleconsulta si se decide avanzar.
+
+**Verificación de 28.1 y 28.2:** `npm run typecheck` (3 workspaces), `npm run build` real de
+Next.js, y `npx expo export --platform web` de mobile — los tres corridos de nuevo por mí después
+de fusionar el trabajo de los dos agentes en paralelo (no hubo conflicto de archivos entre ellos).
+Revisé a mano la ruta de transcripción (auth antes que nada, tope de tamaño, sin fuga de errores) y
+la extracción de `ai-request-auth.ts` (diff idéntico al original).
