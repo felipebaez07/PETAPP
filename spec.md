@@ -2034,3 +2034,40 @@ migrar cada columna que lo use, no es un simple rollback de una línea. El resto
   motor de generación, campañas completas) — nada de eso se construyó todavía, sigue pendiente de
   confirmar los supuestos de la sección 4 de la propuesta original (canal del recordatorio,
   significado de "abrió" una campaña, si se construye una pantalla de admin para activar planes).
+- [ ] **Bloqueante para campañas específicamente**: falta la pantalla donde el cuidador otorga a
+  propósito el consentimiento `comunicaciones_comerciales` (nace en `false`, opt-in puro) — sin
+  ella nadie tiene consentimiento comercial vigente y ninguna campaña le podría llegar a nadie.
+
+## 31. Respaldo de IA: OpenRouter si Groq falla (2026-09-17)
+
+El usuario preguntó si se podían agregar más API keys de motores de IA para que uno respalde a
+otro si deja de funcionar. Se investigaron opciones reales con `WebSearch`/`WebFetch` (no de
+memoria, dado el historial de este proyecto con catálogos de modelos que cambian sin aviso) — el
+usuario descartó explícitamente usar su propia cuenta de Claude, y pidió algo gratis "para el MVP".
+Gemini quedó descartado por experiencia propia del proyecto (por eso se había migrado a Groq el
+2026-09-09: su tier gratis se agotaba rápido en uso real). El usuario eligió **OpenRouter**.
+
+- [x] `apps/web/src/app/api/ai/prediagnostico/route.ts` — nueva función `callOpenRouterFallback()`,
+  un `fetch` plano a `https://openrouter.ai/api/v1/chat/completions` (mismo formato "chat
+  completions" que ya usa Groq, sin SDK nuevo). Modelo `openrouter/free` — un router especial de
+  OpenRouter que elige solo entre sus modelos gratis vigentes, en vez de depender de un nombre de
+  modelo puntual — **exactamente lo que habría evitado** el incidente de la sección 18
+  (`llama-3.3-70b-versatile` dado de baja sin aviso). Verificado con `WebFetch` contra la
+  documentación real de OpenRouter, no supuesto: tier gratis 50 solicitudes/día sin nada más, o
+  1000/día con un pago único de $10 en créditos (no es suscripción).
+- [x] Si Groq falla, ANTES de mostrarle el error al cuidador, se intenta una vez con OpenRouter —
+  si responde, el cuidador nunca se entera de que Groq falló. Sin `OPENROUTER_API_KEY` configurada,
+  el respaldo simplemente no hace nada (no bloquea, se comporta como hoy).
+- [ ] **No se agregó respaldo para el endpoint de transcripción de voz** (`/api/ai/transcribir`,
+  sección 28.1) — es específico de Whisper de Groq, OpenRouter no ofrece un equivalente directo de
+  transcripción de audio bajo el mismo formato. Queda como está, sin respaldo, por ahora.
+- [ ] **No confirmado**: si `openrouter/free` maneja bien las fotos (visión) — la documentación no
+  lo aclaró. El respaldo se intenta igual para turnos con foto (mismo código, sin lógica separada
+  por modalidad) — si el modelo que OpenRouter elija ese momento no soporta imagen, simplemente
+  falla y el cuidador ve el mensaje de error normal, ni mejor ni peor que hoy sin respaldo.
+
+**Verificación:** `npm run typecheck` (3 workspaces) y `npm run build` real de Next.js en verde.
+
+**Pendiente**: el usuario debe crear una cuenta en openrouter.ai, generar una API key, y agregar
+`OPENROUTER_API_KEY` en Vercel (mismo procedimiento que `RESEND_API_KEY`/`GROQ_API_KEY`) — sin esa
+variable, el código no rompe nada, simplemente no hay respaldo todavía.

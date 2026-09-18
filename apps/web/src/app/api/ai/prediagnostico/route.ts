@@ -93,6 +93,48 @@ function isTransientGroqError(err: unknown): boolean {
   return false;
 }
 
+/**
+ * Respaldo si Groq falla — proveedor distinto a propósito (no otra cuenta de Groq): protege
+ * contra una caída real del servicio, no solo un límite de uso puntual. OpenRouter (openrouter.ai)
+ * expone una API con el mismo formato "chat completions" que ya usa Groq, así que no hace falta
+ * ningún SDK nuevo — un `fetch` normal alcanza.
+ *
+ * `openrouter/free` es un router especial: OpenRouter elige solo entre sus modelos gratis vigentes
+ * en vez de que el código dependa de un nombre de modelo puntual — exactamente lo que habría
+ * evitado el incidente de 2026-09-10 (`llama-3.3-70b-versatile` dado de baja sin aviso). Tier
+ * gratis: 50 solicitudes/día sin nada más, o 1000/día si en algún momento se cargan $10 de crédito
+ * (pago único, no suscripción) — de sobra para un respaldo que solo se usa cuando Groq falla, no
+ * para tráfico normal.
+ *
+ * Sin `OPENROUTER_API_KEY` configurada, devuelve `null` de inmediato — el respaldo es opcional, no
+ * bloquea nada si todavía no se configuró.
+ */
+async function callOpenRouterFallback(messages: Groq.Chat.ChatCompletionMessageParam[]): Promise<string | null> {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ model: 'openrouter/free', messages }),
+    });
+    if (!response.ok) {
+      console.error('[prediagnostico] OpenRouter respondió', response.status, await response.text().catch(() => ''));
+      return null;
+    }
+    const data = await response.json();
+    const text = data?.choices?.[0]?.message?.content;
+    return typeof text === 'string' && text.trim() ? text : null;
+  } catch (err) {
+    console.error('[prediagnostico] Error llamando al respaldo de OpenRouter:', err);
+    return null;
+  }
+}
+
 function parseRoadmap(rawJson: string): AiRoadmapItem[] | null {
   try {
     const parsed = aiRoadmapInputSchema.safeParse(JSON.parse(rawJson));
@@ -289,15 +331,17 @@ export async function POST(request: Request) {
       }
     : { role: 'user', content: message };
 
+  const messagesForModel: Groq.Chat.ChatCompletionMessageParam[] = [
+    { role: 'system', content: systemPrompt + turnCountHint },
+    ...historyMessages,
+    currentUserMessage,
+  ];
+
   let replyText: string;
   try {
     const completion = await groq.chat.completions.create({
       model,
-      messages: [
-        { role: 'system', content: systemPrompt + turnCountHint },
-        ...historyMessages,
-        currentUserMessage,
-      ],
+      messages: messagesForModel,
     });
     replyText = stripThinkingBlock(completion.choices[0]?.message?.content ?? '');
   } catch (err) {
@@ -308,10 +352,19 @@ export async function POST(request: Request) {
     // Vercel (el catch lo convierte en un mensaje genérico para el usuario) y depurar un fallo de
     // la API de Groq en producción se vuelve imposible sin esta línea.
     console.error('[prediagnostico] Groq error:', err);
-    const friendly = isTransientGroqError(err)
-      ? 'El asistente está recibiendo mucha demanda en este momento. Esperá unos segundos e intentá de nuevo.'
-      : 'No se pudo contactar al asistente. Intenta de nuevo.';
-    return NextResponse.json({ error: friendly }, { status: 502 });
+
+    // Groq falló de verdad (no solo lento) — antes de rendirse, un intento con un proveedor
+    // DISTINTO (ver callOpenRouterFallback) en vez de mostrarle el error al cuidador de una.
+    const fallbackText = await callOpenRouterFallback(messagesForModel);
+    if (fallbackText) {
+      console.warn('[prediagnostico] Groq falló, respondió el respaldo de OpenRouter.');
+      replyText = stripThinkingBlock(fallbackText);
+    } else {
+      const friendly = isTransientGroqError(err)
+        ? 'El asistente está recibiendo mucha demanda en este momento. Esperá unos segundos e intentá de nuevo.'
+        : 'No se pudo contactar al asistente. Intenta de nuevo.';
+      return NextResponse.json({ error: friendly }, { status: 502 });
+    }
   }
 
   if (!replyText) {
