@@ -142,7 +142,7 @@ export default async function EstablishmentDetailPage({ params }: { params: Prom
         <p className="mt-6 text-sm text-muted-foreground">Teléfono: {formatPhoneForDisplay(establishment.phone)}</p>
       )}
 
-      <Card className="mt-6">
+      <Card id="resenas" className="mt-6 scroll-mt-20">
         <CardHeader>
           <CardTitle>Reseñas de cuidadores</CardTitle>
         </CardHeader>

@@ -1,9 +1,10 @@
 import Link from 'next/link';
-import { CalendarClock, PawPrint } from 'lucide-react';
+import { CalendarClock, PawPrint, Star } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { RevealItem } from '@/components/motion/reveal-item';
 import { SERVICE_REQUEST_STATUS_LABELS, type ServiceRequestStatus } from '@petapp/shared';
 
@@ -111,7 +112,16 @@ export default async function CitasPage() {
                       <p className="mt-1 text-sm text-muted-foreground">{formatDateTime(request.preferred_datetime)}</p>
                     )}
                   </div>
-                  <Badge variant={STATUS_VARIANT[request.status]}>{SERVICE_REQUEST_STATUS_LABELS[request.status]}</Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={STATUS_VARIANT[request.status]}>{SERVICE_REQUEST_STATUS_LABELS[request.status]}</Badge>
+                    {request.status === 'completada' && request.establishment?.slug && (
+                      <Button asChild size="sm" variant="outline" className="gap-1.5">
+                        <Link href={`/directorio/${request.establishment.slug}#resenas`}>
+                          <Star className="size-4" /> Dejar reseña
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </RevealItem>
