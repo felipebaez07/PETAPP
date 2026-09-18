@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { CalendarHeart, FileStack, PawPrint, ShieldCheck, Sparkles, Stethoscope, Syringe } from 'lucide-react';
+import { CalendarHeart, FileStack, PawPrint, Pencil, ShieldCheck, Sparkles, Stethoscope, Syringe } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -13,10 +13,30 @@ import { PreventiveEventRow } from '@/components/cuidador/preventive-event-row';
 import { AddDocumentPanel } from '@/components/cuidador/add-document-panel';
 import { DocumentRow } from '@/components/cuidador/document-row';
 import { ClinicalDocumentItem } from '@/components/cuidador/clinical-document-item';
-import { SPECIES_LABELS, type AiConversation, type ClinicalDocument, type PetWithDetails, type VetVisitNote } from '@petapp/shared';
+import { DeletePetButton } from '@/components/cuidador/delete-pet-button';
+import {
+  CLINICAL_DOCUMENT_TYPE_LABELS,
+  SPECIES_LABELS,
+  type AiConversation,
+  type ClinicalDocument,
+  type PetWithDetails,
+  type VetVisitNote,
+} from '@petapp/shared';
 
-export default async function PetDetailPage({ params }: { params: Promise<{ id: string }> }) {
+const DOCUMENT_TYPE_OPTIONS = Object.entries(CLINICAL_DOCUMENT_TYPE_LABELS) as [
+  ClinicalDocument['document_type'],
+  string,
+][];
+
+export default async function PetDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ tipo?: string }>;
+}) {
   const { id } = await params;
+  const { tipo } = await searchParams;
   const user = await getCurrentUser();
   if (!user) return null; // el layout ya redirige
 
@@ -63,8 +83,16 @@ export default async function PetDetailPage({ params }: { params: Promise<{ id: 
     .from('clinical_documents')
     .select('*, clinical_patient:clinical_patients!inner(pet_id)')
     .eq('clinical_patient.pet_id', pet.id)
+    .is('archived_by_owner_at', null)
     .order('created_at', { ascending: false });
   const clinicalDocuments = (clinicalDocumentsData as unknown as ClinicalDocument[] | null) ?? [];
+  const activeDocumentType =
+    tipo && Object.prototype.hasOwnProperty.call(CLINICAL_DOCUMENT_TYPE_LABELS, tipo)
+      ? (tipo as ClinicalDocument['document_type'])
+      : null;
+  const filteredClinicalDocuments = activeDocumentType
+    ? clinicalDocuments.filter((doc) => doc.document_type === activeDocumentType)
+    : clinicalDocuments;
 
   interface TimelineEntry {
     key: string;
@@ -93,19 +121,27 @@ export default async function PetDetailPage({ params }: { params: Promise<{ id: 
               {SPECIES_LABELS[pet.species]}
               {pet.breed ? ` · ${pet.breed}` : ''}
             </p>
+            <div className="mt-1.5 flex flex-wrap gap-2">
+              {pet.vaccinated && (
+                <Badge variant="success">
+                  <Syringe className="size-3.5" /> Vacunas al día
+                </Badge>
+              )}
+              {pet.sterilized && (
+                <Badge variant="outline">
+                  <ShieldCheck className="size-3.5" /> Esterilizado/a
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {pet.vaccinated && (
-            <Badge variant="success">
-              <Syringe className="size-3.5" /> Vacunas al día
-            </Badge>
-          )}
-          {pet.sterilized && (
-            <Badge variant="outline">
-              <ShieldCheck className="size-3.5" /> Esterilizado/a
-            </Badge>
-          )}
+        <div className="flex items-start gap-2">
+          <Button asChild variant="outline" size="sm" className="gap-1.5">
+            <Link href={`/cuidador/mascotas/${pet.id}/editar`}>
+              <Pencil className="size-4" /> Editar
+            </Link>
+          </Button>
+          <DeletePetButton petId={pet.id} petName={pet.name} />
         </div>
       </div>
 
@@ -229,13 +265,37 @@ export default async function PetDetailPage({ params }: { params: Promise<{ id: 
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ul>
-              {clinicalDocuments.map((document, index) => (
-                <RevealItem key={document.id} index={index} as="li">
-                  <ClinicalDocumentItem doc={document} defaultSignerName={user.profile.full_name} />
-                </RevealItem>
-              ))}
-            </ul>
+            {clinicalDocuments.length > 1 && (
+              <div className="mb-4 flex flex-wrap gap-2">
+                <Link href={`/cuidador/mascotas/${pet.id}`}>
+                  <Badge variant={!activeDocumentType ? 'secondary' : 'outline'} className="cursor-pointer">
+                    Todos ({clinicalDocuments.length})
+                  </Badge>
+                </Link>
+                {DOCUMENT_TYPE_OPTIONS.map(([value, label]) => {
+                  const count = clinicalDocuments.filter((doc) => doc.document_type === value).length;
+                  if (count === 0) return null;
+                  return (
+                    <Link key={value} href={`/cuidador/mascotas/${pet.id}?tipo=${value}`}>
+                      <Badge variant={activeDocumentType === value ? 'secondary' : 'outline'} className="cursor-pointer">
+                        {label} ({count})
+                      </Badge>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+            {filteredClinicalDocuments.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No hay documentos de este tipo.</p>
+            ) : (
+              <ul>
+                {filteredClinicalDocuments.map((document, index) => (
+                  <RevealItem key={document.id} index={index} as="li">
+                    <ClinicalDocumentItem doc={document} defaultSignerName={user.profile.full_name} />
+                  </RevealItem>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
       )}

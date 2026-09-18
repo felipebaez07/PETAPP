@@ -205,3 +205,39 @@ export async function signClinicalDocument(documentId: string, signerName: strin
   revalidatePath(`/cuidador/mascotas/${petId}`);
   return { ok: true };
 }
+
+/**
+ * Quita un documento de la vista del dueño — pedido explícito: "ya lo imprimí y no lo necesito
+ * ver". Deliberadamente NO borra la fila (0021_clinical_documents_owner_archive.sql): el
+ * establecimiento sigue teniendo su propio registro clínico oficial, esto solo lo oculta del lado
+ * del cuidador. El `.update()` envía ÚNICAMENTE `archived_by_owner_at` — mismo criterio de
+ * `signClinicalDocument` de arriba, nunca tocar `content`/`title`/`document_type` desde acá.
+ */
+export async function archiveClinicalDocumentForOwner(documentId: string): Promise<ActionResult> {
+  const user = await getCurrentUser();
+  if (!user || user.profile.role !== 'propietario') return { ok: false, error: 'No autorizado.' };
+
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from('clinical_documents')
+    .select('id, clinical_patient:clinical_patients(pet_id)')
+    .eq('id', documentId)
+    .maybeSingle();
+  const doc = data as unknown as ClinicalDocumentSignLookup | null;
+  if (!doc) return { ok: false, error: 'Documento no encontrado.' };
+
+  const petId = doc.clinical_patient?.pet_id;
+  if (!petId) return { ok: false, error: 'Documento no encontrado.' };
+
+  const owns = await assertOwnsPet(petId);
+  if (!owns.ok) return owns;
+
+  const { error } = await supabase
+    .from('clinical_documents')
+    .update({ archived_by_owner_at: new Date().toISOString() })
+    .eq('id', documentId);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/cuidador/mascotas/${petId}`);
+  return { ok: true };
+}

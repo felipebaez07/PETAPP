@@ -1901,3 +1901,45 @@ Next.js, y `npx expo export --platform web` de mobile — los tres corridos de n
 de fusionar el trabajo de los dos agentes en paralelo (no hubo conflicto de archivos entre ellos).
 Revisé a mano la ruta de transcripción (auth antes que nada, tope de tamaño, sin fuga de errores) y
 la extracción de `ai-request-auth.ts` (diff idéntico al original).
+
+## 29. Voz TTS en acento correcto + editar/borrar mascota y documentos desde el cuidador (2026-09-17)
+
+Dos pedidos del mismo día: el TTS del chat de IA sonaba en inglés, y el usuario aclaró que el
+pedido de "editar/borrar animales y documentos" era para el **panel del cuidador**, no del
+establecimiento (donde ya se había construido eso — sección 27 — sin que hiciera falta).
+
+### 29.1 Fix: TTS hablaba español con acento inglés
+
+- [x] Causa real: solo se pasaba `lang`/`language: 'es-ES'`, sin elegir una voz explícita — varios
+  navegadores y dispositivos Android sin el paquete de voz en español instalado ignoran ese campo y
+  caen a la voz por defecto (inglés). Web: espera a que carguen las voces (`onvoiceschanged`) y
+  busca una voz real en español (prioriza es-CO/es-419/es-MX antes que es-ES) para asignarla a
+  `utterance.voice`. Mobile: usa `Speech.getAvailableVoicesAsync()` y pasa el `identifier` real,
+  cacheado en un ref.
+
+### 29.2 Cuidador: editar/eliminar mascota, filtrar y "eliminar" documentos
+
+- [x] **Editar mascota** (`/cuidador/mascotas/[id]/editar`, `PetForm` reusado en modo edición) y
+  **eliminar mascota** (`deletePet`) — de paso se agregó el selector de Sexo al formulario, que
+  faltaba (`petSchema` ya lo pedía pero no había ningún campo visible para llenarlo).
+  `deletePet` primero revisa si algún establecimiento tiene esta mascota vinculada como paciente de
+  su historia clínica (`clinical_patients.pet_id`) — si es así, rechaza el borrado con un mensaje
+  claro en vez de dejar que la base de datos falle a mitad de camino contra el CHECK
+  `clinical_patients_owner_source` (pet_id o owner_full_name, nunca ninguno de los dos).
+- [x] **Filtro por tipo** en "Documentos para firma" del lado del cuidador — mismos badges
+  clicables con conteo que ya se hicieron en el panel del establecimiento (sección 27).
+- [x] **"Eliminar" un documento desde el cuidador — decisión de diseño explicada al usuario, no
+  asumida en silencio**: NO es un DELETE real de `clinical_documents` (esa fila es del
+  establecimiento, es su historia clínica oficial — borrarla de verdad le haría perder su propio
+  registro). Migración `0021_clinical_documents_owner_archive.sql` agrega
+  `archived_by_owner_at` + una policy nueva que dejan al dueño de la mascota marcarlo sin tocar el
+  contenido — el establecimiento lo sigue viendo siempre en su panel, el cuidador simplemente deja
+  de verlo en el suyo. El botón dice "Eliminar" (para no pelear con lo que pidió el usuario) pero el
+  confirm aclara la diferencia antes de ejecutar.
+
+**Verificación:** `npm run typecheck` (3 workspaces) y `npm run build` real de Next.js en verde
+(mobile no se tocó, no hizo falta `expo export`).
+
+**Pendiente**: aplicar `0021_clinical_documents_owner_archive.sql` en Supabase real — sigue el
+orden de la lista completa: `0016` → `0017` → `0018` → `0019` → `0020` → `0021` (las primeras
+cinco ya están confirmadas aplicadas).

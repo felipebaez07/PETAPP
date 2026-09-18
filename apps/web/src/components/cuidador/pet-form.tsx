@@ -6,20 +6,28 @@ import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion, AnimatePresence } from 'motion/react';
 import { PawPrint } from 'lucide-react';
-import { petSchema, type PetFormValues, SPECIES_LABELS } from '@petapp/shared';
+import { petSchema, type Pet, type PetFormValues, SPECIES_LABELS } from '@petapp/shared';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { SPRING_SHEET } from '@/lib/motion';
-import { createPet } from '@/app/cuidador/mascotas/actions';
+import { createPet, updatePet } from '@/app/cuidador/mascotas/actions';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { validatePhotoFile, fileExtension } from '@/lib/uploads';
 
 const SPECIES = Object.entries(SPECIES_LABELS) as [PetFormValues['species'], string][];
+const SEX_LABELS: Record<PetFormValues['sex'], string> = {
+  macho: 'Macho',
+  hembra: 'Hembra',
+  desconocido: 'Desconocido',
+};
+const SEX_OPTIONS = Object.entries(SEX_LABELS) as [PetFormValues['sex'], string][];
 
-export function PetForm({ onDone, ownerId }: { onDone?: () => void; ownerId: string }) {
+/** `pet` presente = modo edición (precarga sus datos, llama a `updatePet`, y si no hay `onDone`
+ * navega de vuelta a su ficha al guardar) — ausente = alta nueva, comportamiento sin cambios. */
+export function PetForm({ onDone, ownerId, pet }: { onDone?: () => void; ownerId: string; pet?: Pet }) {
   const router = useRouter();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -34,16 +42,27 @@ export function PetForm({ onDone, ownerId }: { onDone?: () => void; ownerId: str
     formState: { errors, isSubmitting },
   } = useForm<PetFormValues>({
     resolver: zodResolver(petSchema),
-    defaultValues: {
-      name: '',
-      species: 'perro',
-      breed: '',
-      sex: 'desconocido',
-      birth_date: '',
-      sterilized: false,
-      vaccinated: false,
-      notes: '',
-    },
+    defaultValues: pet
+      ? {
+          name: pet.name,
+          species: pet.species,
+          breed: pet.breed ?? '',
+          sex: pet.sex,
+          birth_date: pet.birth_date ?? '',
+          sterilized: pet.sterilized,
+          vaccinated: pet.vaccinated,
+          notes: pet.notes ?? '',
+        }
+      : {
+          name: '',
+          species: 'perro',
+          breed: '',
+          sex: 'desconocido',
+          birth_date: '',
+          sterilized: false,
+          vaccinated: false,
+          notes: '',
+        },
   });
   const sterilized = useWatch({ control, name: 'sterilized' });
   const vaccinated = useWatch({ control, name: 'vaccinated' });
@@ -70,8 +89,9 @@ export function PetForm({ onDone, ownerId }: { onDone?: () => void; ownerId: str
 
   const onSubmit = async (values: PetFormValues) => {
     setErrorMessage(null);
-    const result = await createPet(values);
-    if (!result.ok || !result.id) {
+    const result = pet ? await updatePet(pet.id, values) : await createPet(values);
+    const petId = result.id;
+    if (!result.ok || !petId) {
       setErrorMessage(result.error ?? 'No se pudo guardar la mascota.');
       return;
     }
@@ -84,13 +104,13 @@ export function PetForm({ onDone, ownerId }: { onDone?: () => void; ownerId: str
       // foto de todas formas: no vale la pena bloquear el flujo completo por esto.
       const supabase = createSupabaseBrowserClient();
       const ext = fileExtension(photoFile, 'jpg');
-      const path = `${ownerId}/${result.id}/photo.${ext}`;
+      const path = `${ownerId}/${petId}/photo.${ext}`;
       const { error: uploadError } = await supabase.storage
         .from('pet-photos')
         .upload(path, photoFile, { upsert: true, contentType: photoFile.type });
       if (!uploadError) {
         const { data } = supabase.storage.from('pet-photos').getPublicUrl(path);
-        await supabase.from('pets').update({ photo_url: data.publicUrl }).eq('id', result.id);
+        await supabase.from('pets').update({ photo_url: data.publicUrl }).eq('id', petId);
       } else {
         photoUploadFailed = true;
         setErrorMessage('La mascota se guardó, pero la foto no se pudo subir. Puedes intentarlo de nuevo luego.');
@@ -98,7 +118,11 @@ export function PetForm({ onDone, ownerId }: { onDone?: () => void; ownerId: str
     }
 
     router.refresh();
-    if (!photoUploadFailed) onDone?.();
+    if (onDone) {
+      if (!photoUploadFailed) onDone();
+    } else if (pet) {
+      router.push(`/cuidador/mascotas/${petId}`);
+    }
   };
 
   return (
@@ -164,6 +188,21 @@ export function PetForm({ onDone, ownerId }: { onDone?: () => void; ownerId: str
         </div>
       </div>
 
+      <div className="space-y-1.5">
+        <Label htmlFor="sex">Sexo</Label>
+        <select
+          id="sex"
+          {...register('sex')}
+          className="flex h-11 w-full max-w-xs rounded-sm border border-input bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {SEX_OPTIONS.map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className="flex flex-wrap gap-6">
         <div className="flex items-center gap-2">
           <Checkbox
@@ -206,7 +245,7 @@ export function PetForm({ onDone, ownerId }: { onDone?: () => void; ownerId: str
       </AnimatePresence>
 
       <Button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? 'Guardando…' : 'Guardar mascota'}
+        {isSubmitting ? 'Guardando…' : pet ? 'Guardar cambios' : 'Guardar mascota'}
       </Button>
     </motion.form>
   );

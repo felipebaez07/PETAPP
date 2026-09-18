@@ -2,13 +2,13 @@
 
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Download, FileSignature } from 'lucide-react';
+import { Download, FileSignature, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CLINICAL_DOCUMENT_TYPE_LABELS, type ClinicalDocument } from '@petapp/shared';
-import { signClinicalDocument } from '@/app/cuidador/mascotas/[id]/actions';
+import { archiveClinicalDocumentForOwner, signClinicalDocument } from '@/app/cuidador/mascotas/[id]/actions';
 
 function formatDateTime(isoStr: string): string {
   const date = new Date(isoStr);
@@ -33,6 +33,7 @@ export function ClinicalDocumentItem({
   const router = useRouter();
   const [signerName, setSignerName] = useState(defaultSignerName);
   const [saving, setSaving] = useState(false);
+  const [archiving, setArchiving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const onSign = async (e: FormEvent) => {
@@ -52,6 +53,23 @@ export function ClinicalDocumentItem({
     }
   };
 
+  // "Eliminar" acá solo lo quita de la vista del cuidador (0021_clinical_documents_owner_archive.sql)
+  // — el establecimiento sigue teniendo su propio registro clínico, se lo dice el confirm.
+  const onArchive = async () => {
+    if (!window.confirm('¿Quitar este documento de tu vista? El establecimiento sigue teniendo su copia en la historia clínica.')) {
+      return;
+    }
+    setArchiving(true);
+    setError(null);
+    const result = await archiveClinicalDocumentForOwner(doc.id);
+    if (result.ok) {
+      router.refresh();
+    } else {
+      setArchiving(false);
+      setError(result.error ?? 'No se pudo eliminar.');
+    }
+  };
+
   return (
     <div className="space-y-2 border-b border-border py-3 last:border-0">
       <div className="flex items-start justify-between gap-2">
@@ -59,11 +77,21 @@ export function ClinicalDocumentItem({
         <Badge variant="outline">{CLINICAL_DOCUMENT_TYPE_LABELS[doc.document_type]}</Badge>
       </div>
       <p className="line-clamp-4 whitespace-pre-wrap text-sm text-foreground/90">{doc.content}</p>
-      <div>
+      <div className="flex flex-wrap gap-2">
         <Button asChild variant="outline" size="sm" className="gap-1.5">
           <a href={`/api/documentos/${doc.id}/pdf`} target="_blank" rel="noopener noreferrer">
             <Download className="size-4" /> Descargar PDF
           </a>
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={archiving}
+          onClick={onArchive}
+          className="gap-1.5 text-destructive hover:bg-destructive/10"
+        >
+          <Trash2 className="size-4" /> Eliminar
         </Button>
       </div>
       {doc.signed_at ? (
