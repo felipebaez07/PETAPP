@@ -161,3 +161,35 @@ corresponda antes de resolverlo. Se agrega, nunca se sobrescribe.
   - Si existe algún gremio o entidad veterinaria colombiana con una postura pública sobre
     telemedicina veterinaria a la que consultar directamente.
 - **Estado**: abierto.
+
+## LG-008
+
+- **Detectado**: 2026-09-17, especificación formal del usuario para "recordatorios automáticos de
+  servicios recurrentes" (baño, spa, corte de pelo/uñas, limpieza dental) + "jornadas y campañas"
+  del prestador Pro. Todavía no construido — es la fase de modelo de datos, antes de escribir
+  código. Refina/precisa LG-006 (que ya cubría marketing por WhatsApp/SMS en términos generales)
+  con una distinción legal concreta que el propio usuario aportó, citando la Ley 1581 de 2012.
+- **Área**: Habeas data / consentimiento — distinción entre continuidad del servicio y comunicación
+  comercial.
+- **Riesgo**: 🟡 medio.
+- **Por qué aplica**: según el propio usuario, un recordatorio del servicio de la mascota en su
+  propia veterinaria (ej. "tu perro cumple 6 semanas desde el último baño acá") es continuidad de
+  un servicio ya contratado, pero una campaña dirigida (ej. "jornada de vacunación este sábado") es
+  comunicación comercial y exige autorización previa, expresa y separada, con opción de retiro —
+  dos consentimientos distintos, no uno solo, cada uno con su propio registro de cuándo y cómo se
+  otorgó o revocó.
+- **¿Bloquea?**: No bloquea nada hoy — nada construido todavía. Si se avanza, sí condiciona el
+  diseño desde el modelo de datos (no se puede agregar el consentimiento comercial "después", tiene
+  que existir antes de que la primera campaña pueda enviarse).
+- **Antes de qué hay que resolverlo**: antes de que cualquier campaña real le llegue a un cuidador
+  — la campaña debe excluir automáticamente a quien no tenga el consentimiento comercial vigente
+  (regla explícita del propio usuario, ya incorporada al diseño propuesto).
+- **Checklist de qué averiguar**:
+  - Si el mecanismo técnico propuesto (registro append-only de otorgamiento/revocación por tipo de
+    consentimiento) cumple el estándar de "autorización previa, expresa e informada" que exige la
+    Ley 1581 — esto lo debería confirmar alguien con conocimiento legal real, no solo el diseño
+    técnico.
+  - Si el consentimiento de "recordatorios de servicio" puede asumirse por defecto (continuidad del
+    servicio) o si igual requiere algún tipo de aviso al momento del registro, aunque no requiera
+    autorización expresa separada.
+- **Estado**: abierto.
