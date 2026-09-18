@@ -193,3 +193,28 @@ corresponda antes de resolverlo. Se agrega, nunca se sobrescribe.
     servicio) o si igual requiere algún tipo de aviso al momento del registro, aunque no requiera
     autorización expresa separada.
 - **Estado**: abierto.
+
+## LG-009
+
+- **Detectado**: 2026-09-18, el usuario pidió publicar una página pública `/planes` con precios
+  reales en pesos colombianos (Camada $79.000/mes, Manada $149.000/mes) y su lista de features.
+- **Área**: Protección al consumidor / información de precios; publicidad de features no
+  construidas.
+- **Riesgo**: 🟡 medio.
+- **Por qué aplica**: (1) mostrar un precio público en Colombia normalmente exige que sea el precio
+  final que el cliente paga (impuestos incluidos si aplican) y no puede ser engañoso — no se sabe
+  todavía si $79.000/$149.000 ya incluyen IVA u otros cargos. (2) el feature Pro "una jornada o
+  campaña al mes" se anuncia como si ya funcionara, pero el motor de envío de campañas (Paso 5 del
+  módulo de recordatorios/campañas, ver spec.md sección 30) **todavía no está construido** — solo
+  existe el modelo de datos. Publicitar una función que no funciona hoy es el riesgo concreto,
+  independiente de cualquier norma puntual.
+- **¿Bloquea?**: No bloquea publicar la página — no es 🔴 estructural. Sí condiciona el texto: la
+  página no debería prometer "una campaña al mes" en presente si todavía no se puede usar.
+- **Antes de qué hay que resolverlo**: antes de que un prestador real pague el plan Pro esperando
+  poder crear una campaña y no pueda.
+- **Checklist de qué averiguar**:
+  - Si $79.000/$149.000 son precios finales (con IVA si aplica) o antes de impuestos — quién lo
+    confirma con contabilidad/quien maneje lo tributario.
+  - Si conviene marcar el feature de campañas como "próximamente" en la página pública hasta que el
+    Paso 5 esté construido, o si se prioriza construirlo antes de publicar la página.
+- **Estado**: abierto.

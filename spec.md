@@ -2068,6 +2068,100 @@ Gemini quedó descartado por experiencia propia del proyecto (por eso se había 
 
 **Verificación:** `npm run typecheck` (3 workspaces) y `npm run build` real de Next.js en verde.
 
+## 32. Recordatorios de servicios recurrentes: UI + motor de generación (Pasos 2-4) (2026-09-18)
+
+Continuación de la sección 30 (solo modelo de datos) — el usuario aprobó seguir con los pasos 2 a
+4 del orden acordado ("si continua" / "Podrías continuar donde lo dejaste"). El Paso 5 (campañas)
+queda para un turno aparte, porque depende de que la pantalla de consentimientos de este mismo
+turno ya esté en producción.
+
+- [x] **Paso 2 — el cuidador define/silencia sus reglas** (delegado a un subagente en paralelo):
+  `apps/web/src/components/cuidador/pet-service-recurrences-section.tsx` (nuevo) + 6 acciones en
+  `apps/web/src/app/cuidador/mascotas/[id]/actions.ts` (`upsertPetServiceRecurrence`,
+  `deletePetServiceRecurrence`, `mute`/`unmutePetService`, `mute`/`unmuteEstablishment`). La
+  sección vive en la ficha de la mascota, después de "Calendario preventivo": un intervalo en
+  semanas por cada uno de los 5 servicios de estética, silenciar un servicio puntual, o silenciar
+  por completo un establecimiento entre los que la mascota ya visitó (`service_requests` en
+  `confirmada`/`completada`).
+- [x] **Paso 3 — el prestador Pro sugiere sus propios intervalos** (delegado en paralelo):
+  `apps/web/src/app/panel/(dashboard)/servicios-recurrentes/{page,actions}.tsx` (nuevo), con
+  upsell cuando `!user.isPro` en vez del formulario. El gate real está en la policy de RLS
+  (`establishment_service_intervals_pro_owner_write`, 0025), esto es solo la interfaz.
+- [x] **Paso 4 — el motor de generación**, hecho directamente (no delegado, por la complejidad de
+  negocio): `apps/web/src/app/api/cron/recordatorios/route.ts` ahora corre un paso nuevo
+  (`generateDueRecurringReminders`) ANTES del envío de correos que ya existía. Por cada
+  `pet_service_recurrences` activa con intervalo definido: busca el último `service_requests` en
+  `completada` de ese tipo de servicio (join con `services.service_type`) — sin eso no genera nada
+  (regla explícita: sin historial, no hay "próximo" que calcular); si ya se cumplió el intervalo,
+  revisa que no esté silenciado (`pet_service_mutes`, por servicio o por establecimiento) ni ya
+  exista un recordatorio pendiente del mismo tipo; si pasa todo, crea un `preventive_events` nuevo
+  a nombre del establecimiento que atendió esa vez. Ese evento nuevo entra en la misma ventana de
+  envío de correo de la misma corrida — no hace falta esperar al día siguiente.
+  - Falta real detectada al construir esto (no estaba en el modelo de la sección 30): hacía falta
+    saber A QUÉ establecimiento pertenece un recordatorio autogenerado, tanto para aplicar el
+    silencio por establecimiento como para el link directo de la regla 4. Se agregó
+    `supabase/migrations/0027_preventive_events_generated_by.sql` —
+    `preventive_events.generated_by_establishment_id`, aditiva y nullable.
+  - **Regla 4 (botón directo a agendar)**: el correo del recordatorio ahora incluye un link a
+    `/directorio/[slug]?mascota=<id>&servicio=<tipo>` cuando el evento tiene establecimiento
+    asociado. `apps/web/src/app/directorio/[slug]/page.tsx` resuelve esos query params contra
+    datos reales (la mascota debe ser del cuidador que ve la página, el servicio debe existir en
+    ese establecimiento) antes de pasarlos como preselección a
+    `components/directorio/service-request-form.tsx` — un parámetro que no matchea simplemente no
+    preselecciona nada, no rompe la página.
+- [ ] **Pendiente**: el link usa `NEXT_PUBLIC_SITE_URL` con `https://petapp-web-topaz.vercel.app`
+  como respaldo si la variable no está seteada en Vercel — no es obligatorio configurarla, pero es
+  más correcto hacerlo si el dominio cambia.
+- [ ] **Pendiente** (mismas preguntas abiertas de la sección 30, sin resolver aún): canal real del
+  recordatorio (hoy solo email, no WhatsApp), qué cuenta como "abrió una campaña", y si vale la
+  pena una UI de administración para activar planes Pro en vez de SQL manual.
+
+**Verificación:** `npm run typecheck` (3 workspaces) y `npm run build` real de Next.js en verde,
+con las 3 rutas nuevas (`/cuidador/privacidad`, `/panel/servicios-recurrentes`, el cron extendido)
+compilando junto con el resto de la app sin conflictos entre los cambios en paralelo.
+
+## 33. Página pública de precios `/planes` (2026-09-18)
+
+El usuario pidió una sección en el menú principal que muestre los planes con sus características y
+precios, y entregó los precios y nombres reales: **Plan Básico · Camada** ($79.000/mes) y **Plan
+Pro · Manada** ($149.000/mes), cada uno con su lista de features.
+
+- [x] `apps/web/src/app/planes/page.tsx` (nuevo) — página pública (sin sesión), estilo consistente
+  con el resto del sitio (`FadeInSection`, `Card`, mismo `max-w`/spacing que `/` y `/unete`). Dos
+  tarjetas lado a lado, la de Pro con borde y badge destacados. CTA de ambas apunta a `/unete`
+  (igual que el resto del sitio para prestadores, no `/panel/registro` que es para cuidadores).
+- [x] Link "Planes" agregado a `apps/web/src/components/site/navbar.tsx` (`NAV_LINKS`, entre
+  "Directorio" y "Únete al piloto") — se refleja tanto en el nav de escritorio como en el duplicado
+  de mobile, porque ambos leen del mismo arreglo.
+- [x] Nuevas constantes en `packages/shared/src/constants.ts`, para que el precio/nombre/features
+  vivan en un solo lugar y no se dupliquen entre `/planes` y el panel: `PROVIDER_PLAN_MARKETING_NAMES`
+  (Camada/Manada — nombre temático, no reemplaza el `PROVIDER_PLAN_CODE_LABELS` corto que ya
+  usaba el panel), `PROVIDER_PLAN_MONTHLY_PRICE_COP` (79000/149000, numérico), y
+  `PROVIDER_PLAN_FEATURES` (arreglo de bullets por plan, texto entregado por el usuario).
+- [x] `apps/web/src/components/panel/plan-form.tsx` actualizado para que el radio-card de
+  `/panel/plan` (donde el prestador ya elige/ve su plan) diga lo mismo que la página pública —
+  antes decía "estadísticas de solicitudes (en construcción)", una frase que ya estaba desactualizada
+  (`/panel/metricas` existe y funciona desde la sección 28).
+
+**Flag legal/de producto (registrado como LG-009,** `docs/legal/registro-legal.md`**, riesgo 🟡, no
+bloquea):** al revisar qué tan reales son las features de Manada antes de publicarlas, encontré que
+tres de ellas **no están reforzadas técnicamente hoy**, aunque el texto las presenta como
+exclusivas de Pro:
+  - "Métricas de desempeño" (`/panel/metricas`) — hoy la ve cualquier establecimiento sin importar
+    su plan, no hay ningún chequeo de `isPro`.
+  - "Documentos y consentimientos firmados" (`clinical_documents`) — mismo caso, disponible para
+    todos.
+  - El tope de "hasta 2 usuarios" de Camada no se hace cumplir en ningún lado del código
+    (`/panel/personal` no cuenta ni limita cuántos usuarios tiene un establecimiento).
+  - Además, "una jornada o campaña al mes" en Manada depende del motor de envío de campañas, que
+    todavía es solo modelo de datos (Paso 5 de la sección 30, no construido).
+  No cambié el texto que el usuario dio — es su decisión de negocio, no la mía — pero lo dejo
+  explícito acá y en LG-009 para que se decida a propósito: o se construyen esos gates antes de que
+  alguien pague Camada esperando no tener acceso a algo, o se ajusta el texto mientras tanto.
+
+**Verificación:** `npm run typecheck` (3 workspaces) y `npm run build` real de Next.js en verde,
+`/planes` aparece en la lista de rutas junto con el resto de la app.
+
 **Pendiente**: el usuario debe crear una cuenta en openrouter.ai, generar una API key, y agregar
 `OPENROUTER_API_KEY` en Vercel (mismo procedimiento que `RESEND_API_KEY`/`GROQ_API_KEY`) — sin esa
 variable, el código no rompe nada, simplemente no hay respaldo todavía.

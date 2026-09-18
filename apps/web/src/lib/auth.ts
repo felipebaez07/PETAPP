@@ -14,6 +14,14 @@ export interface CurrentUser {
    * y ocultarse/bloquearse para quien no es dueño.
    */
   isEstablishmentOwner: boolean;
+  /**
+   * Comprobación de plan REAL (0025_recurring_services.sql: `establishment_has_active_pro`,
+   * `plan_code='pro' and status='activa'`) — pedido explícito del usuario, "no una bandera
+   * suelta". `false` cuando no hay `establishment` en absoluto. Toda pantalla/acción exclusiva de
+   * Pro debe revisar esto Y confiar en que la RLS de la tabla correspondiente hace el mismo
+   * chequeo del lado de la base — esto es para la interfaz, no el único lugar que protege el dato.
+   */
+  isPro: boolean;
 }
 
 /** Devuelve null si no hay backend conectado o no hay sesión activa. */
@@ -63,5 +71,13 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     }
   }
 
-  return { profile: profile as Profile, establishment, isEstablishmentOwner };
+  let isPro = false;
+  if (establishment) {
+    const { data: proCheck } = await supabase.rpc('establishment_has_active_pro', {
+      check_establishment_id: establishment.id,
+    });
+    isPro = Boolean(proCheck);
+  }
+
+  return { profile: profile as Profile, establishment, isEstablishmentOwner, isPro };
 }

@@ -3,7 +3,15 @@
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { preventiveEventSchema, petDocumentSchema, type PreventiveEventFormValues, type PetDocumentFormValues } from '@petapp/shared';
+import {
+  preventiveEventSchema,
+  petDocumentSchema,
+  petServiceRecurrenceSchema,
+  type PreventiveEventFormValues,
+  type PetDocumentFormValues,
+  type PetServiceRecurrenceFormValues,
+  type PreventiveEventType,
+} from '@petapp/shared';
 
 export interface ActionResult {
   ok: boolean;
@@ -270,6 +278,136 @@ export async function restoreClinicalDocumentForOwner(documentId: string): Promi
     .from('clinical_documents')
     .update({ archived_by_owner_at: null })
     .eq('id', documentId);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/cuidador/mascotas/${petId}`);
+  return { ok: true };
+}
+
+/**
+ * Crea o actualiza la regla de recurrencia del cuidador para un servicio de una mascota
+ * (0025_recurring_services.sql, "Regla 1"). `onConflict` usa la unique real de la tabla
+ * (pet_id, service_type) — una sola fila por mascota+servicio, editar es UPDATE, no otra fila,
+ * mismo patrón que `upsertEstablishmentReview` en directorio/[slug]/actions.ts.
+ */
+export async function upsertPetServiceRecurrence(
+  petId: string,
+  values: PetServiceRecurrenceFormValues
+): Promise<ActionResult> {
+  const parsed = petServiceRecurrenceSchema.safeParse({ ...values, pet_id: petId });
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos.' };
+
+  const owns = await assertOwnsPet(petId);
+  if (!owns.ok) return owns;
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from('pet_service_recurrences').upsert(
+    {
+      pet_id: petId,
+      service_type: parsed.data.service_type,
+      interval_weeks: parsed.data.interval_weeks ?? null,
+      active: parsed.data.active,
+    },
+    { onConflict: 'pet_id,service_type' }
+  );
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/cuidador/mascotas/${petId}`);
+  return { ok: true };
+}
+
+export async function deletePetServiceRecurrence(recurrenceId: string, petId: string): Promise<ActionResult> {
+  const owns = await assertOwnsPet(petId);
+  if (!owns.ok) return owns;
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from('pet_service_recurrences').delete().eq('id', recurrenceId).eq('pet_id', petId);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/cuidador/mascotas/${petId}`);
+  return { ok: true };
+}
+
+/**
+ * Silencia los recordatorios de UN servicio puntual para esta mascota (0025_recurring_services.sql,
+ * "Regla 5"). No hay unique constraint en `pet_service_mutes` — se chequea primero si ya existe un
+ * mute activo para este pet+servicio para no ir acumulando filas duplicadas cada vez que la UI
+ * reenvía la acción (ej. doble click, o volver a abrir la pantalla).
+ */
+export async function mutePetService(petId: string, serviceType: PreventiveEventType): Promise<ActionResult> {
+  const owns = await assertOwnsPet(petId);
+  if (!owns.ok) return owns;
+
+  const supabase = await createSupabaseServerClient();
+  const { data: existing } = await supabase
+    .from('pet_service_mutes')
+    .select('id')
+    .eq('pet_id', petId)
+    .eq('scope', 'service')
+    .eq('service_type', serviceType)
+    .maybeSingle();
+  if (existing) return { ok: true }; // ya estaba silenciado, nada que hacer
+
+  const { error } = await supabase.from('pet_service_mutes').insert({
+    pet_id: petId,
+    scope: 'service',
+    service_type: serviceType,
+    establishment_id: null,
+  });
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/cuidador/mascotas/${petId}`);
+  return { ok: true };
+}
+
+export async function unmutePetService(muteId: string, petId: string): Promise<ActionResult> {
+  const owns = await assertOwnsPet(petId);
+  if (!owns.ok) return owns;
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from('pet_service_mutes').delete().eq('id', muteId).eq('pet_id', petId);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/cuidador/mascotas/${petId}`);
+  return { ok: true };
+}
+
+/**
+ * Silencia TODOS los recordatorios de una clínica puntual para esta mascota — mismo criterio de
+ * "chequear antes de insertar" que `mutePetService`, para no duplicar filas.
+ */
+export async function muteEstablishment(petId: string, establishmentId: string): Promise<ActionResult> {
+  const owns = await assertOwnsPet(petId);
+  if (!owns.ok) return owns;
+
+  const supabase = await createSupabaseServerClient();
+  const { data: existing } = await supabase
+    .from('pet_service_mutes')
+    .select('id')
+    .eq('pet_id', petId)
+    .eq('scope', 'establishment')
+    .eq('establishment_id', establishmentId)
+    .maybeSingle();
+  if (existing) return { ok: true };
+
+  const { error } = await supabase.from('pet_service_mutes').insert({
+    pet_id: petId,
+    scope: 'establishment',
+    service_type: null,
+    establishment_id: establishmentId,
+  });
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/cuidador/mascotas/${petId}`);
+  return { ok: true };
+}
+
+export async function unmuteEstablishment(muteId: string, petId: string): Promise<ActionResult> {
+  const owns = await assertOwnsPet(petId);
+  if (!owns.ok) return owns;
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from('pet_service_mutes').delete().eq('id', muteId).eq('pet_id', petId);
   if (error) return { ok: false, error: error.message };
 
   revalidatePath(`/cuidador/mascotas/${petId}`);

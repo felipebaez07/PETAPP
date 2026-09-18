@@ -15,10 +15,21 @@ export function ServiceRequestForm({
   establishmentId,
   services,
   pets,
+  defaultPetId,
+  defaultServiceId,
 }: {
   establishmentId: string;
   services: Service[];
   pets: Pet[];
+  /**
+   * Preselección desde un recordatorio de servicio recurrente (regla 4 de la spec de
+   * "recordatorios automáticos"): el link del correo trae `?mascota=`/`?servicio=` y
+   * `directorio/[slug]/page.tsx` ya los resolvió contra los `pets`/`services` reales antes de
+   * pasarlos aquí — si no hay coincidencia válida, llegan `undefined` y el select se comporta
+   * como siempre.
+   */
+  defaultPetId?: string;
+  defaultServiceId?: string;
 }) {
   const [status, setStatus] = useState<'idle' | 'saving' | 'sent' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -79,6 +90,7 @@ export function ServiceRequestForm({
           <select
             id="pet_id"
             name="pet_id"
+            defaultValue={defaultPetId ?? ''}
             className="w-full rounded-sm border border-input bg-card px-3 py-2 text-sm text-foreground"
           >
             <option value="">Sin especificar</option>
@@ -96,6 +108,7 @@ export function ServiceRequestForm({
           <select
             id="service_id"
             name="service_id"
+            defaultValue={defaultServiceId ?? ''}
             className="w-full rounded-sm border border-input bg-card px-3 py-2 text-sm text-foreground"
           >
             <option value="">Sin especificar</option>

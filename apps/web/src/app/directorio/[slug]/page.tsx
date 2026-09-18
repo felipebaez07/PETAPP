@@ -20,8 +20,15 @@ import {
   formatPhoneForDisplay,
 } from '@petapp/shared';
 
-export default async function EstablishmentDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function EstablishmentDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ mascota?: string; servicio?: string }>;
+}) {
   const { slug } = await params;
+  const { mascota: petParam, servicio: serviceTypeParam } = await searchParams;
   const establishment = await getEstablishmentBySlug(slug);
   if (!establishment) notFound();
   const viewer = await getCurrentUser();
@@ -32,6 +39,15 @@ export default async function EstablishmentDetailPage({ params }: { params: Prom
     const { data } = await supabase.from('pets').select('*').eq('owner_id', viewer.profile.id).order('name');
     pets = (data ?? []) as Pet[];
   }
+
+  // Preselección desde el link de un recordatorio de servicio recurrente (regla 4 de la spec de
+  // "recordatorios automáticos", apps/web/src/app/api/cron/recordatorios/route.ts). Solo se
+  // acepta si de verdad corresponde a algo real de este cuidador/establecimiento — un query param
+  // que no matchea simplemente no preselecciona nada, no genera error.
+  const defaultPetId = petParam && pets.some((pet) => pet.id === petParam) ? petParam : undefined;
+  const defaultServiceId = serviceTypeParam
+    ? establishment.services.find((service) => service.service_type === serviceTypeParam)?.id
+    : undefined;
 
   const reviews = await getEstablishmentReviews(establishment.id);
   const myReview = viewer ? (reviews.find((r) => r.pet_owner_id === viewer.profile.id) ?? null) : null;
@@ -133,7 +149,13 @@ export default async function EstablishmentDetailPage({ params }: { params: Prom
             <CardTitle>Solicitar cita</CardTitle>
           </CardHeader>
           <CardContent>
-            <ServiceRequestForm establishmentId={establishment.id} services={establishment.services} pets={pets} />
+            <ServiceRequestForm
+              establishmentId={establishment.id}
+              services={establishment.services}
+              pets={pets}
+              defaultPetId={defaultPetId}
+              defaultServiceId={defaultServiceId}
+            />
           </CardContent>
         </Card>
       )}

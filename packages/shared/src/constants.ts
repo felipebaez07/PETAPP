@@ -84,6 +84,48 @@ export const PROVIDER_PLAN_CODE_LABELS: Record<ProviderPlanCode, string> = {
   pro: 'Pro',
 };
 
+// Nombres de marca definidos por el negocio (2026-09-18) para la página pública de precios —
+// "Plan Básico · Camada" / "Plan Pro · Manada". `PROVIDER_PLAN_CODE_LABELS` de arriba sigue siendo
+// el nombre corto que ya se usa en el panel (badges, el radio-select de /panel/plan); este es el
+// nombre temático que se le suma al lado, no un reemplazo.
+export const PROVIDER_PLAN_MARKETING_NAMES: Record<ProviderPlanCode, string> = {
+  basico: 'Camada',
+  pro: 'Manada',
+};
+
+// Precios mensuales reales entregados por el negocio (2026-09-18), en pesos colombianos. Sin
+// pasarela de pago en este piloto (ver PlanForm) — este número es lo que se publica, no algo que
+// hoy se cobre automáticamente.
+export const PROVIDER_PLAN_MONTHLY_PRICE_COP: Record<ProviderPlanCode, number> = {
+  basico: 79000,
+  pro: 149000,
+};
+
+// Features públicas por plan (2026-09-18) para la página /planes. OJO: no todas están reforzadas
+// técnicamente todavía — "métricas de desempeño" (`/panel/metricas`) y "documentos y
+// consentimientos firmados" (`clinical_documents`) hoy están disponibles para cualquier
+// establecimiento sin importar su plan, y el tope de "hasta 2 usuarios" de Camada no se hace
+// cumplir en el código. Ver LG-009 en docs/legal/registro-legal.md.
+export const PROVIDER_PLAN_FEATURES: Record<ProviderPlanCode, string[]> = {
+  basico: [
+    'Perfil verificado en el directorio',
+    'Bandeja de solicitudes de cita',
+    'Redirección a WhatsApp',
+    'Vencimientos preventivos de sus pacientes',
+    'Hasta 2 usuarios del equipo',
+    'Soporte por correo',
+  ],
+  pro: [
+    'Recordatorios automáticos de servicios recurrentes (baño, spa, corte, uñas, dental)',
+    'Una jornada o campaña al mes a sus propios pacientes',
+    'Destacado en el directorio y sello de respuesta rápida',
+    'Métricas de desempeño',
+    'Documentos y consentimientos firmados',
+    'Usuarios y sedes ilimitados',
+    'Soporte prioritario',
+  ],
+};
+
 export const PROVIDER_PLAN_STATUS_LABELS: Record<ProviderPlanStatus, string> = {
   prueba: 'En prueba',
   activa: 'Activa',

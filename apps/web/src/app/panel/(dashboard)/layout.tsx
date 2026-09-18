@@ -13,6 +13,7 @@ import {
   Stethoscope,
   Users,
   BarChart3,
+  Sparkles,
   type LucideIcon,
 } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
@@ -29,6 +30,11 @@ interface NavItem {
    * (`establishment_staff`, 0018_establishment_staff.sql). Para configuración del negocio, no
    * para las pantallas operativas del día a día. */
   requiresOwner?: boolean;
+  /** Exclusivo del plan Pro (`establishment_has_active_pro`, 0025_recurring_services.sql) — se
+   * revisa contra `user.isPro`, la comprobación real que ya usa `getCurrentUser`. Esto es defensa
+   * en profundidad del lado de la interfaz: la RLS de la tabla correspondiente hace el mismo
+   * chequeo del lado de la base, que es el que de verdad protege el dato. */
+  requiresPro?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -83,6 +89,15 @@ const NAV_ITEMS: NavItem[] = [
     requiresEstablishment: true,
     requiresOwner: true,
   },
+  {
+    href: '/panel/servicios-recurrentes',
+    label: 'Servicios recurrentes',
+    icon: Sparkles,
+    roles: ['establecimiento'],
+    requiresEstablishment: true,
+    requiresOwner: true,
+    requiresPro: true,
+  },
   // Perfil "mixto": un negocio puede además llevar sus propias mascotas (pedido 2026-09-02) —
   // /cuidador/mascotas ya lo permite para role='establecimiento', esto solo lo hace visible.
   { href: '/cuidador/mascotas', label: 'Mis mascotas', icon: PawPrint, roles: ['establecimiento'] },
@@ -107,6 +122,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     if (item.requiresEstablishment) {
       if (!user.establishment) return false;
       if (item.requiresOwner && !user.isEstablishmentOwner) return false;
+      if (item.requiresPro && !user.isPro) return false;
       return true;
     }
     return item.roles.includes(user.profile.role);

@@ -6,12 +6,19 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { PROVIDER_PLAN_CODE_LABELS, type ProviderPlan, type ProviderPlanCode } from '@petapp/shared';
+import {
+  PROVIDER_PLAN_CODE_LABELS,
+  PROVIDER_PLAN_MARKETING_NAMES,
+  type ProviderPlan,
+  type ProviderPlanCode,
+} from '@petapp/shared';
 import { updateProviderPlan } from '@/app/panel/(dashboard)/plan/actions';
 
+// Mismo texto y precios que la página pública /planes (packages/shared/src/constants.ts,
+// PROVIDER_PLAN_FEATURES) — acá va un resumen de una línea nada más, para el radio-card compacto.
 const PLAN_DESCRIPTIONS: Record<ProviderPlanCode, string> = {
-  basico: 'Perfil verificado en el directorio y solicitudes de cita ilimitadas.',
-  pro: 'Todo lo del plan básico, más prioridad de aparición y estadísticas de solicitudes (en construcción).',
+  basico: 'Perfil verificado en el directorio, bandeja de solicitudes y calendario preventivo de tus pacientes.',
+  pro: 'Todo lo de Camada, más recordatorios automáticos de servicios recurrentes, campañas y métricas de desempeño.',
 };
 
 export function PlanForm({ plan }: { plan: ProviderPlan | null }) {
@@ -55,7 +62,9 @@ export function PlanForm({ plan }: { plan: ProviderPlan | null }) {
               onChange={() => setPlanCode(code)}
               className="sr-only"
             />
-            <p className="font-heading font-semibold text-foreground">{PROVIDER_PLAN_CODE_LABELS[code]}</p>
+            <p className="font-heading font-semibold text-foreground">
+              {PROVIDER_PLAN_CODE_LABELS[code]} · {PROVIDER_PLAN_MARKETING_NAMES[code]}
+            </p>
             <p className="mt-1 text-sm text-muted-foreground">{PLAN_DESCRIPTIONS[code]}</p>
           </label>
         ))}

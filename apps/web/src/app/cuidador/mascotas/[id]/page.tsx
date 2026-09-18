@@ -1,6 +1,16 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { CalendarHeart, FileStack, PawPrint, Pencil, ShieldCheck, Sparkles, Stethoscope, Syringe } from 'lucide-react';
+import {
+  CalendarHeart,
+  FileStack,
+  PawPrint,
+  Pencil,
+  Scissors,
+  ShieldCheck,
+  Sparkles,
+  Stethoscope,
+  Syringe,
+} from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -14,11 +24,14 @@ import { AddDocumentPanel } from '@/components/cuidador/add-document-panel';
 import { DocumentRow } from '@/components/cuidador/document-row';
 import { ClinicalDocumentItem } from '@/components/cuidador/clinical-document-item';
 import { DeletePetButton } from '@/components/cuidador/delete-pet-button';
+import { PetServiceRecurrencesSection } from '@/components/cuidador/pet-service-recurrences-section';
 import {
   CLINICAL_DOCUMENT_TYPE_LABELS,
   SPECIES_LABELS,
   type AiConversation,
   type ClinicalDocument,
+  type PetServiceMute,
+  type PetServiceRecurrence,
   type PetWithDetails,
   type VetVisitNote,
 } from '@petapp/shared';
@@ -60,7 +73,13 @@ export default async function PetDetailPage({
   // mezcla los resúmenes de pre-diagnósticos completados con lo que el cuidador fue contando que
   // dijo/hizo el veterinario en cada cita real — el mismo historial combinado que el backend de
   // IA (route.ts) ya usa como contexto en la próxima consulta, ahora visible acá.
-  const [{ data: vetVisitNotesData }, { data: pastConversationsData }] = await Promise.all([
+  const [
+    { data: vetVisitNotesData },
+    { data: pastConversationsData },
+    { data: serviceRecurrencesData },
+    { data: serviceMutesData },
+    { data: visitedEstablishmentsData },
+  ] = await Promise.all([
     supabase.from('vet_visit_notes').select('*').eq('pet_id', pet.id).order('created_at', { ascending: false }),
     supabase
       .from('ai_conversations')
@@ -69,9 +88,36 @@ export default async function PetDetailPage({
       .eq('status', 'completada')
       .not('summary', 'is', null)
       .order('created_at', { ascending: false }),
+    // Reglas del cuidador de "servicios recurrentes" (0025_recurring_services.sql) — solo lectura
+    // acá, las mutaciones viven en actions.ts (assertOwnsPet + RLS ya cubren la escritura).
+    supabase.from('pet_service_recurrences').select('*').eq('pet_id', pet.id),
+    supabase.from('pet_service_mutes').select('*').eq('pet_id', pet.id),
+    // Establecimientos con los que esta mascota tuvo una cita real (confirmada o completada) —
+    // necesario para que el cuidador elija A CUÁL silenciar, ya que puede haber visitado más de
+    // uno. Mismo estilo de join que `apps/web/src/app/cuidador/citas/page.tsx`.
+    supabase
+      .from('service_requests')
+      .select('establishment_id, establishment:establishments(id,name)')
+      .eq('pet_id', pet.id)
+      .in('status', ['confirmada', 'completada']),
   ]);
   const vetVisitNotes = (vetVisitNotesData as VetVisitNote[] | null) ?? [];
   const pastConversations = (pastConversationsData as Pick<AiConversation, 'id' | 'summary' | 'created_at'>[] | null) ?? [];
+  const serviceRecurrences = (serviceRecurrencesData as PetServiceRecurrence[] | null) ?? [];
+  const serviceMutes = (serviceMutesData as PetServiceMute[] | null) ?? [];
+
+  interface VisitedEstablishmentRow {
+    establishment_id: string;
+    establishment: { id: string; name: string } | null;
+  }
+  const visitedEstablishmentsRows = (visitedEstablishmentsData as unknown as VisitedEstablishmentRow[] | null) ?? [];
+  const visitedEstablishments = Array.from(
+    new Map(
+      visitedEstablishmentsRows
+        .filter((row) => row.establishment)
+        .map((row) => [row.establishment_id, { id: row.establishment_id, name: row.establishment!.name }])
+    ).values()
+  );
 
   // Documentos para firma (0019_clinical_documents.sql) redactados por el establecimiento —
   // llegan por `clinical_patients.pet_id`, no hay una FK directa de `clinical_documents` a `pets`.
@@ -196,6 +242,26 @@ export default async function PetDetailPage({
               ))}
             </ul>
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Scissors className="size-4 text-secondary" aria-hidden /> Servicios recurrentes
+          </CardTitle>
+          <CardDescription>
+            Define cada cuántas semanas quieres que te recordemos baño, spa, corte de pelo, corte de uñas o
+            limpieza dental de {pet.name} — o silencia lo que no necesites.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PetServiceRecurrencesSection
+            petId={pet.id}
+            recurrences={serviceRecurrences}
+            mutes={serviceMutes}
+            visitedEstablishments={visitedEstablishments}
+          />
         </CardContent>
       </Card>
 

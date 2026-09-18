@@ -8,6 +8,7 @@ import { signOut } from '@/app/panel/actions';
 
 const NAV_LINKS = [
   { href: '/directorio', label: 'Directorio' },
+  { href: '/planes', label: 'Planes' },
   { href: '/unete', label: 'Únete al piloto' },
 ];
 

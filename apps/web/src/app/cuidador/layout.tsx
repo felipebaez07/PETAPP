@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { PawPrint, CalendarClock } from 'lucide-react';
+import { PawPrint, CalendarClock, ShieldCheck } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { isSupabaseConfigured } from '@/lib/supabase/config';
 
@@ -36,6 +36,13 @@ export default async function CuidadorLayout({ children }: { children: React.Rea
         >
           <CalendarClock className="size-4" />
           Tus citas
+        </Link>
+        <Link
+          href="/cuidador/privacidad"
+          className="inline-flex items-center gap-2 font-heading text-sm font-semibold text-muted-foreground transition-colors duration-200 hover:text-foreground"
+        >
+          <ShieldCheck className="size-4" />
+          Privacidad
         </Link>
       </div>
       {children}
