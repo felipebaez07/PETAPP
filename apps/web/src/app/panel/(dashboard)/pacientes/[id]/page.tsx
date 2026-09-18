@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RevealItem } from '@/components/motion/reveal-item';
 import { DeletePatientButton } from '@/components/panel/delete-patient-button';
+import { DeleteDocumentButton } from '@/components/panel/delete-document-button';
 import { ClinicalDocumentForm } from '@/components/panel/clinical-document-form';
 import {
   CLINICAL_DOCUMENT_TYPE_LABELS,
@@ -24,6 +25,10 @@ import {
 import { addClinicalRecord } from './actions';
 
 const RECORD_TYPE_OPTIONS = Object.entries(CLINICAL_RECORD_TYPE_LABELS) as [ClinicalRecord['record_type'], string][];
+const DOCUMENT_TYPE_OPTIONS = Object.entries(CLINICAL_DOCUMENT_TYPE_LABELS) as [
+  ClinicalDocument['document_type'],
+  string,
+][];
 
 interface ClinicalPatientDetailRow extends ClinicalPatient {
   pet: { name: string; owner: { full_name: string; phone: string | null } | null } | null;
@@ -88,8 +93,15 @@ const SOAP_FIELDS: { key: keyof ClinicalRecord; label: string; format?: (value: 
   { key: 'follow_up_date', label: 'Próximo control', format: (v) => formatDate(String(v)) },
 ];
 
-export default async function PacienteDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PacienteDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ tipo?: string }>;
+}) {
   const { id } = await params;
+  const { tipo } = await searchParams;
   const user = await getCurrentUser();
   if (!user?.establishment) redirect('/panel');
 
@@ -118,6 +130,13 @@ export default async function PacienteDetailPage({ params }: { params: Promise<{
     .eq('clinical_patient_id', patient.id)
     .order('created_at', { ascending: false });
   const documents = (documentsData ?? []) as ClinicalDocument[];
+  const activeDocumentType =
+    tipo && Object.prototype.hasOwnProperty.call(CLINICAL_DOCUMENT_TYPE_LABELS, tipo)
+      ? (tipo as ClinicalDocument['document_type'])
+      : null;
+  const filteredDocuments = activeDocumentType
+    ? documents.filter((doc) => doc.document_type === activeDocumentType)
+    : documents;
 
   const latestWeightRecord = records.find((r) => r.weight_kg != null);
   const age = computeAge(patient.birth_date, patient.estimated_age_years);
@@ -387,16 +406,42 @@ export default async function PacienteDetailPage({ params }: { params: Promise<{
       </Card>
 
       <h2 className="mb-3 font-heading text-lg font-semibold text-foreground">Documentos</h2>
-      {documents.length === 0 ? (
+
+      {documents.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          <Link href={`/panel/pacientes/${patient.id}`}>
+            <Badge variant={!activeDocumentType ? 'secondary' : 'outline'} className="cursor-pointer">
+              Todos ({documents.length})
+            </Badge>
+          </Link>
+          {DOCUMENT_TYPE_OPTIONS.map(([value, label]) => {
+            const count = documents.filter((doc) => doc.document_type === value).length;
+            if (count === 0) return null;
+            return (
+              <Link key={value} href={`/panel/pacientes/${patient.id}?tipo=${value}`}>
+                <Badge variant={activeDocumentType === value ? 'secondary' : 'outline'} className="cursor-pointer">
+                  {label} ({count})
+                </Badge>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
+      {filteredDocuments.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-2 p-8 text-center">
             <FileStack className="size-8 text-muted-foreground" aria-hidden />
-            <p className="text-sm text-muted-foreground">Todavía no hay documentos generados para este paciente.</p>
+            <p className="text-sm text-muted-foreground">
+              {documents.length === 0
+                ? 'Todavía no hay documentos generados para este paciente.'
+                : 'No hay documentos de este tipo.'}
+            </p>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-3">
-          {documents.map((doc, index) => (
+          {filteredDocuments.map((doc, index) => (
             <RevealItem key={doc.id} index={index}>
               <Card>
                 <CardHeader className="flex-row items-start justify-between gap-2 space-y-0">
@@ -426,6 +471,7 @@ export default async function PacienteDetailPage({ params }: { params: Promise<{
                         <Download className="size-4" /> Descargar PDF
                       </a>
                     </Button>
+                    <DeleteDocumentButton documentId={doc.id} clinicalPatientId={patient.id} documentTitle={doc.title} />
                   </div>
                 </CardContent>
               </Card>

@@ -236,3 +236,30 @@ export async function deleteClinicalPatient(formData: FormData): Promise<void> {
   revalidatePath('/panel/pacientes');
   redirect('/panel/pacientes');
 }
+
+/**
+ * Borra un documento (consentimiento/remisión/orden/fórmula) de un paciente — pedido explícito del
+ * usuario: una remisión que ya se imprimió y entregó no necesita quedar visible para siempre.
+ * `clinical_patient_id` viaja en el formulario para poder revalidar la ruta correcta sin una
+ * consulta extra — la RLS de `clinical_documents` (0019_clinical_documents.sql) ya exige que el
+ * documento pertenezca a este establecimiento, `.eq('establishment_id', ...)` es defensa en
+ * profundidad.
+ */
+export async function deleteClinicalDocument(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user?.establishment) return;
+
+  const id = str(formData, 'id');
+  const clinicalPatientId = str(formData, 'clinical_patient_id');
+  if (!id || !clinicalPatientId) return;
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from('clinical_documents')
+    .delete()
+    .eq('id', id)
+    .eq('establishment_id', user.establishment.id);
+  if (error) return;
+
+  revalidatePath(`/panel/pacientes/${clinicalPatientId}`);
+}
