@@ -23,7 +23,26 @@ export type ServiceRequestChannel = 'whatsapp' | 'telefono' | 'presencial' | 'ot
 
 export type PartnerApplicationStatus = 'nuevo' | 'contactado' | 'descartado' | 'convertido';
 
-export type PreventiveEventType = 'vacuna' | 'control' | 'desparasitacion' | 'otro';
+// Los 5 últimos son de estética/cuidado recurrente (0022_grooming_service_types.sql) — mismo enum
+// que vacuna/control/desparasitación para que el calendario preventivo, `services.service_type` y
+// las reglas de recurrencia del cuidador puedan hablar del mismo "tipo de servicio" sin traducir
+// entre sistemas paralelos.
+export type PreventiveEventType =
+  | 'vacuna'
+  | 'control'
+  | 'desparasitacion'
+  | 'otro'
+  | 'bano'
+  | 'spa'
+  | 'corte_pelo'
+  | 'corte_unas'
+  | 'limpieza_dental';
+
+export type PetSize = 'pequeno' | 'mediano' | 'grande';
+
+/** Ver 0024_owner_consents.sql — 'recordatorios_servicio' se asume otorgado por defecto
+ * (continuidad del servicio), 'comunicaciones_comerciales' nunca se asume (opt-in puro). */
+export type ConsentType = 'recordatorios_servicio' | 'comunicaciones_comerciales';
 
 export type PetDocumentType = 'carnet_vacunacion' | 'historia_clinica' | 'otro';
 
@@ -57,6 +76,10 @@ export interface Pet {
   vaccinated: boolean;
   photo_url: string | null;
   notes: string | null;
+  /** 0023_pet_size_coat_and_service_category.sql — opcionales, el cuidador los llena si quiere.
+   * Alimentan las sugerencias de intervalo del prestador (`EstablishmentServiceInterval`). */
+  size: PetSize | null;
+  coat_type: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -105,6 +128,10 @@ export interface Service {
   price_reference: string | null;
   duration_minutes: number | null;
   is_active: boolean;
+  /** 0023_pet_size_coat_and_service_category.sql — categoría estructurada opcional, separada del
+   * nombre comercial libre (`name`, ej. "Baño premium") que cada establecimiento le puso. Sin
+   * esto no hay forma programática de saber que "Baño premium" ES un baño. */
+  service_type: PreventiveEventType | null;
   created_at: string;
 }
 
@@ -139,6 +166,46 @@ export interface PreventiveEvent {
   updated_at: string;
 }
 
+/** Regla del cuidador: cada cuántas semanas quiere que se le recuerde un servicio para esta
+ * mascota (0025_recurring_services.sql). `interval_weeks` null = sin frecuencia definida todavía,
+ * no genera nada. Es lo que de verdad dispara los recordatorios — la sugerencia del prestador
+ * (`EstablishmentServiceInterval`) nunca se impone. */
+export interface PetServiceRecurrence {
+  id: string;
+  pet_id: string;
+  service_type: PreventiveEventType;
+  interval_weeks: number | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/** El cuidador silencia un servicio puntual, o TODOS los recordatorios de una clínica — nunca al
+ * revés, el prestador no puede leer ni tocar esto (0025_recurring_services.sql). Exactamente uno
+ * de `service_type`/`establishment_id` viene lleno, según `scope`. */
+export interface PetServiceMute {
+  id: string;
+  pet_id: string;
+  scope: 'service' | 'establishment';
+  service_type: PreventiveEventType | null;
+  establishment_id: string | null;
+  created_at: string;
+}
+
+/** Intervalo sugerido por un prestador Pro para un tipo de servicio — nunca se impone, solo se
+ * ofrece como sugerencia al cuidador al definir su propia `PetServiceRecurrence`
+ * (0025_recurring_services.sql). Escritura protegida por Pro activo de verdad en la RLS. */
+export interface EstablishmentServiceInterval {
+  id: string;
+  establishment_id: string;
+  service_type: PreventiveEventType;
+  interval_weeks: number;
+  pet_size: PetSize | null;
+  coat_type: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 /**
  * Documento/soporte básico de una mascota (carnet de vacunación, historia clínica, etc.).
  * Exactamente una de las dos fuentes está presente: `document_url` (enlace externo pegado a
@@ -167,6 +234,51 @@ export interface ProviderPlan {
   activated_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * Registro APPEND-ONLY de consentimientos del cuidador (0024_owner_consents.sql, LG-008) — nunca
+ * se actualiza ni se borra una fila; para revocar se inserta una nueva con `granted: false`. La
+ * fila más reciente por (owner_id, consent_type) es la vigente. Ver `has_active_consent()` del
+ * lado de la base de datos para la lógica de "sin ninguna fila todavía" (recordatorios de servicio
+ * se asumen otorgados, comunicaciones comerciales nunca).
+ */
+export interface OwnerConsent {
+  id: string;
+  owner_id: string;
+  consent_type: ConsentType;
+  granted: boolean;
+  method: 'registro' | 'panel';
+  created_at: string;
+}
+
+/** Jornada/campaña de un prestador Pro (0026_campaigns.sql) — el público objetivo NUNCA se
+ * materializa acá, se calcula en la consulta del motor de envío (pacientes reales + consentimiento
+ * comercial vigente + estos filtros). */
+export interface Campaign {
+  id: string;
+  establishment_id: string;
+  title: string;
+  description: string | null;
+  service_type: PreventiveEventType | null;
+  starts_on: string | null;
+  ends_on: string | null;
+  max_capacity: number | null;
+  species_filter: PetSpecies | null;
+  pet_size_filter: PetSize | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Registro de a quién se le mandó una campaña — para las métricas de alcance/apertura/solicitudes
+ * generadas (0026_campaigns.sql). No decide a quién se le manda, solo dice a quién YA se le mandó. */
+export interface CampaignSend {
+  id: string;
+  campaign_id: string;
+  pet_owner_id: string;
+  sent_at: string;
+  opened_at: string | null;
+  service_request_id: string | null;
 }
 
 export interface PartnerApplication {

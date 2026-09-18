@@ -82,14 +82,55 @@ export const serviceSchema = z.object({
 });
 export type ServiceFormValues = z.infer<typeof serviceSchema>;
 
+// Los 5 últimos son de estética/cuidado recurrente (0022_grooming_service_types.sql) — deben
+// coincidir siempre con el enum `PreventiveEventType` de types.ts, no hay forma de derivarlo
+// automáticamente del tipo de TypeScript dentro de un `z.enum`.
 export const preventiveEventSchema = z.object({
   pet_id: z.string().uuid(),
-  type: z.enum(['vacuna', 'control', 'desparasitacion', 'otro']),
+  type: z.enum(['vacuna', 'control', 'desparasitacion', 'otro', 'bano', 'spa', 'corte_pelo', 'corte_unas', 'limpieza_dental']),
   title: z.string().min(1, 'Ponle un título a este recordatorio').max(120),
   due_date: z.string().min(1, 'La fecha es obligatoria'),
   notes: z.string().max(500).optional().or(z.literal('')),
 });
 export type PreventiveEventFormValues = z.infer<typeof preventiveEventSchema>;
+
+/** Regla de recurrencia del cuidador para un servicio de una mascota (0025_recurring_services.sql).
+ * `interval_weeks` vacío = sin frecuencia definida, no genera nada — coherente con que la columna
+ * sea nullable en la base. */
+export const petServiceRecurrenceSchema = z.object({
+  pet_id: z.string().uuid(),
+  service_type: z.enum(['vacuna', 'control', 'desparasitacion', 'otro', 'bano', 'spa', 'corte_pelo', 'corte_unas', 'limpieza_dental']),
+  interval_weeks: z.coerce.number().int().min(1).max(104).optional(),
+  active: z.boolean().default(true),
+});
+export type PetServiceRecurrenceFormValues = z.infer<typeof petServiceRecurrenceSchema>;
+
+/** Sugerencia de intervalo de un prestador Pro (0025_recurring_services.sql) — a diferencia de la
+ * regla del cuidador, acá `interval_weeks` SÍ es obligatorio: no tiene sentido una sugerencia sin
+ * número. */
+export const establishmentServiceIntervalSchema = z.object({
+  service_type: z.enum(['vacuna', 'control', 'desparasitacion', 'otro', 'bano', 'spa', 'corte_pelo', 'corte_unas', 'limpieza_dental']),
+  interval_weeks: z.coerce.number().int().min(1).max(104),
+  pet_size: z.enum(['pequeno', 'mediano', 'grande']).optional(),
+  coat_type: z.string().max(80).optional().or(z.literal('')),
+});
+export type EstablishmentServiceIntervalFormValues = z.infer<typeof establishmentServiceIntervalSchema>;
+
+/** Jornada/campaña de un prestador Pro (0026_campaigns.sql). Sin ubicación exacta del cuidador
+ * como filtro — el propio requisito legal/de producto lo prohíbe explícitamente. */
+export const campaignSchema = z.object({
+  title: z.string().min(1, 'Ponle un título a la campaña').max(120),
+  description: z.string().max(1000).optional().or(z.literal('')),
+  service_type: z
+    .enum(['vacuna', 'control', 'desparasitacion', 'otro', 'bano', 'spa', 'corte_pelo', 'corte_unas', 'limpieza_dental'])
+    .optional(),
+  starts_on: z.string().optional().or(z.literal('')),
+  ends_on: z.string().optional().or(z.literal('')),
+  max_capacity: z.coerce.number().int().min(1).optional(),
+  species_filter: z.enum(['perro', 'gato', 'otro']).optional(),
+  pet_size_filter: z.enum(['pequeno', 'mediano', 'grande']).optional(),
+});
+export type CampaignFormValues = z.infer<typeof campaignSchema>;
 
 // Exactamente una fuente: un enlace externo pegado a mano (`document_url`, restringido a
 // http(s) — igual que antes, se renderiza en un <a href> directo y `z.string().url()` por sí

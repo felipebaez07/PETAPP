@@ -9,6 +9,8 @@ import type {
   ProviderPlanStatus,
   ClinicalRecordType,
   ClinicalDocumentType,
+  PetSize,
+  ConsentType,
 } from './types';
 
 export const APP_NAME = 'PeTech';
@@ -48,6 +50,27 @@ export const PREVENTIVE_EVENT_TYPE_LABELS: Record<PreventiveEventType, string> =
   control: 'Control',
   desparasitacion: 'Desparasitación',
   otro: 'Otro',
+  bano: 'Baño',
+  spa: 'Spa',
+  corte_pelo: 'Corte de pelo',
+  corte_unas: 'Corte de uñas',
+  limpieza_dental: 'Limpieza dental',
+};
+
+/** Los 5 tipos de estética/cuidado recurrente de PREVENTIVE_EVENT_TYPE_LABELS, aparte de los 4
+ * originales del calendario preventivo (vacuna/control/desparasitación/otro) — útil para filtrar
+ * el selector a solo estos en las pantallas de "servicios recurrentes". */
+export const GROOMING_SERVICE_TYPES = ['bano', 'spa', 'corte_pelo', 'corte_unas', 'limpieza_dental'] as const;
+
+export const PET_SIZE_LABELS: Record<PetSize, string> = {
+  pequeno: 'Pequeño',
+  mediano: 'Mediano',
+  grande: 'Grande',
+};
+
+export const CONSENT_TYPE_LABELS: Record<ConsentType, string> = {
+  recordatorios_servicio: 'Recordatorios de servicios de mis mascotas',
+  comunicaciones_comerciales: 'Comunicaciones comerciales y campañas',
 };
 
 export const PET_DOCUMENT_TYPE_LABELS: Record<PetDocumentType, string> = {

@@ -45,8 +45,8 @@ export const DEMO_ESTABLISHMENTS: EstablishmentWithDetails[] = [
     updated_at: new Date().toISOString(),
     hours: fullWeekHours('1', true),
     services: [
-      { id: 's1', establishment_id: '1', name: 'Consulta general', description: 'Valoración clínica completa', price_reference: 'desde $50.000', duration_minutes: null, is_active: true, created_at: new Date().toISOString() },
-      { id: 's2', establishment_id: '1', name: 'Vacunación', description: 'Esquema completo perros y gatos', price_reference: 'desde $35.000', duration_minutes: null, is_active: true, created_at: new Date().toISOString() },
+      { id: 's1', establishment_id: '1', name: 'Consulta general', description: 'Valoración clínica completa', price_reference: 'desde $50.000', duration_minutes: null, is_active: true, service_type: null, created_at: new Date().toISOString() },
+      { id: 's2', establishment_id: '1', name: 'Vacunación', description: 'Esquema completo perros y gatos', price_reference: 'desde $35.000', duration_minutes: null, is_active: true, service_type: null, created_at: new Date().toISOString() },
     ],
   },
   {
@@ -76,7 +76,7 @@ export const DEMO_ESTABLISHMENTS: EstablishmentWithDetails[] = [
     updated_at: new Date().toISOString(),
     hours: fullWeekHours('2', false),
     services: [
-      { id: 's3', establishment_id: '2', name: 'Cirugía menor', description: 'Esterilización y procedimientos ambulatorios', price_reference: 'desde $180.000', duration_minutes: null, is_active: true, created_at: new Date().toISOString() },
+      { id: 's3', establishment_id: '2', name: 'Cirugía menor', description: 'Esterilización y procedimientos ambulatorios', price_reference: 'desde $180.000', duration_minutes: null, is_active: true, service_type: null, created_at: new Date().toISOString() },
     ],
   },
   {
@@ -106,7 +106,7 @@ export const DEMO_ESTABLISHMENTS: EstablishmentWithDetails[] = [
     updated_at: new Date().toISOString(),
     hours: fullWeekHours('3', true),
     services: [
-      { id: 's4', establishment_id: '3', name: 'Urgencia 24H', description: 'Atención inmediata cualquier hora del día', price_reference: 'desde $80.000', duration_minutes: null, is_active: true, created_at: new Date().toISOString() },
+      { id: 's4', establishment_id: '3', name: 'Urgencia 24H', description: 'Atención inmediata cualquier hora del día', price_reference: 'desde $80.000', duration_minutes: null, is_active: true, service_type: null, created_at: new Date().toISOString() },
     ],
   },
   {
@@ -136,7 +136,7 @@ export const DEMO_ESTABLISHMENTS: EstablishmentWithDetails[] = [
     updated_at: new Date().toISOString(),
     hours: fullWeekHours('7', false),
     services: [
-      { id: 's7', establishment_id: '7', name: 'Consulta a domicilio', description: 'Visita veterinaria en tu hogar', price_reference: 'desde $70.000', duration_minutes: null, is_active: true, created_at: new Date().toISOString() },
+      { id: 's7', establishment_id: '7', name: 'Consulta a domicilio', description: 'Visita veterinaria en tu hogar', price_reference: 'desde $70.000', duration_minutes: null, is_active: true, service_type: null, created_at: new Date().toISOString() },
     ],
   },
 ];

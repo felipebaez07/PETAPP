@@ -1964,3 +1964,73 @@ vuelta y mantener la función de eliminar.
   Editor y des-archivar todo lo que se había ocultado durante la prueba, sin esperar al redeploy.
 
 **Verificación:** `npm run typecheck` (3 workspaces) y `npm run build` real de Next.js en verde.
+
+## 30. Modelo de datos: recordatorios de servicios recurrentes + campañas (2026-09-17)
+
+El usuario entregó una especificación formal (contexto de negocio: 2 planes, Básico/Pro, el
+cuidador nunca paga; dos funcionalidades — recordatorios de servicios recurrentes de estética, y
+jornadas/campañas del prestador Pro — con un requisito legal explícito de dos consentimientos
+separados bajo la Ley 1581). Se investigó el repo primero (ver la respuesta completa de esa
+conversación) y se confirmaron dos hallazgos clave antes de diseñar: **`provider_plans` existe
+pero hoy nada lo verifica** (es pura declaración de intención, con un trigger que ya impide la
+autoactivación pero sin ninguna comprobación de acceso en ningún lado) y **`preventive_events` no
+tiene ningún concepto de recurrencia** (eventos de fecha única, nada se regenera solo).
+
+Esta sección es **solo el modelo de datos** (Paso 1 del orden acordado) — sin motor de generación,
+sin UI, sin envío de campañas todavía. Migraciones, en este orden exacto (dependencias reales entre
+ellas, no arbitrario):
+
+- [x] **`0022_grooming_service_types.sql`** — extiende `preventive_event_type` con
+  `bano`/`spa`/`corte_pelo`/`corte_unas`/`limpieza_dental`. Los servicios de estética entran por el
+  mismo lugar que vacunas/control/desparasitación, tal como pidió el usuario explícitamente — sola
+  en su propio archivo porque Postgres no deja usar un valor de enum recién agregado dentro de la
+  misma transacción en que se agregó.
+- [x] **`0023_pet_size_coat_and_service_category.sql`** — `pets.size` (enum pequeño/mediano/grande)
+  y `pets.coat_type` (texto), ambos opcionales; `services.service_type` (mismo enum extendido,
+  opcional) para separar la categoría estructurada del nombre comercial libre que cada
+  establecimiento le pone a su servicio (ej. "Baño premium").
+- [x] **`0024_owner_consents.sql`** — tabla **append-only** (nunca se actualiza/borra una fila, se
+  agrega una nueva para revocar) con los dos consentimientos exigidos: `recordatorios_servicio` y
+  `comunicaciones_comerciales`. Función `has_active_consent()`: sin ninguna fila todavía,
+  `recordatorios_servicio` se asume otorgado (continuidad del servicio, no exige autorización
+  previa expresa) — `comunicaciones_comerciales` nunca se asume, sin fila es `false` (opt-in puro).
+  Registrado como **LG-008** en `docs/legal/registro-legal.md`.
+- [x] **`0025_recurring_services.sql`** — `establishment_has_active_pro()` (la comprobación de plan
+  real que pidió el usuario, "no una bandera suelta": `plan_code='pro' and status='activa'`, no solo
+  el `plan_code`). `pet_service_recurrences` (la regla del cuidador, sin depender de Pro).
+  `pet_service_mutes` (silenciar un servicio o todo un establecimiento — el prestador no tiene
+  ninguna policy que le permita leer ni tocar esta tabla, tal como exigió el usuario).
+  `establishment_service_intervals` (la sugerencia del prestador — lectura pública, **escritura
+  protegida por `establishment_has_active_pro()` en la propia RLS**, no en la interfaz).
+- [x] **`0026_campaigns.sql`** — `campaigns` (mismo criterio de escritura solo-Pro-real) y
+  `campaign_sends` (registro de a quién se le mandó, para las métricas). El público objetivo
+  **no se materializa en una tabla** — queda para el Paso 5 (el motor de envío calculará quién ya es
+  paciente + tiene consentimiento comercial vigente + cumple los filtros, en la propia consulta, tal
+  como exigió el usuario). Sin ninguna columna de ubicación exacta del cuidador — prohibido
+  explícitamente. El tope de una campaña por mes se revisa con un `count()` en la acción de
+  servidor (Paso 5), no en la RLS.
+- [x] `packages/shared`: tipos/labels/schemas Zod para todo lo anterior
+  (`PetServiceRecurrence`, `PetServiceMute`, `EstablishmentServiceInterval`, `OwnerConsent`,
+  `Campaign`, `CampaignSend`, `PetSize`, `ConsentType`) + `PreventiveEventType`/`Pet`/`Service`
+  extendidos. `preventiveEventSchema` (ya existía) también se extendió — su enum estaba escrito a
+  mano y se habría quedado desactualizado en silencio si no se tocaba.
+
+**Nota honesta sobre reversibilidad**: `ALTER TYPE ... ADD VALUE` (0022) no tiene un `DROP VALUE`
+limpio en Postgres — si algún día hay que deshacerlo, hace falta recrear el tipo sin esos valores y
+migrar cada columna que lo use, no es un simple rollback de una línea. El resto de las migraciones
+(0023-0026) son aditivas puras sin esta salvedad.
+
+**Verificación:** `npm run typecheck` (3 workspaces), `npm run build` real de Next.js, y
+`npx expo export --platform web` de mobile — los tres en verde. Se encontraron y arreglaron objetos
+`Pet`/`Service` de prueba (`packages/shared/src/demoData.ts`,
+`apps/mobile/contexts/PetsContext.tsx`) que quedaron sin los campos nuevos.
+
+**Pendiente**:
+- [ ] Aplicar `0022` a `0026` en Supabase real, en ese orden (después de las ya confirmadas
+  `0016`-`0021`).
+- [ ] Activar el plan Pro de Vettest — se le dio al usuario un `INSERT ... ON CONFLICT` para pegar
+  en el SQL Editor (no depende de las migraciones nuevas, `provider_plans` ya existe desde 0005).
+- [ ] Pasos 2-5 del orden acordado (recurrencias + UI del cuidador, sugerencias del prestador,
+  motor de generación, campañas completas) — nada de eso se construyó todavía, sigue pendiente de
+  confirmar los supuestos de la sección 4 de la propuesta original (canal del recordatorio,
+  significado de "abrió" una campaña, si se construye una pantalla de admin para activar planes).
