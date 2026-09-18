@@ -345,6 +345,9 @@ export interface ClinicalDocument {
   content: string;
   signer_name: string | null;
   signed_at: string | null;
+  /** Cuándo el dueño de la mascota lo quitó de su propia vista (0021_clinical_documents_owner_archive.sql)
+   * — no null significa "archivado para el cuidador"; el establecimiento lo sigue viendo siempre. */
+  archived_by_owner_at: string | null;
   created_at: string;
   updated_at: string;
 }

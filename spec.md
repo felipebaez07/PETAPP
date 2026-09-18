@@ -1943,3 +1943,24 @@ establecimiento (donde ya se había construido eso — sección 27 — sin que h
 **Pendiente**: aplicar `0021_clinical_documents_owner_archive.sql` en Supabase real — sigue el
 orden de la lista completa: `0016` → `0017` → `0018` → `0019` → `0020` → `0021` (las primeras
 cinco ya están confirmadas aplicadas).
+
+### 29.3 Fix: "Eliminar" hacía desaparecer toda la sección sin forma de recuperarlo
+
+El usuario probó el botón "Eliminar" de 29.2 sobre el único documento que tenía — la tarjeta entera
+"Documentos para firma" se ocultó (por diseño: solo se mostraba si `clinicalDocuments.length > 0`),
+lo que se sintió como si se hubiera borrado la sección completa. Pidió explícitamente traerlo de
+vuelta y mantener la función de eliminar.
+
+- [x] Se agregó `restoreClinicalDocumentForOwner` (deshace `archived_by_owner_at`).
+- [x] La página ahora trae TODOS los documentos (activos + archivados) y los separa en dos listas
+  — la tarjeta se muestra si hay cualquiera de los dos, no solo activos. Los archivados viven en un
+  `<details>` colapsable "Documentos eliminados (N)" con botón "Restaurar" por fila — sin JS, HTML
+  nativo.
+- [x] Como ahora es reversible, se quitó el `window.confirm()` de "Eliminar" — ya no hace falta
+  confirmar algo de lo que te puedes arrepentir con un clic.
+- [x] `ClinicalDocument.archived_by_owner_at` agregado al tipo compartido (`packages/shared`) —
+  existía en la base desde 0021 pero nunca se había reflejado en el tipo de TypeScript.
+- [x] **Alivio inmediato para el usuario**: se le dio un `UPDATE` de una línea para pegar en el SQL
+  Editor y des-archivar todo lo que se había ocultado durante la prueba, sin esperar al redeploy.
+
+**Verificación:** `npm run typecheck` (3 workspaces) y `npm run build` real de Next.js en verde.

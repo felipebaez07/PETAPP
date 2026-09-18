@@ -79,13 +79,17 @@ export default async function PetDetailPage({
   // `clinical_patient.pet_id` (sin `!inner` solo filtraría el contenido embebido, devolviendo TODOS
   // los documentos de TODOS los pacientes) — mismo patrón ya usado en
   // panel/pacientes/nuevo/actions.ts para buscar por dueño.
+  // Se trae TODO (archivados incluidos) y se separa acá — así la tarjeta completa no desaparece
+  // solo porque el cuidador archivó su único documento (pasó de verdad probando esto: "eliminar"
+  // el único que había hacía que toda la sección se esfumara sin forma de recuperarlo).
   const { data: clinicalDocumentsData } = await supabase
     .from('clinical_documents')
     .select('*, clinical_patient:clinical_patients!inner(pet_id)')
     .eq('clinical_patient.pet_id', pet.id)
-    .is('archived_by_owner_at', null)
     .order('created_at', { ascending: false });
-  const clinicalDocuments = (clinicalDocumentsData as unknown as ClinicalDocument[] | null) ?? [];
+  const allClinicalDocuments = (clinicalDocumentsData as unknown as ClinicalDocument[] | null) ?? [];
+  const clinicalDocuments = allClinicalDocuments.filter((doc) => !doc.archived_by_owner_at);
+  const archivedClinicalDocuments = allClinicalDocuments.filter((doc) => doc.archived_by_owner_at);
   const activeDocumentType =
     tipo && Object.prototype.hasOwnProperty.call(CLINICAL_DOCUMENT_TYPE_LABELS, tipo)
       ? (tipo as ClinicalDocument['document_type'])
@@ -255,7 +259,7 @@ export default async function PetDetailPage({
         </CardContent>
       </Card>
 
-      {clinicalDocuments.length > 0 && (
+      {allClinicalDocuments.length > 0 && (
         <Card className="mt-6">
           <CardHeader>
             <CardTitle>Documentos para firma</CardTitle>
@@ -286,7 +290,11 @@ export default async function PetDetailPage({
               </div>
             )}
             {filteredClinicalDocuments.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No hay documentos de este tipo.</p>
+              <p className="text-sm text-muted-foreground">
+                {clinicalDocuments.length === 0
+                  ? 'No tienes documentos activos — revisa "Documentos eliminados" abajo si buscas uno que quitaste.'
+                  : 'No hay documentos de este tipo.'}
+              </p>
             ) : (
               <ul>
                 {filteredClinicalDocuments.map((document, index) => (
@@ -295,6 +303,21 @@ export default async function PetDetailPage({
                   </RevealItem>
                 ))}
               </ul>
+            )}
+
+            {archivedClinicalDocuments.length > 0 && (
+              <details className="mt-4 border-t border-border pt-4">
+                <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground">
+                  Documentos eliminados ({archivedClinicalDocuments.length})
+                </summary>
+                <ul className="mt-2">
+                  {archivedClinicalDocuments.map((document, index) => (
+                    <RevealItem key={document.id} index={index} as="li">
+                      <ClinicalDocumentItem doc={document} defaultSignerName={user.profile.full_name} archived />
+                    </RevealItem>
+                  ))}
+                </ul>
+              </details>
             )}
           </CardContent>
         </Card>

@@ -2,13 +2,17 @@
 
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Download, FileSignature, Trash2 } from 'lucide-react';
+import { Download, FileSignature, RotateCcw, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CLINICAL_DOCUMENT_TYPE_LABELS, type ClinicalDocument } from '@petapp/shared';
-import { archiveClinicalDocumentForOwner, signClinicalDocument } from '@/app/cuidador/mascotas/[id]/actions';
+import {
+  archiveClinicalDocumentForOwner,
+  restoreClinicalDocumentForOwner,
+  signClinicalDocument,
+} from '@/app/cuidador/mascotas/[id]/actions';
 
 function formatDateTime(isoStr: string): string {
   const date = new Date(isoStr);
@@ -26,9 +30,13 @@ function formatDateTime(isoStr: string): string {
 export function ClinicalDocumentItem({
   doc,
   defaultSignerName,
+  archived = false,
 }: {
   doc: ClinicalDocument;
   defaultSignerName: string;
+  /** true = esta fila vive en la subsección "Documentos eliminados": muestra "Restaurar" en vez
+   * de "Eliminar". Ver `archiveClinicalDocumentForOwner`/`restoreClinicalDocumentForOwner`. */
+  archived?: boolean;
 }) {
   const router = useRouter();
   const [signerName, setSignerName] = useState(defaultSignerName);
@@ -54,19 +62,17 @@ export function ClinicalDocumentItem({
   };
 
   // "Eliminar" acá solo lo quita de la vista del cuidador (0021_clinical_documents_owner_archive.sql)
-  // — el establecimiento sigue teniendo su propio registro clínico, se lo dice el confirm.
-  const onArchive = async () => {
-    if (!window.confirm('¿Quitar este documento de tu vista? El establecimiento sigue teniendo su copia en la historia clínica.')) {
-      return;
-    }
+  // — el establecimiento sigue teniendo su propio registro clínico. No hace falta confirmar con un
+  // window.confirm: se puede deshacer en cualquier momento desde "Documentos eliminados".
+  const onToggleArchive = async () => {
     setArchiving(true);
     setError(null);
-    const result = await archiveClinicalDocumentForOwner(doc.id);
+    const result = archived ? await restoreClinicalDocumentForOwner(doc.id) : await archiveClinicalDocumentForOwner(doc.id);
     if (result.ok) {
       router.refresh();
     } else {
       setArchiving(false);
-      setError(result.error ?? 'No se pudo eliminar.');
+      setError(result.error ?? 'No se pudo completar la acción.');
     }
   };
 
@@ -88,10 +94,18 @@ export function ClinicalDocumentItem({
           variant="outline"
           size="sm"
           disabled={archiving}
-          onClick={onArchive}
-          className="gap-1.5 text-destructive hover:bg-destructive/10"
+          onClick={onToggleArchive}
+          className={archived ? 'gap-1.5' : 'gap-1.5 text-destructive hover:bg-destructive/10'}
         >
-          <Trash2 className="size-4" /> Eliminar
+          {archived ? (
+            <>
+              <RotateCcw className="size-4" /> Restaurar
+            </>
+          ) : (
+            <>
+              <Trash2 className="size-4" /> Eliminar
+            </>
+          )}
         </Button>
       </div>
       {doc.signed_at ? (

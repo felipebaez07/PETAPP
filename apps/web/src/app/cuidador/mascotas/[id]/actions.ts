@@ -241,3 +241,37 @@ export async function archiveClinicalDocumentForOwner(documentId: string): Promi
   revalidatePath(`/cuidador/mascotas/${petId}`);
   return { ok: true };
 }
+
+/**
+ * Deshace `archiveClinicalDocumentForOwner` — "eliminar" un documento nunca debía ser un camino
+ * sin vuelta (pedido explícito del usuario después de probarlo: "tráela de vuelta"). Vuelve a
+ * dejarlo visible en la lista principal del cuidador.
+ */
+export async function restoreClinicalDocumentForOwner(documentId: string): Promise<ActionResult> {
+  const user = await getCurrentUser();
+  if (!user || user.profile.role !== 'propietario') return { ok: false, error: 'No autorizado.' };
+
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from('clinical_documents')
+    .select('id, clinical_patient:clinical_patients(pet_id)')
+    .eq('id', documentId)
+    .maybeSingle();
+  const doc = data as unknown as ClinicalDocumentSignLookup | null;
+  if (!doc) return { ok: false, error: 'Documento no encontrado.' };
+
+  const petId = doc.clinical_patient?.pet_id;
+  if (!petId) return { ok: false, error: 'Documento no encontrado.' };
+
+  const owns = await assertOwnsPet(petId);
+  if (!owns.ok) return owns;
+
+  const { error } = await supabase
+    .from('clinical_documents')
+    .update({ archived_by_owner_at: null })
+    .eq('id', documentId);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/cuidador/mascotas/${petId}`);
+  return { ok: true };
+}
