@@ -136,3 +136,28 @@ corresponda antes de resolverlo. Se agrega, nunca se sobrescribe.
   - Consentimiento explícito y opt-out para marketing por WhatsApp/SMS (distinto del consentimiento
     ya necesario para notificaciones transaccionales como recordatorios de citas).
 - **Estado**: abierto.
+
+## LG-007
+
+- **Detectado**: 2026-09-17, diseñando (todavía no construido, solo propuesta) un módulo de
+  teleconsulta veterinaria por videollamada — incluye la posibilidad de generar fórmulas/recetas
+  (0019_clinical_documents.sql, ya existe) desde una consulta remota, sin examen físico presencial.
+- **Área**: Ejercicio de profesión regulada / telemedicina veterinaria.
+- **Riesgo**: 🟡 medio (si se construye).
+- **Por qué aplica**: la medicina veterinaria es una profesión regulada — algunos actos (sobre todo
+  prescribir ciertos medicamentos, o procedimientos que exigen examen físico directo) pueden tener
+  restricciones sobre si se pueden realizar/autorizar de forma remota. No es lo mismo una
+  teleconsulta de orientación/seguimiento que una que termine en una fórmula médica sin haber
+  revisado físicamente al paciente.
+- **¿Bloquea?**: No bloquea nada hoy — es solo una propuesta de diseño, nada construido. Si se
+  decide avanzar, sí condiciona qué se puede ofrecer por teleconsulta (ej. ¿solo orientación/
+  seguimiento, o también fórmulas?) antes de habilitarlo.
+- **Antes de qué hay que resolverlo**: antes de permitir que una teleconsulta genere una fórmula/
+  receta sin una consulta presencial previa registrada para ese mismo caso.
+- **Checklist de qué averiguar**:
+  - Si el ejercicio de la medicina veterinaria en Colombia distingue (como sí hacen varias
+    regulaciones de telemedicina humana) entre consulta remota de orientación/seguimiento vs. la
+    que habilita prescribir sin examen físico previo.
+  - Si existe algún gremio o entidad veterinaria colombiana con una postura pública sobre
+    telemedicina veterinaria a la que consultar directamente.
+- **Estado**: abierto.
