@@ -60,6 +60,7 @@ export function PrediagnosticoChat({ petId, petName, ownerId, initialConversatio
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
 
   const done = Boolean(summary);
 
@@ -74,6 +75,34 @@ export function PrediagnosticoChat({ petId, petName, ownerId, initialConversatio
     );
     setSpeechSupported(typeof window !== 'undefined' && 'speechSynthesis' in window);
   }, []);
+
+  // Las voces del navegador se cargan de forma asíncrona (a veces `getVoices()` devuelve vacío en
+  // la primera llamada) — sin escuchar `onvoiceschanged`, `toggleSpeak` podía correr sin ninguna
+  // voz cargada y el navegador terminaba usando su voz por defecto (en inglés en muchos sistemas),
+  // que es exactamente el bug reportado: "habla español con voz de inglés".
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    const loadVoices = () => {
+      voicesRef.current = window.speechSynthesis.getVoices();
+    };
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    return () => {
+      window.speechSynthesis.onvoiceschanged = null;
+    };
+  }, []);
+
+  // Prioriza español latinoamericano (el público de la app es Colombia) antes que castellano, y
+  // solo si no hay ninguna voz en español cae al `lang` genérico sin voz explícita.
+  function pickSpanishVoice(): SpeechSynthesisVoice | null {
+    const voices = voicesRef.current;
+    const priority = ['es-co', 'es-419', 'es-mx', 'es-us', 'es-ar', 'es-es'];
+    for (const code of priority) {
+      const match = voices.find((v) => v.lang.toLowerCase() === code);
+      if (match) return match;
+    }
+    return voices.find((v) => v.lang.toLowerCase().startsWith('es')) ?? null;
+  }
 
   // Si el componente se desmonta a mitad de una grabación o de una lectura en voz alta, no dejar
   // el micrófono abierto ni el speech synthesis hablando en el vacío.
@@ -187,7 +216,9 @@ export function PrediagnosticoChat({ petId, petName, ownerId, initialConversatio
       return;
     }
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'es-ES';
+    const spanishVoice = pickSpanishVoice();
+    if (spanishVoice) utterance.voice = spanishVoice;
+    utterance.lang = spanishVoice?.lang ?? 'es-419';
     utterance.onend = () => setSpeakingIndex((current) => (current === index ? null : current));
     utterance.onerror = () => setSpeakingIndex((current) => (current === index ? null : current));
     window.speechSynthesis.speak(utterance);

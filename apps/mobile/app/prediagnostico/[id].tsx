@@ -68,6 +68,7 @@ export default function PrediagnosticoScreen() {
   const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const recordingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const spanishVoiceIdRef = useRef<string | null | undefined>(undefined);
 
   // expo-audio (no expo-av: en el SDK instalado acá, expo-av quedó congelado en una versión vieja
   // sin bump de SDK, mientras que expo-audio y expo-speech sí siguen el versionado 57.x — la
@@ -217,7 +218,36 @@ export default function PrediagnosticoScreen() {
     }
   };
 
-  const toggleSpeak = (index: number, text: string) => {
+  // Pasar solo `language: 'es-ES'` no bastaba: en varios dispositivos (sobre todo Android sin el
+  // paquete de voz en español instalado) el motor de TTS ignora ese campo y cae a su voz por
+  // defecto en inglés — es exactamente el bug reportado, "habla español con voz de inglés". Buscar
+  // el `identifier` real de una voz en español instalada y pasarlo explícito es lo que de verdad
+  // fuerza el acento correcto. Se resuelve una sola vez y se cachea en un ref (no en cada tap).
+  async function resolveSpanishVoiceId(): Promise<string | null> {
+    if (spanishVoiceIdRef.current !== undefined) return spanishVoiceIdRef.current;
+    try {
+      const voices = await Speech.getAvailableVoicesAsync();
+      const priority = ['es-co', 'es-419', 'es-mx', 'es-us', 'es-ar', 'es-es'];
+      let found: string | null = null;
+      for (const code of priority) {
+        const match = voices.find((v) => v.language?.toLowerCase() === code);
+        if (match) {
+          found = match.identifier;
+          break;
+        }
+      }
+      if (!found) {
+        found = voices.find((v) => v.language?.toLowerCase().startsWith('es'))?.identifier ?? null;
+      }
+      spanishVoiceIdRef.current = found;
+      return found;
+    } catch {
+      spanishVoiceIdRef.current = null;
+      return null;
+    }
+  }
+
+  const toggleSpeak = async (index: number, text: string) => {
     if (!text) return;
     if (speakingIndex === index) {
       Speech.stop();
@@ -225,8 +255,10 @@ export default function PrediagnosticoScreen() {
       return;
     }
     Speech.stop();
+    const voiceId = await resolveSpanishVoiceId();
     Speech.speak(text, {
-      language: 'es-ES',
+      language: 'es-419',
+      voice: voiceId ?? undefined,
       onDone: () => setSpeakingIndex((current) => (current === index ? null : current)),
       onStopped: () => setSpeakingIndex((current) => (current === index ? null : current)),
       onError: () => setSpeakingIndex((current) => (current === index ? null : current)),
